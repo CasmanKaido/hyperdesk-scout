@@ -63,7 +63,7 @@ This is the project's source of truth for build order. Work on one milestone at 
 - [x] Upstream timeout and malformed-response paths are tested
 - [x] Repeated scans use the cache within its TTL
 - [!] Docker image starts and passes its health check — Docker is not installed in the current environment
-- [ ] GitHub Actions passes on `main` — requires committing and pushing this milestone
+- [!] GitHub Actions passes on `main` — blocked because GitHub reports the account is locked due to a billing issue; no workflow step was started
 
 **Next after completion:** M2 — Public HTTPS deployment.
 
