@@ -7,6 +7,7 @@ const dockerfile = await readFile(new URL("../Dockerfile", import.meta.url), "ut
 
 test("deployment config uses the Docker runtime and health endpoint", () => {
   assert.match(renderConfig, /runtime: docker/);
+  assert.match(renderConfig, /plan: free/);
   assert.match(renderConfig, /healthCheckPath: \/health/);
   assert.match(renderConfig, /branch: main/);
   assert.match(dockerfile, /HEALTHCHECK/);

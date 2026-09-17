@@ -2,6 +2,7 @@ services:
   - type: web
     name: hyperdesk-scout
     runtime: docker
+    plan: free
     repo: https://github.com/CasmanKaido/hyperdesk-scout
     branch: main
     healthCheckPath: /health

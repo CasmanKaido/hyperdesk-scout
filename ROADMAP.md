@@ -75,7 +75,7 @@ This is the project's source of truth for build order. Work on one milestone at 
 
 ### Decision required
 
-Selected target: **Render Blueprint using the repository Dockerfile**. Render provides managed HTTPS, environment variables, logs, health checks, and GitHub-based redeployment. Service creation remains a manual authorization step because provider signup and plan selection may involve billing terms.
+Selected target: **Render Free web service using the repository Dockerfile**. The Blueprint explicitly requests `plan: free`. Render provides managed HTTPS, environment variables, logs, health checks, and GitHub-based redeployment. Free instances sleep after 15 minutes idle and may take about one minute to wake. Service creation remains a manual authorization step so the dashboard can be checked for **Free / $0** before approval.
 
 ### Build
 

@@ -2,7 +2,9 @@
 
 The selected initial provider is Render because it can deploy the existing Dockerfile directly from GitHub, provides managed HTTPS, health checks, logs, environment variables, and automatic deployments from `main`.
 
-Creating the service is intentionally a manual authorization step: provider signup and plan selection may involve account or billing terms.
+The Blueprint explicitly selects Render's `free` web-service plan. According to Render's current documentation, free web services receive 750 instance hours per workspace each month. If no payment method is attached, exceeding included usage suspends the service instead of generating overage charges. Always confirm that the dashboard still displays **Free / $0** before approving service creation.
+
+Creating the service remains a manual authorization step because you must accept Render's account terms and confirm the selected plan.
 
 ## Deploy on Render
 
@@ -10,13 +12,17 @@ Creating the service is intentionally a manual authorization step: provider sign
 2. Open the Render dashboard and choose **New → Blueprint**.
 3. Select `CasmanKaido/hyperdesk-scout`.
 4. Render will detect `render.yaml` and the repository `Dockerfile`.
-5. Review the selected plan and any displayed cost before approving creation.
+5. Confirm the service plan is **Free / $0**. Do not proceed if Render selects a paid plan.
 6. Create the `hyperdesk-scout` web service.
 7. Wait for the image build and `/health` health check to pass.
 8. Copy the assigned HTTPS URL, such as `https://hyperdesk-scout.onrender.com`.
 9. Replace the placeholder deployment URL in the README and OpenAPI `servers` list.
 
 No secrets are needed for the current read-only service. Do not add OKX credentials until the later x402 milestone.
+
+## Free-plan limitations
+
+Render spins down a free web service after 15 minutes without inbound traffic. The first request after spin-down can take about one minute while the service starts. For judging or a live demo, call `/health` a few minutes before presenting and verify the funding scan is warm. Free services also have monthly instance-hour, bandwidth, and build-minute allowances; inspect usage in the Render dashboard. The service has no persistent local state, so ephemeral storage is acceptable.
 
 ## Required verification
 

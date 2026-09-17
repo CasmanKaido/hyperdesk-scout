@@ -61,9 +61,9 @@ Copy `.env.example` values into your deployment environment. Do not commit a rea
 
 ## Deployment
 
-The initial deployment target is Render. The repository includes `render.yaml` for Blueprint deployment and a detailed authorization and verification checklist in [`DEPLOYMENT.md`](DEPLOYMENT.md).
+The initial deployment target is Render's **Free web-service plan**. The repository includes `render.yaml` with `plan: free` and a detailed authorization and verification checklist in [`DEPLOYMENT.md`](DEPLOYMENT.md).
 
-Provider account creation and plan approval are manual because they may involve billing terms. The public service URL will be added here after deployment.
+Confirm the Render dashboard displays **Free / $0** before creating the service. Free instances sleep after 15 minutes idle and can take about one minute to wake, so warm `/health` before a demo. The public service URL will be added here after deployment.
 
 ## Container
 
