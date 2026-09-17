@@ -19,6 +19,18 @@
         }
       }
     },
+    "/openapi.json": {
+      "get": {
+        "operationId": "getOpenApiSpec",
+        "summary": "Retrieve the OpenAPI contract",
+        "responses": {
+          "200": {
+            "description": "OpenAPI 3.1 document",
+            "content": { "application/json": { "schema": { "type": "object" } } }
+          }
+        }
+      }
+    },
     "/api/v1/funding-scan": {
       "post": {
         "operationId": "scanFunding",

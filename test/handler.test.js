@@ -33,6 +33,18 @@ test("handles health without market data", async () => {
   assert.deepEqual(result.body, { status: "ok", service: "hyperdesk-scout", version: "0.1.0" });
 });
 
+test("serves the OpenAPI contract when configured", async () => {
+  const handle = createRequestHandler({
+    getMarketData: async () => { throw new Error("should not run"); },
+    requestId: () => "req_test",
+    logger: silentLogger,
+    openApiSpec: { openapi: "3.1.0" },
+  });
+  const result = await handle({ method: "GET", pathname: "/openapi.json" });
+  assert.equal(result.status, 200);
+  assert.equal(result.body.openapi, "3.1.0");
+});
+
 test("returns a structured funding scan with freshness metadata", async () => {
   const handle = handlerWith(async () => ({
     markets: [market],

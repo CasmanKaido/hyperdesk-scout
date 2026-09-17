@@ -75,13 +75,15 @@ This is the project's source of truth for build order. Work on one milestone at 
 
 ### Decision required
 
-Choose one deployment target. Prefer a service with HTTPS, environment variables, logs, and simple redeployment. Candidate options include Railway, Render, Fly.io, or a cloud container service.
+Selected target: **Render Blueprint using the repository Dockerfile**. Render provides managed HTTPS, environment variables, logs, health checks, and GitHub-based redeployment. Service creation remains a manual authorization step because provider signup and plan selection may involve billing terms.
 
 ### Build
 
-- [ ] Select deployment provider
-- [ ] Create production service
-- [ ] Configure environment variables
+- [x] Select deployment provider: Render
+- [x] Add `render.yaml` infrastructure configuration
+- [x] Add deployment and verification documentation
+- [ ] Create production service through the Render dashboard
+- [ ] Configure or confirm environment variables
 - [ ] Deploy from the GitHub `main` branch
 - [ ] Confirm HTTPS certificate
 - [ ] Confirm `GET /health` from outside the development machine

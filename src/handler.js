@@ -32,6 +32,7 @@ export function createRequestHandler({
   logger = console,
   rateLimiter = null,
   corsAllowOrigin = process.env.CORS_ALLOW_ORIGIN || "*",
+  openApiSpec = null,
 } = {}) {
   if (typeof getMarketData !== "function") throw new TypeError("getMarketData is required");
 
@@ -50,6 +51,8 @@ export function createRequestHandler({
         result = { status: 204, headers: { ...corsHeaders, "x-request-id": id }, body: null };
       } else if (method === "GET" && pathname === "/health") {
         result = json(200, { status: "ok", service: "hyperdesk-scout", version: "0.1.0" }, id, corsHeaders);
+      } else if (method === "GET" && pathname === "/openapi.json" && openApiSpec) {
+        result = json(200, openApiSpec, id, corsHeaders);
       } else if (method === "POST" && pathname === "/api/v1/funding-scan") {
         const rate = rateLimiter?.consume(clientIp);
         if (rate && !rate.allowed) {

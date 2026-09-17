@@ -1,0 +1,25 @@
+services:
+  - type: web
+    name: hyperdesk-scout
+    runtime: docker
+    repo: https://github.com/CasmanKaido/hyperdesk-scout
+    branch: main
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: HYPERLIQUID_API_URL
+        value: https://api.hyperliquid.xyz
+      - key: HYPERLIQUID_TIMEOUT_MS
+        value: "5000"
+      - key: MARKET_DATA_CACHE_TTL_MS
+        value: "10000"
+      - key: MARKET_DATA_MAX_AGE_MS
+        value: "30000"
+      - key: RATE_LIMIT_MAX_REQUESTS
+        value: "60"
+      - key: RATE_LIMIT_WINDOW_MS
+        value: "60000"
+      - key: CORS_ALLOW_ORIGIN
+        value: "*"

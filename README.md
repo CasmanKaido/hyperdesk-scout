@@ -30,7 +30,7 @@ curl -X POST http://localhost:3000/api/v1/funding-scan \
 
 ## API
 
-The machine-readable OpenAPI 3.1 contract is available in [`openapi.json`](openapi.json).
+The machine-readable OpenAPI 3.1 contract is available in [`openapi.json`](openapi.json) and is served at `GET /openapi.json`.
 
 ### `POST /api/v1/funding-scan`
 
@@ -58,6 +58,12 @@ Copy `.env.example` values into your deployment environment. Do not commit a rea
 | `RATE_LIMIT_MAX_REQUESTS` | `60` | Requests allowed per client/window |
 | `RATE_LIMIT_WINDOW_MS` | `60000` | Rate-limit window |
 | `CORS_ALLOW_ORIGIN` | `*` | Allowed browser origin; restrict for a private frontend |
+
+## Deployment
+
+The initial deployment target is Render. The repository includes `render.yaml` for Blueprint deployment and a detailed authorization and verification checklist in [`DEPLOYMENT.md`](DEPLOYMENT.md).
+
+Provider account creation and plan approval are manual because they may involve billing terms. The public service URL will be added here after deployment.
 
 ## Container
 

@@ -2,6 +2,7 @@ import { createServer } from "node:http";
 import { createRequestHandler } from "./handler.js";
 import { createMarketDataProvider } from "./market-data.js";
 import { createRateLimiter } from "./rate-limit.js";
+import { loadOpenApiSpec } from "./openapi.js";
 
 const PORT = Number(process.env.PORT || 3000);
 const MAX_BODY_BYTES = 32 * 1024;
@@ -23,8 +24,9 @@ export function createApp({
   getMarketData = createMarketDataProvider(),
   rateLimiter = createRateLimiter(),
   logger = console,
+  openApiSpec = loadOpenApiSpec(),
 } = {}) {
-  const handleRequest = createRequestHandler({ getMarketData, rateLimiter, logger });
+  const handleRequest = createRequestHandler({ getMarketData, rateLimiter, logger, openApiSpec });
 
   return createServer(async (request, response) => {
     try {
