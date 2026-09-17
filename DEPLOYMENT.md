@@ -90,6 +90,11 @@ After deployment, update `ROADMAP.md` and `README.md` with:
 - **Validation:** empty symbols returned `HTTP 400`
 - **Cache sequence:** `miss`, `hit`, `hit` across three consecutive successful scans
 - **Container verification:** Render successfully built the Dockerfile and passed `/health`
+- **Orchestrator version:** `0.2.0`, verified 2026-09-17 17:19 UTC
+- **Orchestration endpoint:** `POST /api/v1/orchestrate` returned `HTTP 200`
+- **Workflow trace:** Funding and Liquidity completed in stage 1; Risk completed in stage 2; deterministic synthesis completed in stage 3
+- **Safety boundary:** `execution_included: false` and `approval_required: true`
+- **Live provenance:** fresh Hyperliquid mainnet snapshot with BTC, ETH, and SOL evidence
 
 ## Rollback
 

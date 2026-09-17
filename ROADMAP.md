@@ -120,7 +120,7 @@ Selected target: **Render Free web service using the repository Dockerfile**. Th
 - [x] Add deterministic synthesis and conflict reporting
 - [x] Return `execution_included: false` and an explicit approval boundary
 - [x] Add OpenAPI schemas and contract tests
-- [ ] Deploy and verify the orchestration endpoint
+- [x] Deploy and verify the orchestration endpoint
 
 ### OKX.AI integration
 
@@ -138,8 +138,8 @@ Selected target: **Render Free web service using the repository Dockerfile**. Th
 
 ### Exit criteria
 
-- [ ] One orchestration request produces a traceable Funding → Liquidity → Risk workflow
-- [ ] At least one unsafe candidate is rejected with deterministic evidence
+- [x] One live orchestration request produces a traceable Funding → Liquidity → Risk workflow
+- [x] Automated orchestration tests reject an unsafe candidate with deterministic evidence
 - [ ] A real OKX.AI request reaches the public endpoint
 - [ ] The result is delivered in the same interaction
 - [ ] The OKX.AI listing or integration URL is public and documented
