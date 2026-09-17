@@ -111,15 +111,15 @@ Selected target: **Render Free web service using the repository Dockerfile**. Th
 
 - [x] Validate the orchestration positioning against live marketplace searches without claiming market exclusivity
 - [x] Define the narrow product and safety boundary in `STRATEGY.md`
-- [ ] Add `POST /api/v1/orchestrate`
-- [ ] Support the first objective: `market_neutral_income`
-- [ ] Extract Funding, Liquidity, and Risk specialist modules
-- [ ] Add a fixed specialist registry and explicit workflow plan
-- [ ] Run independent specialists in parallel
-- [ ] Add evidence provenance, timestamps, and workflow trace
-- [ ] Add deterministic synthesis and conflict reporting
-- [ ] Return `execution_included: false` and an explicit approval boundary
-- [ ] Add OpenAPI schemas and contract tests
+- [x] Add `POST /api/v1/orchestrate`
+- [x] Support the first objective: `market_neutral_income`
+- [x] Extract Funding, Liquidity, and Risk specialist modules
+- [x] Add a fixed specialist registry and explicit workflow plan
+- [x] Run independent Funding and Liquidity specialists in parallel
+- [x] Add evidence provenance, timestamps, and workflow trace
+- [x] Add deterministic synthesis and conflict reporting
+- [x] Return `execution_included: false` and an explicit approval boundary
+- [x] Add OpenAPI schemas and contract tests
 - [ ] Deploy and verify the orchestration endpoint
 
 ### OKX.AI integration

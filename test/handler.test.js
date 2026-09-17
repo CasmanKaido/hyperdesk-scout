@@ -30,7 +30,7 @@ test("handles health without market data", async () => {
   const handle = handlerWith(async () => { throw new Error("should not run"); });
   const result = await handle({ method: "GET", pathname: "/health" });
   assert.equal(result.status, 200);
-  assert.deepEqual(result.body, { status: "ok", service: "hyperdesk-scout", version: "0.1.0" });
+  assert.deepEqual(result.body, { status: "ok", service: "hyperdesk-scout", version: "0.2.0" });
 });
 
 test("serves the OpenAPI contract when configured", async () => {
@@ -69,6 +69,30 @@ test("returns a structured funding scan with freshness metadata", async () => {
     cache_status: "miss",
     fetch_duration_ms: 25,
   });
+});
+
+test("runs the market-neutral orchestration workflow", async () => {
+  const handle = handlerWith(async () => ({
+    markets: [market],
+    fetchedAt: "2026-09-17T00:00:00.000Z",
+    ageMs: 1000,
+    cacheStatus: "miss",
+    fetchDurationMs: 25,
+  }));
+  const result = await handle({
+    method: "POST",
+    pathname: "/api/v1/orchestrate",
+    bodyText: JSON.stringify({
+      objective: "market_neutral_income",
+      symbols: ["ETH"],
+      risk_tolerance: "aggressive",
+    }),
+  });
+
+  assert.equal(result.status, 200);
+  assert.equal(result.body.workflow_id, "req_test");
+  assert.equal(result.body.execution_included, false);
+  assert.equal(result.body.workflow.trace.length, 3);
 });
 
 test("returns stable validation and upstream errors", async () => {

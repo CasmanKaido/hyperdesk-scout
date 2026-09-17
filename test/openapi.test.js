@@ -9,6 +9,7 @@ test("publishes an OpenAPI 3.1 contract for every route", () => {
   assert.equal(spec.openapi, "3.1.0");
   assert.ok(spec.paths["/health"].get);
   assert.ok(spec.paths["/openapi.json"].get);
+  assert.ok(spec.paths["/api/v1/orchestrate"].post);
   assert.ok(spec.paths["/api/v1/funding-scan"].post);
   assert.ok(spec.components.schemas.FundingScanResponse.required.includes("market_data"));
 });
@@ -46,5 +47,14 @@ test("the documented required response fields match an actual response", async (
   }
   for (const field of spec.components.schemas.Opportunity.required) {
     assert.ok(Object.hasOwn(response.body.opportunities[0], field), `missing opportunity field: ${field}`);
+  }
+
+  const orchestration = await handle({
+    method: "POST",
+    pathname: "/api/v1/orchestrate",
+    bodyText: JSON.stringify({ symbols: ["ETH"], risk_tolerance: "aggressive" }),
+  });
+  for (const field of spec.components.schemas.OrchestrationResponse.required) {
+    assert.ok(Object.hasOwn(orchestration.body, field), `missing orchestration field: ${field}`);
   }
 });

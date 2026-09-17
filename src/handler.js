@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { UpstreamError } from "./hyperliquid.js";
 import { buildFundingScan, validateScanInput, ValidationError } from "./service.js";
+import { orchestrateMarketNeutral, validateOrchestrationInput } from "./orchestrator.js";
 
 const JSON_HEADERS = {
   "content-type": "application/json; charset=utf-8",
@@ -50,9 +51,47 @@ export function createRequestHandler({
       if (method === "OPTIONS") {
         result = { status: 204, headers: { ...corsHeaders, "x-request-id": id }, body: null };
       } else if (method === "GET" && pathname === "/health") {
-        result = json(200, { status: "ok", service: "hyperdesk-scout", version: "0.1.0" }, id, corsHeaders);
+        result = json(200, { status: "ok", service: "hyperdesk-scout", version: "0.2.0" }, id, corsHeaders);
       } else if (method === "GET" && pathname === "/openapi.json" && openApiSpec) {
         result = json(200, openApiSpec, id, corsHeaders);
+      } else if (method === "POST" && pathname === "/api/v1/orchestrate") {
+        const rate = rateLimiter?.consume(clientIp);
+        if (rate && !rate.allowed) {
+          result = json(429, {
+            request_id: id,
+            error: "rate_limited",
+            message: "Too many requests",
+          }, id, {
+            ...corsHeaders,
+            "retry-after": String(Math.max(1, Math.ceil((rate.resetAt - Date.now()) / 1000))),
+            "x-ratelimit-limit": String(rate.limit),
+            "x-ratelimit-remaining": "0",
+          });
+        } else {
+          const input = validateOrchestrationInput(parseJsonBody(bodyText));
+          const marketData = await getMarketData();
+          result = json(200, {
+            request_id: id,
+            ...await orchestrateMarketNeutral({
+              markets: marketData.markets,
+              input,
+              marketData: {
+                fetchedAt: marketData.fetchedAt,
+                ageMs: marketData.ageMs,
+                cacheStatus: marketData.cacheStatus,
+                dataStatus: marketData.cacheStatus === "stale_fallback" ? "stale" : "fresh",
+              },
+              generatedAt: now(),
+              workflowId: id,
+            }),
+          }, id, {
+            ...corsHeaders,
+            ...(rate ? {
+              "x-ratelimit-limit": String(rate.limit),
+              "x-ratelimit-remaining": String(rate.remaining),
+            } : {}),
+          });
+        }
       } else if (method === "POST" && pathname === "/api/v1/funding-scan") {
         const rate = rateLimiter?.consume(clientIp);
         if (rate && !rate.allowed) {

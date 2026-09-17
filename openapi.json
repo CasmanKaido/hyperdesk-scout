@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "HyperDesk Scout API",
-    "version": "0.1.0",
+    "version": "0.2.0",
     "description": "Read-only Hyperliquid funding, basis, liquidity, and risk intelligence for OKX AI A2MCP."
   },
   "servers": [
@@ -31,6 +31,32 @@
             "description": "OpenAPI 3.1 document",
             "content": { "application/json": { "schema": { "type": "object" } } }
           }
+        }
+      }
+    },
+    "/api/v1/orchestrate": {
+      "post": {
+        "operationId": "orchestrateMarketNeutralIncome",
+        "summary": "Coordinate Hyperliquid funding, liquidity, and risk specialists",
+        "description": "Runs a traceable market-neutral-income workflow. It returns evidence and an approval boundary; it never executes a trade.",
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/OrchestrationRequest" },
+              "example": { "objective": "market_neutral_income", "symbols": ["BTC", "ETH", "SOL"], "risk_tolerance": "moderate", "max_leverage": 2, "max_notional_usd": 1000, "min_funding_apr": 5 }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Specialist workflow completed",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/OrchestrationResponse" } } }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "429": { "$ref": "#/components/responses/RateLimited" },
+          "502": { "$ref": "#/components/responses/UpstreamError" },
+          "504": { "$ref": "#/components/responses/UpstreamError" }
         }
       }
     },
@@ -151,6 +177,40 @@
           "riskScore": { "type": "number", "minimum": 0, "maximum": 1 },
           "opportunityScore": { "type": "number", "minimum": 0, "maximum": 1 },
           "riskFlags": { "type": "array", "items": { "type": "string" } }
+        }
+      },
+      "OrchestrationRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "objective": { "const": "market_neutral_income", "default": "market_neutral_income" },
+          "symbols": { "type": "array", "minItems": 1, "maxItems": 20, "items": { "type": "string", "pattern": "^[A-Za-z0-9:_-]{1,30}$" }, "default": ["BTC", "ETH", "SOL"] },
+          "risk_tolerance": { "type": "string", "enum": ["conservative", "moderate", "aggressive"], "default": "moderate" },
+          "max_leverage": { "type": "number", "minimum": 1, "maximum": 10, "default": 2 },
+          "max_notional_usd": { "type": "number", "exclusiveMinimum": 0, "maximum": 1000000, "default": 1000 },
+          "min_funding_apr": { "type": "number", "minimum": 0, "maximum": 10000, "default": 5 }
+        }
+      },
+      "OrchestrationResponse": {
+        "type": "object",
+        "required": ["request_id", "service", "version", "workflow_id", "generated_at", "objective", "execution_included", "approval_required", "workflow", "provenance", "constraints", "unavailable_symbols", "specialist_outputs", "conflicts", "synthesis", "disclaimer"],
+        "properties": {
+          "request_id": { "type": "string" },
+          "service": { "const": "HyperDesk Orchestrator" },
+          "version": { "type": "string" },
+          "workflow_id": { "type": "string" },
+          "generated_at": { "type": "string", "format": "date-time" },
+          "objective": { "const": "market_neutral_income" },
+          "execution_included": { "const": false },
+          "approval_required": { "const": true },
+          "workflow": { "type": "object" },
+          "provenance": { "type": "object" },
+          "constraints": { "type": "object" },
+          "unavailable_symbols": { "type": "array", "items": { "type": "string" } },
+          "specialist_outputs": { "type": "object" },
+          "conflicts": { "type": "array", "items": { "type": "object" } },
+          "synthesis": { "type": "object" },
+          "disclaimer": { "type": "string" }
         }
       },
       "ErrorResponse": {

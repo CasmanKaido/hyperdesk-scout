@@ -26,7 +26,15 @@ Health check:
 curl http://localhost:3000/health
 ```
 
-Funding scan:
+Orchestrated market-neutral analysis:
+
+```bash
+curl -X POST http://localhost:3000/api/v1/orchestrate \
+  -H 'Content-Type: application/json' \
+  -d '{"objective":"market_neutral_income","symbols":["BTC","ETH","SOL"],"risk_tolerance":"moderate","max_leverage":2,"max_notional_usd":1000}'
+```
+
+Funding specialist:
 
 ```bash
 curl -X POST http://localhost:3000/api/v1/funding-scan \
@@ -37,6 +45,21 @@ curl -X POST http://localhost:3000/api/v1/funding-scan \
 ## API
 
 The machine-readable OpenAPI 3.1 contract is available in [`openapi.json`](openapi.json) and is served at `GET /openapi.json`.
+
+### `POST /api/v1/orchestrate`
+
+Coordinates the Funding and Liquidity specialists in parallel, then applies the dependent Risk Policy specialist and deterministic synthesis.
+
+Input fields:
+
+- `objective`: currently only `market_neutral_income`; defaults to that value.
+- `symbols`: 1–20 Hyperliquid perpetual market names; defaults to BTC, ETH, and SOL.
+- `risk_tolerance`: `conservative`, `moderate`, or `aggressive`; defaults to `moderate`.
+- `max_leverage`: service constraint from 1–10; defaults to 2.
+- `max_notional_usd`: proposed maximum notional, greater than 0 and no more than 1,000,000; defaults to 1,000.
+- `min_funding_apr`: absolute annualized snapshot threshold; defaults to 5.
+
+The response includes the workflow plan, specialist trace, provenance, specialist evidence, conflicts, approved/caution candidates, rejected candidates, and the next approval-boundary action. It always returns `execution_included: false`.
 
 ### `POST /api/v1/funding-scan`
 
@@ -91,7 +114,7 @@ npm run check
 
 The ordered build plan, acceptance criteria, prerequisites, and current next task are maintained in [`ROADMAP.md`](ROADMAP.md).
 
-Current milestone: **M1 — Production API hardening**. We will freeze and test the public API contract before deployment, OKX AI registration, and x402 payments.
+Current milestone: **M3 — Hyperliquid orchestration MVP and free OKX.AI integration**. The first router workflow is implemented locally and will be verified on the public deployment before marketplace registration.
 
 ## Sources
 

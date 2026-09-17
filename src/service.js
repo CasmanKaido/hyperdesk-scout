@@ -63,7 +63,7 @@ export function buildFundingScan(markets, input, metadata = {}) {
   const available = new Set(markets.map((market) => market.symbol.toUpperCase()));
   return {
     service: "HyperDesk Scout",
-    version: "0.1.0",
+    version: "0.2.0",
     generated_at: generatedAt.toISOString(),
     data_source: "Hyperliquid mainnet",
     data_status: metadata.cacheStatus === "stale_fallback" ? "stale" : "fresh",
