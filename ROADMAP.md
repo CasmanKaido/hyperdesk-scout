@@ -13,9 +13,9 @@ This is the project's source of truth for build order. Work on one milestone at 
 
 **Completed:** M0 — Read-only funding scanner; M1 — Production API hardening (GitHub Actions remains externally blocked by account billing); M2 — Public HTTPS deployment
 
-**Next:** M3 — Free OKX AI A2MCP integration
+**Next:** M3 — Hyperliquid orchestration MVP and free OKX.AI integration
 
-**Why M3 is next:** The API contract is stable and the service is live over HTTPS. We can now register the free endpoint with OKX AI and prove the required end-to-end marketplace workflow before adding payments.
+**Why M3 is next:** The deployed scanner is a useful specialist but not a sufficiently differentiated product. We will reuse it inside a transparent Funding → Liquidity → Risk workflow, then register the existing funding capability and the new orchestration flow through OKX.AI.
 
 ---
 
@@ -103,27 +103,46 @@ Selected target: **Render Free web service using the repository Dockerfile**. Th
 
 ---
 
-## M3 — Free OKX AI A2MCP integration
+## M3 — Hyperliquid orchestration MVP and free OKX.AI integration
 
-**Goal:** Demonstrate that OKX AI can discover and call HyperDesk end to end.
+**Goal:** Differentiate HyperDesk as a transparent coordinator of specialist Hyperliquid capabilities, then prove that OKX.AI can call it end to end.
 
-### Build
+### Router build
 
-- [ ] Confirm current ASP registration fields with official documentation or hackathon support
-- [ ] Prepare service name, description, category, endpoint, input fields, and example output
-- [ ] Register the free funding scan endpoint
-- [ ] Register a test user through the OKX AI debugging flow
-- [ ] Invoke HyperDesk from OKX AI
+- [x] Validate the orchestration positioning against live marketplace searches without claiming market exclusivity
+- [x] Define the narrow product and safety boundary in `STRATEGY.md`
+- [ ] Add `POST /api/v1/orchestrate`
+- [ ] Support the first objective: `market_neutral_income`
+- [ ] Extract Funding, Liquidity, and Risk specialist modules
+- [ ] Add a fixed specialist registry and explicit workflow plan
+- [ ] Run independent specialists in parallel
+- [ ] Add evidence provenance, timestamps, and workflow trace
+- [ ] Add deterministic synthesis and conflict reporting
+- [ ] Return `execution_included: false` and an explicit approval boundary
+- [ ] Add OpenAPI schemas and contract tests
+- [ ] Deploy and verify the orchestration endpoint
+
+### OKX.AI integration
+
+- [x] Confirm current ASP registration fields with the official CLI workflow
+- [ ] Confirm ASP name, one-sentence description, and avatar
+- [ ] Prepare the free A2MCP service listing
+- [ ] Register the ASP and free funding specialist
+- [ ] Register a test user through the OKX.AI debugging flow
+- [ ] Invoke HyperDesk from OKX.AI
 - [ ] Confirm parameters arrive correctly
 - [ ] Confirm structured results are returned without manual setup
 - [ ] Save service/listing URL
+- [ ] Add one real, non-duplicative external OKX.AI specialist integration
 - [ ] Capture screenshots or a short recording as evidence
 
 ### Exit criteria
 
-- [ ] A real OKX AI request reaches the public endpoint
+- [ ] One orchestration request produces a traceable Funding → Liquidity → Risk workflow
+- [ ] At least one unsafe candidate is rejected with deterministic evidence
+- [ ] A real OKX.AI request reaches the public endpoint
 - [ ] The result is delivered in the same interaction
-- [ ] The OKX AI listing or integration URL is public and documented
+- [ ] The OKX.AI listing or integration URL is public and documented
 - [ ] The workflow can be repeated from a clean session
 
 **Next after completion:** M4 — x402 payment on X Layer testnet.
@@ -256,11 +275,14 @@ Execution is not required for a compelling hackathon demo. A reliable paid intel
 | Decision | Choice | Reason |
 | --- | --- | --- |
 | Primary hackathon track | Build a Company | Core product is an agent/API service distributed through OKX AI |
-| First OKX AI service type | A2MCP | Funding scans are standardized parameter-in/result-out tasks |
+| Product position | Hyperliquid specialist orchestrator | Individual analytics APIs are crowded; coordination and synthesis are the differentiated workflow |
+| First OKX AI service type | A2MCP | The existing funding specialist is already a standardized parameter-in/result-out task |
+| Second OKX AI service type | A2A | Multi-step strategy orchestration requires clarification, coordination, and an approval boundary |
 | Initial Hyperliquid access | Read-only | Safest way to prove value and integration |
 | Initial pricing mode | Free | Validate the marketplace workflow before adding payment dependencies |
 | Payment network | X Layer testnet first | Demonstrate x402 without risking real funds |
-| Execution | Deferred | Not necessary until analytics, payment, and safety controls are stable |
+| Custom X Layer vault | Deferred | x402 provides a real X Layer role without introducing custody and contract-audit risk |
+| Execution | Deferred | Not necessary until orchestration, payment, and safety controls are stable |
 
 ## Working rule
 

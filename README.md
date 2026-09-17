@@ -1,14 +1,16 @@
 # HyperDesk Scout
 
-HyperDesk Scout is a read-only Hyperliquid funding intelligence API designed to be published as an OKX AI A2MCP service. It returns deterministic, machine-readable funding, basis, liquidity, and risk metrics.
+HyperDesk is a read-only Hyperliquid specialist-orchestration service for OKX.AI. Its first deployed specialist, HyperDesk Scout, returns deterministic funding, basis, liquidity, and risk evidence; the next API coordinates Funding, Liquidity, and Risk specialists into a traceable market-neutral workflow.
 
 - **Live API:** https://hyperdesk-scout.onrender.com
 - **Health:** https://hyperdesk-scout.onrender.com/health
 - **OpenAPI:** https://hyperdesk-scout.onrender.com/openapi.json
 
-## Why this shape
+## Product direction
 
-The OKX A2MCP guide defines a service as an HTTPS API that takes parameters and returns a clear result. A free endpoint returns HTTP 200 directly; x402 can be added with the OKX Payment SDK after the service is deployed and validated.
+Existing marketplace products already expose individual Hyperliquid analytics, risk, and execution capabilities. HyperDesk is therefore evolving from a standalone scanner into the orchestration layer that selects specialist stages, combines their evidence, reports conflicts, and stops at an explicit execution-approval boundary.
+
+The deployed funding scanner remains useful as the first A2MCP specialist. See [`STRATEGY.md`](STRATEGY.md) for the validated positioning, narrow router MVP, safety boundary, and external-agent integration plan.
 
 ## Run
 
