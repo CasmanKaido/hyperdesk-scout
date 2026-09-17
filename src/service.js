@@ -16,6 +16,12 @@ export function validateScanInput(input = {}) {
     throw new ValidationError("Request body must be a JSON object");
   }
 
+  const allowedFields = new Set(["symbols", "min_funding_apr", "risk_tolerance"]);
+  const unknownFields = Object.keys(input).filter((field) => !allowedFields.has(field));
+  if (unknownFields.length > 0) {
+    throw new ValidationError(`Unknown request field: ${unknownFields[0]}`);
+  }
+
   const symbols = input.symbols ?? DEFAULT_SYMBOLS;
   if (!Array.isArray(symbols) || symbols.length < 1 || symbols.length > 50) {
     throw new ValidationError("symbols must contain between 1 and 50 items");
@@ -41,7 +47,9 @@ export function validateScanInput(input = {}) {
   return { symbols: [...new Set(normalizedSymbols)], minFundingApr, riskTolerance };
 }
 
-export function buildFundingScan(markets, input, generatedAt = new Date()) {
+export function buildFundingScan(markets, input, metadata = {}) {
+  const generatedAt = metadata.generatedAt ?? new Date();
+  const ageMs = Math.max(0, Number(metadata.ageMs ?? 0));
   const requested = new Set(input.symbols);
   const riskCaps = { conservative: 0.45, moderate: 0.7, aggressive: 1 };
 
@@ -58,7 +66,13 @@ export function buildFundingScan(markets, input, generatedAt = new Date()) {
     version: "0.1.0",
     generated_at: generatedAt.toISOString(),
     data_source: "Hyperliquid mainnet",
-    data_status: "fresh",
+    data_status: metadata.cacheStatus === "stale_fallback" ? "stale" : "fresh",
+    market_data: {
+      fetched_at: metadata.fetchedAt ?? generatedAt.toISOString(),
+      age_ms: ageMs,
+      cache_status: metadata.cacheStatus ?? "miss",
+      fetch_duration_ms: Math.max(0, Number(metadata.fetchDurationMs ?? 0)),
+    },
     methodology: {
       funding_apr: "current hourly funding rate × 24 × 365; not a forecast",
       basis: "(mark price - oracle price) / oracle price",

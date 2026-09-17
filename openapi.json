@@ -1,0 +1,152 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "HyperDesk Scout API",
+    "version": "0.1.0",
+    "description": "Read-only Hyperliquid funding, basis, liquidity, and risk intelligence for OKX AI A2MCP."
+  },
+  "servers": [{ "url": "http://localhost:3000", "description": "Local development" }],
+  "paths": {
+    "/health": {
+      "get": {
+        "operationId": "getHealth",
+        "summary": "Check service health",
+        "responses": {
+          "200": {
+            "description": "Service is running",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/HealthResponse" } } }
+          }
+        }
+      }
+    },
+    "/api/v1/funding-scan": {
+      "post": {
+        "operationId": "scanFunding",
+        "summary": "Scan Hyperliquid perpetual markets for funding opportunities",
+        "description": "Returns deterministic metrics from a current market snapshot. Annualized funding is not a forecast.",
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/FundingScanRequest" },
+              "example": { "symbols": ["BTC", "ETH", "SOL"], "min_funding_apr": 5, "risk_tolerance": "moderate" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Funding scan completed",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/FundingScanResponse" } } }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "429": { "$ref": "#/components/responses/RateLimited" },
+          "502": { "$ref": "#/components/responses/UpstreamError" },
+          "504": { "$ref": "#/components/responses/UpstreamError" }
+        }
+      }
+    }
+  },
+  "components": {
+    "responses": {
+      "BadRequest": {
+        "description": "Invalid request",
+        "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } }
+      },
+      "RateLimited": {
+        "description": "Client exceeded the request limit",
+        "headers": {
+          "Retry-After": { "schema": { "type": "integer", "minimum": 1 } }
+        },
+        "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } }
+      },
+      "UpstreamError": {
+        "description": "Hyperliquid is unavailable or timed out",
+        "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } }
+      }
+    },
+    "schemas": {
+      "HealthResponse": {
+        "type": "object",
+        "required": ["status", "service", "version"],
+        "properties": {
+          "status": { "const": "ok" },
+          "service": { "const": "hyperdesk-scout" },
+          "version": { "type": "string" }
+        }
+      },
+      "FundingScanRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "symbols": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 50,
+            "items": { "type": "string", "pattern": "^[A-Za-z0-9:_-]{1,30}$" },
+            "default": ["BTC", "ETH", "SOL"]
+          },
+          "min_funding_apr": { "type": "number", "minimum": 0, "default": 0 },
+          "risk_tolerance": { "type": "string", "enum": ["conservative", "moderate", "aggressive"], "default": "moderate" }
+        }
+      },
+      "FundingScanResponse": {
+        "type": "object",
+        "required": ["request_id", "service", "version", "generated_at", "data_source", "data_status", "market_data", "methodology", "query", "unavailable_symbols", "opportunities", "disclaimer"],
+        "properties": {
+          "request_id": { "type": "string" },
+          "service": { "const": "HyperDesk Scout" },
+          "version": { "type": "string" },
+          "generated_at": { "type": "string", "format": "date-time" },
+          "data_source": { "const": "Hyperliquid mainnet" },
+          "data_status": { "type": "string", "enum": ["fresh", "stale"] },
+          "market_data": { "$ref": "#/components/schemas/MarketDataMetadata" },
+          "methodology": { "type": "object", "additionalProperties": { "type": "string" } },
+          "query": { "type": "object" },
+          "unavailable_symbols": { "type": "array", "items": { "type": "string" } },
+          "opportunities": { "type": "array", "items": { "$ref": "#/components/schemas/Opportunity" } },
+          "disclaimer": { "type": "string" }
+        }
+      },
+      "MarketDataMetadata": {
+        "type": "object",
+        "required": ["fetched_at", "age_ms", "cache_status", "fetch_duration_ms"],
+        "properties": {
+          "fetched_at": { "type": "string", "format": "date-time" },
+          "age_ms": { "type": "integer", "minimum": 0 },
+          "cache_status": { "type": "string", "enum": ["hit", "miss", "stale_fallback"] },
+          "fetch_duration_ms": { "type": "integer", "minimum": 0 }
+        }
+      },
+      "Opportunity": {
+        "type": "object",
+        "required": ["symbol", "maxLeverage", "fundingRate", "fundingAprPercent", "markPrice", "oraclePrice", "basisPercent", "openInterest", "openInterestNotionalUsd", "volume24hUsd", "impactSpreadBps", "liquidityScore", "riskScore", "opportunityScore", "riskFlags"],
+        "properties": {
+          "symbol": { "type": "string" },
+          "maxLeverage": { "type": "number" },
+          "fundingRate": { "type": "number" },
+          "fundingAprPercent": { "type": "number" },
+          "markPrice": { "type": "number" },
+          "oraclePrice": { "type": "number" },
+          "basisPercent": { "type": "number" },
+          "openInterest": { "type": "number" },
+          "openInterestNotionalUsd": { "type": "number" },
+          "volume24hUsd": { "type": "number" },
+          "impactSpreadBps": { "type": ["number", "null"] },
+          "liquidityScore": { "type": "number", "minimum": 0, "maximum": 1 },
+          "riskScore": { "type": "number", "minimum": 0, "maximum": 1 },
+          "opportunityScore": { "type": "number", "minimum": 0, "maximum": 1 },
+          "riskFlags": { "type": "array", "items": { "type": "string" } }
+        }
+      },
+      "ErrorResponse": {
+        "type": "object",
+        "required": ["request_id", "error", "message"],
+        "properties": {
+          "request_id": { "type": "string" },
+          "error": { "type": "string" },
+          "message": { "type": "string" }
+        }
+      }
+    }
+  }
+}

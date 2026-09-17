@@ -1,0 +1,100 @@
+import { randomUUID } from "node:crypto";
+import { UpstreamError } from "./hyperliquid.js";
+import { buildFundingScan, validateScanInput, ValidationError } from "./service.js";
+
+const JSON_HEADERS = {
+  "content-type": "application/json; charset=utf-8",
+  "cache-control": "no-store",
+  "x-content-type-options": "nosniff",
+};
+
+function json(status, body, requestId, headers = {}) {
+  return {
+    status,
+    headers: { ...JSON_HEADERS, "x-request-id": requestId, ...headers },
+    body,
+  };
+}
+
+function parseJsonBody(bodyText) {
+  if (!bodyText) return {};
+  try {
+    return JSON.parse(bodyText);
+  } catch {
+    throw new ValidationError("Request body must contain valid JSON");
+  }
+}
+
+export function createRequestHandler({
+  getMarketData,
+  requestId = randomUUID,
+  now = () => new Date(),
+  logger = console,
+  rateLimiter = null,
+  corsAllowOrigin = process.env.CORS_ALLOW_ORIGIN || "*",
+} = {}) {
+  if (typeof getMarketData !== "function") throw new TypeError("getMarketData is required");
+
+  return async function handleRequest({ method, pathname, headers = {}, bodyText = "", clientIp = "unknown" }) {
+    const id = headers["x-request-id"] || headers["X-Request-Id"] || requestId();
+    const startedAt = Date.now();
+    const corsHeaders = {
+      "access-control-allow-origin": corsAllowOrigin,
+      "access-control-allow-methods": "GET, POST, OPTIONS",
+      "access-control-allow-headers": "Content-Type, X-Request-Id, PAYMENT-SIGNATURE",
+    };
+
+    try {
+      let result;
+      if (method === "OPTIONS") {
+        result = { status: 204, headers: { ...corsHeaders, "x-request-id": id }, body: null };
+      } else if (method === "GET" && pathname === "/health") {
+        result = json(200, { status: "ok", service: "hyperdesk-scout", version: "0.1.0" }, id, corsHeaders);
+      } else if (method === "POST" && pathname === "/api/v1/funding-scan") {
+        const rate = rateLimiter?.consume(clientIp);
+        if (rate && !rate.allowed) {
+          result = json(429, {
+            request_id: id,
+            error: "rate_limited",
+            message: "Too many requests",
+          }, id, {
+            ...corsHeaders,
+            "retry-after": String(Math.max(1, Math.ceil((rate.resetAt - Date.now()) / 1000))),
+            "x-ratelimit-limit": String(rate.limit),
+            "x-ratelimit-remaining": "0",
+          });
+        } else {
+          const input = validateScanInput(parseJsonBody(bodyText));
+          const marketData = await getMarketData();
+          result = json(200, {
+            request_id: id,
+            ...buildFundingScan(marketData.markets, input, {
+              generatedAt: now(),
+              fetchedAt: marketData.fetchedAt,
+              ageMs: marketData.ageMs,
+              cacheStatus: marketData.cacheStatus,
+              fetchDurationMs: marketData.fetchDurationMs,
+            }),
+          }, id, {
+            ...corsHeaders,
+            ...(rate ? {
+              "x-ratelimit-limit": String(rate.limit),
+              "x-ratelimit-remaining": String(rate.remaining),
+            } : {}),
+          });
+        }
+      } else {
+        result = json(404, { request_id: id, error: "not_found", message: "Route not found" }, id, corsHeaders);
+      }
+
+      logger.info?.(JSON.stringify({ requestId: id, method, pathname, status: result.status, latencyMs: Date.now() - startedAt }));
+      return result;
+    } catch (error) {
+      const status = error instanceof ValidationError || error instanceof UpstreamError ? error.status : 500;
+      const code = error instanceof ValidationError ? "invalid_request"
+        : error instanceof UpstreamError ? "upstream_unavailable" : "internal_error";
+      logger.error?.(JSON.stringify({ requestId: id, method, pathname, status, code, latencyMs: Date.now() - startedAt }));
+      return json(status, { request_id: id, error: code, message: error.message }, id, corsHeaders);
+    }
+  };
+}

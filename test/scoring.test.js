@@ -29,11 +29,12 @@ test("validates and normalizes scan input", () => {
     riskTolerance: "moderate",
   });
   assert.throws(() => validateScanInput({ symbols: [] }), ValidationError);
+  assert.throws(() => validateScanInput({ unknown: true }), /Unknown request field/);
 });
 
 test("builds deterministic ranked response", () => {
   const input = validateScanInput({ symbols: ["ETH", "NOPE"], risk_tolerance: "aggressive" });
-  const result = buildFundingScan([market], input, new Date("2026-09-17T00:00:00Z"));
+  const result = buildFundingScan([market], input, { generatedAt: new Date("2026-09-17T00:00:00Z") });
   assert.equal(result.opportunities[0].symbol, "ETH");
   assert.deepEqual(result.unavailable_symbols, ["NOPE"]);
   assert.equal(result.data_status, "fresh");
