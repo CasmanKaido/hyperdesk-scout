@@ -5,7 +5,10 @@
     "version": "0.1.0",
     "description": "Read-only Hyperliquid funding, basis, liquidity, and risk intelligence for OKX AI A2MCP."
   },
-  "servers": [{ "url": "http://localhost:3000", "description": "Local development" }],
+  "servers": [
+    { "url": "https://hyperdesk-scout.onrender.com", "description": "Production" },
+    { "url": "http://localhost:3000", "description": "Local development" }
+  ],
   "paths": {
     "/health": {
       "get": {

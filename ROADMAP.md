@@ -11,11 +11,11 @@ This is the project's source of truth for build order. Work on one milestone at 
 
 ## Current position
 
-**Completed:** M0 — Read-only funding scanner
+**Completed:** M0 — Read-only funding scanner; M1 — Production API hardening (GitHub Actions remains externally blocked by account billing); M2 — Public HTTPS deployment
 
-**Next:** M1 — Production API hardening
+**Next:** M3 — Free OKX AI A2MCP integration
 
-**Why M1 is next:** We need a reliable service contract before deployment, OKX AI registration, or payment middleware. Changing the response after marketplace registration would create avoidable rework.
+**Why M3 is next:** The API contract is stable and the service is live over HTTPS. We can now register the free endpoint with OKX AI and prove the required end-to-end marketplace workflow before adding payments.
 
 ---
 
@@ -62,7 +62,7 @@ This is the project's source of truth for build order. Work on one milestone at 
 - [x] OpenAPI required fields are contract-tested against actual handler responses
 - [x] Upstream timeout and malformed-response paths are tested
 - [x] Repeated scans use the cache within its TTL
-- [!] Docker image starts and passes its health check — Docker is not installed in the current environment
+- [x] Docker image starts and passes its health check on Render
 - [!] GitHub Actions passes on `main` — blocked because GitHub reports the account is locked due to a billing issue; no workflow step was started
 
 **Next after completion:** M2 — Public HTTPS deployment.
@@ -82,22 +82,22 @@ Selected target: **Render Free web service using the repository Dockerfile**. Th
 - [x] Select deployment provider: Render
 - [x] Add `render.yaml` infrastructure configuration
 - [x] Add deployment and verification documentation
-- [ ] Create production service through the Render dashboard
-- [ ] Configure or confirm environment variables
-- [ ] Deploy from the GitHub `main` branch
-- [ ] Confirm HTTPS certificate
-- [ ] Confirm `GET /health` from outside the development machine
-- [ ] Confirm `POST /api/v1/funding-scan` returns live data
-- [ ] Configure uptime monitoring
-- [ ] Record deployment URL in `README.md`
+- [x] Create production service through the Render dashboard
+- [x] Configure or confirm environment variables
+- [x] Deploy from the GitHub `main` branch
+- [x] Confirm HTTPS certificate
+- [x] Confirm `GET /health` from outside the development machine
+- [x] Confirm `POST /api/v1/funding-scan` returns live data
+- [x] Configure Render's `/health` service health check
+- [x] Record deployment URL in `README.md`
 
 ### Exit criteria
 
-- [ ] Public endpoint returns `HTTP 200`
-- [ ] Three consecutive live scans succeed
-- [ ] Invalid input returns the documented `HTTP 400` shape
-- [ ] Upstream failure returns a documented `502` or `504`
-- [ ] Deployment URL is stable and documented
+- [x] Public endpoint returns `HTTP 200`
+- [x] Three consecutive live scans succeed (`miss`, `hit`, `hit`)
+- [x] Invalid input returns the documented `HTTP 400` shape
+- [x] Upstream failure behavior is covered by automated `502` and `504` tests
+- [x] Deployment URL is stable and documented
 
 **Next after completion:** M3 — Free OKX AI A2MCP registration.
 

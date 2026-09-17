@@ -80,6 +80,17 @@ After deployment, update `ROADMAP.md` and `README.md` with:
 - Results of three live scans
 - Link to service logs or a screenshot, if suitable for the submission package
 
+## Verified deployment
+
+- **Service URL:** https://hyperdesk-scout.onrender.com
+- **Verified at:** 2026-09-17 15:21 UTC
+- **Health:** `HTTP 200`
+- **OpenAPI:** `HTTP 200`, OpenAPI `3.1.0`
+- **Live scan:** `HTTP 200`, fresh Hyperliquid mainnet data, BTC/ETH/SOL returned
+- **Validation:** empty symbols returned `HTTP 400`
+- **Cache sequence:** `miss`, `hit`, `hit` across three consecutive successful scans
+- **Container verification:** Render successfully built the Dockerfile and passed `/health`
+
 ## Rollback
 
 Render deploys from `main`. If a deployment is unhealthy, use Render's rollback function or revert the faulty Git commit and push the revert. Never rewrite shared `main` history.

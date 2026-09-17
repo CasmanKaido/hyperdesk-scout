@@ -2,6 +2,10 @@
 
 HyperDesk Scout is a read-only Hyperliquid funding intelligence API designed to be published as an OKX AI A2MCP service. It returns deterministic, machine-readable funding, basis, liquidity, and risk metrics.
 
+- **Live API:** https://hyperdesk-scout.onrender.com
+- **Health:** https://hyperdesk-scout.onrender.com/health
+- **OpenAPI:** https://hyperdesk-scout.onrender.com/openapi.json
+
 ## Why this shape
 
 The OKX A2MCP guide defines a service as an HTTPS API that takes parameters and returns a clear result. A free endpoint returns HTTP 200 directly; x402 can be added with the OKX Payment SDK after the service is deployed and validated.
@@ -63,7 +67,7 @@ Copy `.env.example` values into your deployment environment. Do not commit a rea
 
 The initial deployment target is Render's **Free web-service plan**. The repository includes `render.yaml` with `plan: free` and a detailed authorization and verification checklist in [`DEPLOYMENT.md`](DEPLOYMENT.md).
 
-Confirm the Render dashboard displays **Free / $0** before creating the service. Free instances sleep after 15 minutes idle and can take about one minute to wake, so warm `/health` before a demo. The public service URL will be added here after deployment.
+The service is deployed at https://hyperdesk-scout.onrender.com. Free instances sleep after 15 minutes idle and can take about one minute to wake, so warm `/health` before a demo.
 
 ## Container
 
