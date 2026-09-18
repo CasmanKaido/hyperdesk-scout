@@ -95,6 +95,8 @@ test("uses Gemini and appends deterministic planner metadata", async () => {
   assert.match(requestBody.input, /JSON only/);
   assert.match(requestBody.input, /BTC, ETH, SOL/);
   assert.match(requestBody.input, /Do not calculate or invent market data/);
+  assert.match(requestBody.input, /Do not propose pair trades/);
+  assert.match(requestBody.input, /Never present unknown market or operational conditions as assumptions/);
 
   assert.equal(result.provider, "gemini");
   assert.equal(result.model, "gemini-3.8-flash");
