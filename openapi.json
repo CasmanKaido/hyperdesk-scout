@@ -12,12 +12,12 @@
   "paths": {
     "/": {
       "get": {
-        "operationId": "getServiceIndex",
-        "summary": "Describe LiquidFlux and its public endpoints",
+        "operationId": "getDashboard",
+        "summary": "Open the LiquidFlux analysis workspace",
         "responses": {
           "200": {
-            "description": "Service index",
-            "content": { "application/json": { "schema": { "type": "object" } } }
+            "description": "Responsive LiquidFlux dashboard",
+            "content": { "text/html": { "schema": { "type": "string" } } }
           }
         }
       }

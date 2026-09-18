@@ -3,6 +3,7 @@ import { createRequestHandler } from "./handler.js";
 import { createMarketDataProvider } from "./market-data.js";
 import { createRateLimiter } from "./rate-limit.js";
 import { loadOpenApiSpec } from "./openapi.js";
+import { getStaticAsset, loadStaticAssets } from "./static.js";
 
 const PORT = Number(process.env.PORT || 3000);
 const MAX_BODY_BYTES = 32 * 1024;
@@ -25,14 +26,23 @@ export function createApp({
   rateLimiter = createRateLimiter(),
   logger = console,
   openApiSpec = loadOpenApiSpec(),
+  staticAssets = loadStaticAssets(),
 } = {}) {
   const handleRequest = createRequestHandler({ getMarketData, rateLimiter, logger, openApiSpec });
 
   return createServer(async (request, response) => {
     try {
+      const pathname = new URL(request.url, "http://localhost").pathname;
+      const staticAsset = getStaticAsset(staticAssets, request.method, pathname);
+      if (staticAsset) {
+        response.writeHead(200, staticAsset.headers);
+        response.end(request.method === "HEAD" ? undefined : staticAsset.body);
+        return;
+      }
+
       const result = await handleRequest({
         method: request.method,
-        pathname: new URL(request.url, "http://localhost").pathname,
+        pathname,
         headers: request.headers,
         bodyText: await readBody(request),
         clientIp: request.socket.remoteAddress || "unknown",

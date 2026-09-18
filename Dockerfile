@@ -5,6 +5,8 @@ WORKDIR /app
 
 COPY package.json ./
 COPY openapi.json ./
+COPY public ./public
+COPY assets ./assets
 COPY src ./src
 
 USER node

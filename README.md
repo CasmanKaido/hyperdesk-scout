@@ -2,7 +2,7 @@
 
 LiquidFlux is a read-only Hyperliquid specialist-orchestration service for OKX.AI. Its deployed Funding Specialist returns deterministic funding, basis, liquidity, and risk evidence, while its orchestration API coordinates Funding, Liquidity, and Risk specialists into a traceable market-neutral workflow.
 
-- **Service index:** https://hyperdesk-scout.onrender.com
+- **Live dashboard:** https://hyperdesk-scout.onrender.com
 - **Live API origin:** https://hyperdesk-scout.onrender.com
 - **Health:** https://hyperdesk-scout.onrender.com/health
 - **OpenAPI:** https://hyperdesk-scout.onrender.com/openapi.json
@@ -13,7 +13,22 @@ LiquidFlux is a read-only Hyperliquid specialist-orchestration service for OKX.A
 
 Existing marketplace products already expose individual Hyperliquid analytics, risk, and execution capabilities. LiquidFlux is therefore evolving from a standalone scanner into the orchestration layer that selects specialist stages, combines their evidence, reports conflicts, and stops at an explicit execution-approval boundary.
 
-The deployed funding scanner remains useful as the first A2MCP specialist and is registered under the LiquidFlux ASP identity. A live buyer-side invocation through OKX.AI returned fresh Hyperliquid mainnet evidence synchronously with no manual setup. See [`STRATEGY.md`](STRATEGY.md) for the validated positioning, narrow router MVP, safety boundary, and external-agent integration plan, and [`OKX_AI.md`](OKX_AI.md) for marketplace evidence.
+The deployed funding scanner remains useful as the first A2MCP specialist and is registered under the LiquidFlux ASP identity. A live buyer-side invocation through OKX.AI returned fresh Hyperliquid mainnet evidence synchronously with no manual setup. The root URL now serves the actual analyst workspace: users set constraints, run the deployed orchestration workflow, and inspect the resulting evidence and rejection reasons. See [`STRATEGY.md`](STRATEGY.md) for the validated positioning, narrow router MVP, safety boundary, and external-agent integration plan, and [`OKX_AI.md`](OKX_AI.md) for marketplace evidence.
+
+![LiquidFlux analysis workspace](assets/screenshots/dashboard-result.png)
+
+## Dashboard
+
+The dependency-free dashboard is served by the existing Node service and calls `POST /api/v1/orchestrate` directly. It includes:
+
+- Constraint controls for markets, risk tolerance, leverage, notional, and minimum funding APR
+- Stage-aware loading, actionable errors, first-run guidance, and no-op outcomes
+- Candidate and rejection reasoning before raw specialist evidence
+- Expandable Funding, Liquidity, and Risk outputs with the complete structured response
+- Visible provenance, freshness, workflow trace, and execution-approval boundary
+- Responsive desktop and mobile layouts, keyboard focus, and reduced-motion support
+
+No wallet connection or trade execution is included.
 
 ## Run
 
@@ -117,7 +132,7 @@ npm run check
 
 The ordered build plan, acceptance criteria, prerequisites, and current next task are maintained in [`ROADMAP.md`](ROADMAP.md).
 
-Current milestone: **M3 — Hyperliquid orchestration MVP and free OKX.AI integration**. The first router workflow is deployed, the ASP listing is approved, and the Funding Specialist has completed an end-to-end invocation through OKX.AI. The next product milestone is one real external specialist integration.
+Current work spans **M3 — OKX.AI integration** and **M6 — Demo interface**. The first router workflow is deployed, the ASP listing is approved, the Funding Specialist completed an end-to-end invocation through OKX.AI, and a production-ready analyst dashboard now exercises the live workflow. A paid external specialist remains intentionally deferred until a relevant provider works through the official OKX.AI invocation path.
 
 ## Sources
 

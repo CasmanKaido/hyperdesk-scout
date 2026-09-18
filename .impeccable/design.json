@@ -1,0 +1,126 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-09-18T15:30:00Z",
+  "title": "Design System: LiquidFlux",
+  "extensions": {
+    "colorMeta": {
+      "workspace": {
+        "role": "neutral",
+        "displayName": "Workspace",
+        "canonical": "oklch(1 0 0)",
+        "tonalRamp": ["oklch(0.15 0 0)", "oklch(0.26 0 0)", "oklch(0.38 0 0)", "oklch(0.5 0 0)", "oklch(0.64 0 0)", "oklch(0.76 0 0)", "oklch(0.88 0 0)", "oklch(1 0 0)"]
+      },
+      "deep-ink": {
+        "role": "neutral",
+        "displayName": "Deep Ink",
+        "canonical": "oklch(0.19 0.025 145)",
+        "tonalRamp": ["oklch(0.15 0.018 145)", "oklch(0.25 0.024 145)", "oklch(0.37 0.024 145)", "oklch(0.49 0.021 145)", "oklch(0.62 0.018 145)", "oklch(0.74 0.014 145)", "oklch(0.86 0.009 145)", "oklch(0.95 0.004 145)"]
+      },
+      "research-green": {
+        "role": "primary",
+        "displayName": "Research Green",
+        "canonical": "oklch(0.52 0.145 145)",
+        "tonalRamp": ["oklch(0.15 0.045 145)", "oklch(0.27 0.09 145)", "oklch(0.39 0.125 145)", "oklch(0.52 0.145 145)", "oklch(0.64 0.13 145)", "oklch(0.76 0.1 145)", "oklch(0.86 0.065 145)", "oklch(0.95 0.025 145)"]
+      },
+      "review-amber": {
+        "role": "secondary",
+        "displayName": "Review Amber",
+        "canonical": "oklch(0.58 0.14 75)",
+        "tonalRamp": ["oklch(0.15 0.045 75)", "oklch(0.28 0.085 75)", "oklch(0.41 0.12 75)", "oklch(0.58 0.14 75)", "oklch(0.68 0.12 75)", "oklch(0.78 0.09 75)", "oklch(0.88 0.055 75)", "oklch(0.95 0.025 75)"]
+      },
+      "rejection-red": {
+        "role": "tertiary",
+        "displayName": "Rejection Red",
+        "canonical": "oklch(0.5 0.17 28)",
+        "tonalRamp": ["oklch(0.15 0.05 28)", "oklch(0.27 0.1 28)", "oklch(0.39 0.145 28)", "oklch(0.5 0.17 28)", "oklch(0.63 0.145 28)", "oklch(0.75 0.105 28)", "oklch(0.86 0.06 28)", "oklch(0.95 0.025 28)"]
+      }
+    },
+    "typographyMeta": {
+      "display": { "displayName": "Display", "purpose": "Page objective and strongest synthesis outcome." },
+      "headline": { "displayName": "Headline", "purpose": "Primary workspace regions." },
+      "title": { "displayName": "Title", "purpose": "Result sections and specialist stages." },
+      "body": { "displayName": "Body", "purpose": "Analysis explanation and risk reasoning." },
+      "label": { "displayName": "Label", "purpose": "Controls and compact state labels." },
+      "data": { "displayName": "Data", "purpose": "Market values, timestamps, and machine evidence." }
+    },
+    "shadows": [],
+    "motion": [
+      { "name": "feedback", "value": "150ms cubic-bezier(0.22, 1, 0.36, 1)", "purpose": "Button, field, and chip state feedback." },
+      { "name": "state-change", "value": "220ms cubic-bezier(0.22, 1, 0.36, 1)", "purpose": "Disclosure and result-state transitions." }
+    ],
+    "breakpoints": [
+      { "name": "workflow-row", "value": "608px" },
+      { "name": "desktop-workspace", "value": "1024px" }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Analysis Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Runs the real orchestration workflow and exposes loading state.",
+      "html": "<button class=\"ds-btn-primary\">Run analysis <span aria-hidden=\"true\">→</span></button>",
+      "css": ".ds-btn-primary { min-height: 52px; padding: 12px 16px; background: var(--color-primary, oklch(0.52 0.145 145)); color: var(--color-bg, oklch(1 0 0)); border: 0; border-radius: 6px; font: 700 14px/1.4 Avenir Next, Segoe UI, sans-serif; transition: background 150ms cubic-bezier(0.22, 1, 0.36, 1), transform 100ms cubic-bezier(0.22, 1, 0.36, 1); } .ds-btn-primary:hover { background: var(--color-primary-dark, oklch(0.42 0.13 145)); } .ds-btn-primary:focus-visible { outline: 3px solid var(--color-primary, oklch(0.52 0.145 145)); outline-offset: 3px; } .ds-btn-primary:active { transform: translateY(1px); }"
+    },
+    {
+      "name": "Analysis Input",
+      "kind": "input",
+      "refersTo": "input-default",
+      "description": "Visible-label field for markets and numeric constraints.",
+      "html": "<label class=\"ds-field\">Markets<input value=\"BTC, ETH, SOL\"></label>",
+      "css": ".ds-field { display: grid; gap: 8px; color: oklch(0.19 0.025 145); font: 700 14px/1.4 Avenir Next, Segoe UI, sans-serif; } .ds-field input { min-height: 48px; padding: 12px; background: oklch(1 0 0); color: oklch(0.19 0.025 145); border: 1px solid oklch(0.74 0.025 145); border-radius: 6px; font: 400 16px/1.5 Avenir Next, Segoe UI, sans-serif; } .ds-field input:hover { border-color: oklch(0.49 0.018 145); } .ds-field input:focus-visible { outline: 3px solid oklch(0.52 0.145 145); outline-offset: 3px; }"
+    },
+    {
+      "name": "Policy Pass Chip",
+      "kind": "chip",
+      "refersTo": "chip-review",
+      "description": "Text-first semantic status for candidates that pass active policy.",
+      "html": "<span class=\"ds-chip-pass\">Policy pass</span>",
+      "css": ".ds-chip-pass { display: inline-flex; align-items: center; min-height: 28px; padding: 4px 10px; background: oklch(0.94 0.045 145); color: oklch(0.42 0.13 145); border-radius: 999px; font: 700 12px/1.2 Avenir Next, Segoe UI, sans-serif; }"
+    },
+    {
+      "name": "Candidate Evidence Row",
+      "kind": "custom",
+      "description": "Flat comparison row for one market and its decision metrics.",
+      "html": "<article class=\"ds-candidate\"><div><strong>BTC</strong><span>Policy pass</span></div><dl><div><dt>Funding APR</dt><dd>10.95%</dd></div><div><dt>Risk score</dt><dd>0 / 100</dd></div></dl></article>",
+      "css": ".ds-candidate { padding: 16px 0; border-bottom: 1px solid oklch(0.88 0.012 145); color: oklch(0.19 0.025 145); font: 400 16px/1.5 Avenir Next, Segoe UI, sans-serif; } .ds-candidate > div { display: flex; justify-content: space-between; gap: 12px; } .ds-candidate dl { display: flex; gap: 24px; margin: 16px 0 0; } .ds-candidate dt { color: oklch(0.49 0.018 145); font-size: 12px; } .ds-candidate dd { margin: 4px 0 0; font: 700 14px/1.5 SFMono-Regular, Consolas, monospace; }"
+    },
+    {
+      "name": "Specialist Disclosure",
+      "kind": "custom",
+      "description": "Expandable specialist evidence with native keyboard behavior.",
+      "html": "<details class=\"ds-specialist\"><summary>Funding Specialist <small>3 markets checked</small></summary><p>Structured evidence appears here.</p></details>",
+      "css": ".ds-specialist { background: oklch(0.975 0.006 145); color: oklch(0.19 0.025 145); border-radius: 10px; font: 400 16px/1.5 Avenir Next, Segoe UI, sans-serif; } .ds-specialist summary { min-height: 56px; padding: 12px 16px; cursor: pointer; font-weight: 700; } .ds-specialist summary:hover { background: oklch(0.945 0.012 145); border-radius: 10px; } .ds-specialist summary:focus-visible { outline: 3px solid oklch(0.52 0.145 145); outline-offset: 3px; } .ds-specialist small { display: block; color: oklch(0.49 0.018 145); font-size: 14px; font-weight: 400; } .ds-specialist p { padding: 0 16px 16px; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Evidence Desk",
+    "overview": "LiquidFlux is a composed analyst's workspace in clear daylight. Evidence is easy to compare, workflow stages remain visible, and every decision can be traced to current market data. Confidence comes from hierarchy, provenance, and restraint rather than decorative spectacle.",
+    "keyCharacteristics": [
+      "Evidence-led rather than signal-led",
+      "Restrained semantic color on a true white workspace",
+      "Visible specialist stages and provenance",
+      "Fixed product typography with selective monospaced data",
+      "Flat analytical surfaces with state-driven motion",
+      "Responsive structure without hiding core evidence"
+    ],
+    "rules": [
+      { "name": "The Ten Percent Rule", "body": "Research Green is rare enough to retain meaning. It never floods the dashboard or becomes decorative glow.", "section": "colors" },
+      { "name": "The Semantic Color Rule", "body": "Green, amber, and red always pair with explicit text and shape. Color never carries state alone.", "section": "colors" },
+      { "name": "The Numbers Earn Mono Rule", "body": "Monospaced type is reserved for values that benefit from alignment and auditability. It is never a blanket crypto aesthetic.", "section": "typography" },
+      { "name": "The Flat Evidence Rule", "body": "Analytical surfaces remain on one plane. Candidates are divided comparison rows, not an identical grid of floating cards.", "section": "elevation" }
+    ],
+    "dos": [
+      "Do make the objective, constraints, and current workflow state understandable within two seconds.",
+      "Do expose provenance, freshness, conflicts, rejection reasons, and the approval boundary beside the decision they qualify.",
+      "Do use sentence-case labels and tabular numerals for comparable evidence.",
+      "Do preserve 44px touch targets, visible focus, reduced motion, and local table scrolling."
+    ],
+    "donts": [
+      "Don't imitate a Binance Futures trading screen with flashing prices, red/green overload, urgency, or gambling cues.",
+      "Don't use generic AI-dashboard styling such as decorative glow, excessive gradients, glass cards, or unexplained AI recommendations.",
+      "Don't build a lifeless enterprise admin panel with dense navigation, undifferentiated gray tables, and weak visual hierarchy.",
+      "Don't use colored side stripes, gradient text, decorative grid backgrounds, nested cards, or identical card grids."
+    ]
+  }
+}

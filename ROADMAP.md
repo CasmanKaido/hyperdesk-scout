@@ -13,9 +13,9 @@ This is the project's source of truth for build order. Work on one milestone at 
 
 **Completed:** M0 — Read-only funding scanner; M1 — Production API hardening (GitHub Actions remains externally blocked by account billing); M2 — Public HTTPS deployment
 
-**In progress:** M3 — Hyperliquid orchestration MVP and free OKX.AI integration
+**In progress:** M3 — Hyperliquid orchestration MVP and free OKX.AI integration; M6 — Demo interface
 
-**Next:** Add one real, non-duplicative external OKX.AI specialist and capture reproducible marketplace evidence. The first-party Funding → Liquidity → Risk workflow is deployed, and the free Funding Specialist has been invoked successfully through OKX.AI.
+**Next:** Deploy and verify the new analyst dashboard, then capture reproducible visual evidence. A paid external specialist is deferred until a relevant provider succeeds through the official OKX.AI invocation path; LiquidFlux will not force an unsafe or incompatible integration merely to claim multi-agent orchestration.
 
 ---
 
@@ -137,7 +137,7 @@ Selected target: **Render Free web service using the repository Dockerfile**. Th
 - [x] Confirm default parameters arrive correctly
 - [x] Confirm structured results are returned without manual setup
 - [ ] Save service/listing URL
-- [ ] Add one real, non-duplicative external OKX.AI specialist integration
+- [!] Add one real, non-duplicative external OKX.AI specialist integration — deferred after live searches found no suitable current Hyperliquid service and the strongest free candidate failed the official A2MCP transport check
 - [ ] Capture screenshots or a short recording as evidence
 
 ### Exit criteria
@@ -222,14 +222,14 @@ Selected target: **Render Free web service using the repository Dockerfile**. Th
 
 **Goal:** Make the service understandable in a 2–4 minute judging demo.
 
-- [ ] Create a focused web interface or polished CLI
-- [ ] Show live opportunities and risk flags
+- [x] Create a focused web interface or polished CLI
+- [x] Show live opportunities and risk flags
 - [ ] Show the OKX AI invocation
 - [ ] Show the unpaid and paid request flow
 - [ ] Add an optional natural-language explanation generated from structured results
-- [ ] Keep all numerical controls deterministic
-- [ ] Add loading, empty, stale-data, and failure states
-- [ ] Add a visible informational-use disclaimer
+- [x] Keep all numerical controls deterministic
+- [x] Add loading, empty, stale-data, and failure states
+- [x] Add a visible informational-use disclaimer
 
 **Exit criteria:** A new user can complete the main workflow without developer assistance.
 

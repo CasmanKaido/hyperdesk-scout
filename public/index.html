@@ -1,0 +1,185 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="description" content="LiquidFlux coordinates Hyperliquid funding, liquidity, and risk evidence into transparent, approval-gated workflows.">
+  <meta name="theme-color" content="#ffffff">
+  <title>LiquidFlux — Hyperliquid evidence workspace</title>
+  <link rel="icon" href="/assets/liquidflux-avatar.png" type="image/png">
+  <link rel="stylesheet" href="/styles.css">
+  <script src="/app.js" type="module"></script>
+</head>
+<body>
+  <a class="skip-link" href="#main-content">Skip to analysis workspace</a>
+
+  <header class="app-header">
+    <a class="brand" href="/" aria-label="LiquidFlux home">
+      <img src="/assets/liquidflux-avatar.png" width="40" height="40" alt="">
+      <span>
+        <strong>LiquidFlux</strong>
+        <small>Hyperliquid evidence workspace</small>
+      </span>
+    </a>
+
+    <div class="header-status" aria-label="Service status">
+      <span class="status-dot" aria-hidden="true"></span>
+      <span id="service-status">Checking service</span>
+    </div>
+
+    <nav class="header-links" aria-label="Resources">
+      <a href="/openapi.json">OpenAPI</a>
+      <a href="https://github.com/CasmanKaido/hyperdesk-scout" rel="noreferrer">GitHub</a>
+    </nav>
+  </header>
+
+  <main id="main-content">
+    <section class="workspace-heading" aria-labelledby="page-title">
+      <div>
+        <p class="context-line">Market-neutral income · Hyperliquid mainnet</p>
+        <h1 id="page-title">Assess the edge, not the headline.</h1>
+        <p class="workspace-summary">Set your limits. LiquidFlux coordinates funding, liquidity, and risk specialists, then shows the evidence behind every review candidate and rejection.</p>
+      </div>
+      <div class="safety-statement">
+        <span class="safety-mark" aria-hidden="true">✓</span>
+        <span><strong>Analysis only</strong>No trade execution or wallet connection</span>
+      </div>
+    </section>
+
+    <div class="workspace-shell">
+      <aside class="control-panel" aria-labelledby="constraints-title">
+        <div class="panel-heading">
+          <div>
+            <p class="step-label">Analysis setup</p>
+            <h2 id="constraints-title">Define constraints</h2>
+          </div>
+          <span class="objective-chip">Market neutral</span>
+        </div>
+
+        <form id="analysis-form" novalidate>
+          <div class="field-group">
+            <label for="symbols">Markets</label>
+            <p class="field-help" id="symbols-help">Enter 1–20 Hyperliquid symbols, separated by commas.</p>
+            <input id="symbols" name="symbols" type="text" value="BTC, ETH, SOL" autocomplete="off" aria-describedby="symbols-help symbols-error">
+            <p class="field-error" id="symbols-error" aria-live="polite"></p>
+          </div>
+
+          <fieldset class="field-group">
+            <legend>Risk tolerance</legend>
+            <div class="segmented-control">
+              <label><input type="radio" name="risk_tolerance" value="conservative"><span>Conservative</span></label>
+              <label><input type="radio" name="risk_tolerance" value="moderate" checked><span>Moderate</span></label>
+              <label><input type="radio" name="risk_tolerance" value="aggressive"><span>Aggressive</span></label>
+            </div>
+          </fieldset>
+
+          <div class="paired-fields">
+            <div class="field-group">
+              <label for="max-leverage">Maximum leverage</label>
+              <div class="input-suffix">
+                <input id="max-leverage" name="max_leverage" type="number" value="2" min="1" max="10" step="0.5" inputmode="decimal">
+                <span aria-hidden="true">×</span>
+              </div>
+            </div>
+            <div class="field-group">
+              <label for="min-funding">Minimum funding APR</label>
+              <div class="input-suffix">
+                <input id="min-funding" name="min_funding_apr" type="number" value="5" min="0" max="10000" step="0.1" inputmode="decimal">
+                <span aria-hidden="true">%</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="field-group">
+            <label for="max-notional">Maximum notional</label>
+            <p class="field-help" id="notional-help">Used to test liquidity and market-impact constraints.</p>
+            <div class="input-prefix">
+              <span aria-hidden="true">$</span>
+              <input id="max-notional" name="max_notional_usd" type="number" value="1000" min="1" max="1000000" step="1" inputmode="decimal" aria-describedby="notional-help">
+            </div>
+          </div>
+
+          <p class="form-error" id="form-error" role="alert"></p>
+
+          <button class="primary-action" id="run-analysis" type="submit">
+            <span class="button-label">Run analysis</span>
+            <svg aria-hidden="true" viewBox="0 0 20 20" width="20" height="20"><path d="M4 10h11m-4-4 4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
+
+          <p class="form-note">Funding is annualized from the current hourly rate. It is evidence, not forecast yield.</p>
+        </form>
+      </aside>
+
+      <section class="analysis-panel" aria-labelledby="analysis-title">
+        <div class="analysis-toolbar">
+          <div>
+            <p class="step-label">Specialist workflow</p>
+            <h2 id="analysis-title">Decision evidence</h2>
+          </div>
+          <span class="approval-chip">Approval required before execution</span>
+        </div>
+
+        <div id="analysis-status" class="sr-only" aria-live="polite"></div>
+
+        <section id="empty-state" class="empty-state">
+          <div class="workflow-preview" aria-label="LiquidFlux workflow">
+            <div class="preview-stage">
+              <span class="stage-index">1</span>
+              <span><strong>Funding + Liquidity</strong><small>Run in parallel</small></span>
+            </div>
+            <span class="flow-arrow" aria-hidden="true">→</span>
+            <div class="preview-stage">
+              <span class="stage-index">2</span>
+              <span><strong>Risk policy</strong><small>Tests constraints</small></span>
+            </div>
+            <span class="flow-arrow" aria-hidden="true">→</span>
+            <div class="preview-stage">
+              <span class="stage-index">3</span>
+              <span><strong>Synthesis</strong><small>Explains the decision</small></span>
+            </div>
+          </div>
+          <div class="empty-copy">
+            <h3>Start with the evidence.</h3>
+            <p>Run the default BTC, ETH, and SOL analysis or adjust the constraints first. Results will show what passed, what failed, and why.</p>
+          </div>
+          <dl class="boundary-list">
+            <div><dt>Data source</dt><dd>Hyperliquid mainnet</dd></div>
+            <div><dt>Specialists</dt><dd>Funding, liquidity, risk</dd></div>
+            <div><dt>Execution</dt><dd>Never included</dd></div>
+          </dl>
+        </section>
+
+        <section id="loading-state" class="loading-state" hidden aria-label="Analysis in progress">
+          <div class="loading-heading">
+            <span class="loading-orbit" aria-hidden="true"></span>
+            <div><h3>Coordinating specialists</h3><p>Fetching current Hyperliquid evidence and applying your constraints.</p></div>
+          </div>
+          <ol class="loading-stages">
+            <li><span></span><div><strong>Funding and liquidity</strong><small>Reading the same market snapshot in parallel</small></div></li>
+            <li><span></span><div><strong>Risk policy</strong><small>Waiting for stage-one evidence</small></div></li>
+            <li><span></span><div><strong>Deterministic synthesis</strong><small>Waiting for risk decisions</small></div></li>
+          </ol>
+          <div class="skeleton-block" aria-hidden="true"><i></i><i></i><i></i></div>
+        </section>
+
+        <section id="error-state" class="error-state" hidden role="alert">
+          <span class="error-mark" aria-hidden="true">!</span>
+          <div><h3>Analysis could not complete</h3><p id="error-message">We could not reach the analysis service.</p><button id="retry-analysis" class="text-action" type="button">Try the analysis again</button></div>
+        </section>
+
+        <section id="result-state" hidden>
+          <div id="result-summary"></div>
+          <div id="candidate-results"></div>
+          <div id="workflow-results"></div>
+          <div id="evidence-results"></div>
+        </section>
+      </section>
+    </div>
+  </main>
+
+  <footer class="app-footer">
+    <p>LiquidFlux provides informational market analysis. Funding can reverse, basis can move, and returns are not guaranteed.</p>
+    <span>API version 0.2.1</span>
+  </footer>
+</body>
+</html>
