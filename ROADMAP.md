@@ -15,7 +15,7 @@ This is the project's source of truth for build order. Work on one milestone at 
 
 **In progress:** M3 — Hyperliquid orchestration MVP and free OKX.AI integration; M6 — Demo interface
 
-**Next:** Configure one server-side AI provider key on Render and capture reproducible demo evidence for both AI planning and the verified OKX.AI orchestrator invocation. A paid external specialist is deferred until a relevant provider succeeds through the official OKX.AI invocation path; LiquidFlux will not force an unsafe or incompatible integration merely to claim multi-agent orchestration.
+**Next:** Capture reproducible demo evidence for the production AI planner and verified OKX.AI orchestrator invocation, then diagnose why Gemini currently hands off to the working Groq fallback. A paid external specialist is deferred until a relevant provider succeeds through the official OKX.AI invocation path; LiquidFlux will not force an unsafe or incompatible integration merely to claim multi-agent orchestration.
 
 ---
 
@@ -230,6 +230,7 @@ Selected target: **Render Free web service using the repository Dockerfile**. Th
 - [ ] Show the OKX AI invocation
 - [ ] Show the unpaid and paid request flow
 - [x] Add provider-neutral natural-language objective planning with Gemini primary and Groq fallback
+- [x] Configure production provider keys and verify a successful Groq fallback plan
 - [x] Validate AI-generated constraints before displaying or using them
 - [x] Preserve explicit human approval and manual fallback when AI is unavailable
 - [ ] Add an optional natural-language explanation generated from structured results

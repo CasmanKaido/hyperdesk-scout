@@ -103,7 +103,10 @@ After deployment, update `ROADMAP.md` and `README.md` with:
 - **Cache sequence:** `miss`, `hit`, `hit` across three consecutive successful scans
 - **Container verification:** Render successfully built the Dockerfile and passed `/health`
 - **Orchestrator version:** `0.2.0`, verified 2026-09-17 17:19 UTC
-- **AI planner version:** `0.3.0`; production provider verification pending a server-side Render key
+- **AI planner version:** `0.3.0`
+- **AI planner verification:** `HTTP 200` on 2026-09-18 through the configured Groq fallback (`openai/gpt-oss-20b`)
+- **AI safety boundary:** validated constraints, `approval_required: true`, `execution_included: false`, and no market-data fetch during planning
+- **Gemini status:** the primary attempt currently falls back to Groq; inspect Render's safe `ai_provider_failed` log reason to distinguish key access, quota, or provider HTTP rejection
 - **Orchestration endpoint:** `POST /api/v1/orchestrate` returned `HTTP 200`
 - **Workflow trace:** Funding and Liquidity completed in stage 1; Risk completed in stage 2; deterministic synthesis completed in stage 3
 - **Safety boundary:** `execution_included: false` and `approval_required: true`

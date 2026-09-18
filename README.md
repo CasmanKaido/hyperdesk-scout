@@ -6,7 +6,7 @@ LiquidFlux is an AI-assisted, read-only Hyperliquid specialist-orchestration ser
 - **Live API origin:** https://hyperdesk-scout.onrender.com
 - **Health:** https://hyperdesk-scout.onrender.com/health
 - **OpenAPI:** https://hyperdesk-scout.onrender.com/openapi.json
-- **AI planner:** `POST https://hyperdesk-scout.onrender.com/api/v1/plan`
+- **AI planner:** `POST https://hyperdesk-scout.onrender.com/api/v1/plan` — production-verified with Groq fallback
 - **Orchestrator:** `POST https://hyperdesk-scout.onrender.com/api/v1/orchestrate`
 - **OKX.AI ASP:** LiquidFlux, Agent ID `13784` — Funding Specialist and Market-Neutral Orchestrator published as free A2MCP services
 
