@@ -1,4 +1,4 @@
-# HyperDesk Scout Execution Roadmap
+# LiquidFlux Execution Roadmap
 
 This is the project's source of truth for build order. Work on one milestone at a time. A milestone is complete only when every exit criterion is satisfied.
 
@@ -13,9 +13,9 @@ This is the project's source of truth for build order. Work on one milestone at 
 
 **Completed:** M0 — Read-only funding scanner; M1 — Production API hardening (GitHub Actions remains externally blocked by account billing); M2 — Public HTTPS deployment
 
-**Next:** M3 — Hyperliquid orchestration MVP and free OKX.AI integration
+**In progress:** M3 — Hyperliquid orchestration MVP and free OKX.AI integration
 
-**Why M3 is next:** The deployed scanner is a useful specialist but not a sufficiently differentiated product. We will reuse it inside a transparent Funding → Liquidity → Risk workflow, then register the existing funding capability and the new orchestration flow through OKX.AI.
+**Next:** Add one real, non-duplicative external OKX.AI specialist and capture reproducible marketplace evidence. The first-party Funding → Liquidity → Risk workflow is deployed, and the free Funding Specialist has been invoked successfully through OKX.AI.
 
 ---
 
@@ -105,7 +105,7 @@ Selected target: **Render Free web service using the repository Dockerfile**. Th
 
 ## M3 — Hyperliquid orchestration MVP and free OKX.AI integration
 
-**Goal:** Differentiate HyperDesk as a transparent coordinator of specialist Hyperliquid capabilities, then prove that OKX.AI can call it end to end.
+**Goal:** Differentiate LiquidFlux as a transparent coordinator of specialist Hyperliquid capabilities, then prove that OKX.AI can call it end to end.
 
 ### Router build
 
@@ -133,9 +133,9 @@ Selected target: **Render Free web service using the repository Dockerfile**. Th
 - [x] Receive marketplace approval — active and eligible for task recommendations
 - [x] Register LiquidFlux Tester User Agent ID `13785`
 - [x] Discover the Funding Specialist through a live OKX.AI marketplace search
-- [ ] Invoke HyperDesk from OKX.AI
-- [ ] Confirm parameters arrive correctly
-- [ ] Confirm structured results are returned without manual setup
+- [x] Invoke LiquidFlux from OKX.AI
+- [x] Confirm default parameters arrive correctly
+- [x] Confirm structured results are returned without manual setup
 - [ ] Save service/listing URL
 - [ ] Add one real, non-duplicative external OKX.AI specialist integration
 - [ ] Capture screenshots or a short recording as evidence
@@ -144,8 +144,8 @@ Selected target: **Render Free web service using the repository Dockerfile**. Th
 
 - [x] One live orchestration request produces a traceable Funding → Liquidity → Risk workflow
 - [x] Automated orchestration tests reject an unsafe candidate with deterministic evidence
-- [ ] A real OKX.AI request reaches the public endpoint
-- [ ] The result is delivered in the same interaction
+- [x] A real OKX.AI request reaches the public endpoint
+- [x] The result is delivered in the same interaction
 - [ ] The OKX.AI listing or integration URL is public and documented
 - [ ] The workflow can be repeated from a clean session
 

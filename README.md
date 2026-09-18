@@ -1,6 +1,6 @@
-# HyperDesk Scout
+# LiquidFlux
 
-HyperDesk is a read-only Hyperliquid specialist-orchestration service for OKX.AI. Its first deployed specialist, HyperDesk Scout, returns deterministic funding, basis, liquidity, and risk evidence; the next API coordinates Funding, Liquidity, and Risk specialists into a traceable market-neutral workflow.
+LiquidFlux is a read-only Hyperliquid specialist-orchestration service for OKX.AI. Its deployed Funding Specialist returns deterministic funding, basis, liquidity, and risk evidence, while its orchestration API coordinates Funding, Liquidity, and Risk specialists into a traceable market-neutral workflow.
 
 - **Service index:** https://hyperdesk-scout.onrender.com
 - **Live API origin:** https://hyperdesk-scout.onrender.com
@@ -11,9 +11,9 @@ HyperDesk is a read-only Hyperliquid specialist-orchestration service for OKX.AI
 
 ## Product direction
 
-Existing marketplace products already expose individual Hyperliquid analytics, risk, and execution capabilities. HyperDesk is therefore evolving from a standalone scanner into the orchestration layer that selects specialist stages, combines their evidence, reports conflicts, and stops at an explicit execution-approval boundary.
+Existing marketplace products already expose individual Hyperliquid analytics, risk, and execution capabilities. LiquidFlux is therefore evolving from a standalone scanner into the orchestration layer that selects specialist stages, combines their evidence, reports conflicts, and stops at an explicit execution-approval boundary.
 
-The deployed funding scanner remains useful as the first A2MCP specialist and is registered under the LiquidFlux ASP identity. See [`STRATEGY.md`](STRATEGY.md) for the validated positioning, narrow router MVP, safety boundary, and external-agent integration plan, and [`OKX_AI.md`](OKX_AI.md) for marketplace integration status.
+The deployed funding scanner remains useful as the first A2MCP specialist and is registered under the LiquidFlux ASP identity. A live buyer-side invocation through OKX.AI returned fresh Hyperliquid mainnet evidence synchronously with no manual setup. See [`STRATEGY.md`](STRATEGY.md) for the validated positioning, narrow router MVP, safety boundary, and external-agent integration plan, and [`OKX_AI.md`](OKX_AI.md) for marketplace evidence.
 
 ## Run
 
@@ -117,7 +117,7 @@ npm run check
 
 The ordered build plan, acceptance criteria, prerequisites, and current next task are maintained in [`ROADMAP.md`](ROADMAP.md).
 
-Current milestone: **M3 — Hyperliquid orchestration MVP and free OKX.AI integration**. The first router workflow is implemented locally and will be verified on the public deployment before marketplace registration.
+Current milestone: **M3 — Hyperliquid orchestration MVP and free OKX.AI integration**. The first router workflow is deployed, the ASP listing is approved, and the Funding Specialist has completed an end-to-end invocation through OKX.AI. The next product milestone is one real external specialist integration.
 
 ## Sources
 

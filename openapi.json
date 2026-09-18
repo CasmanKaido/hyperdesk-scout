@@ -1,7 +1,7 @@
 {
   "openapi": "3.1.0",
   "info": {
-    "title": "HyperDesk Scout API",
+    "title": "LiquidFlux API",
     "version": "0.2.1",
     "description": "Read-only Hyperliquid funding, basis, liquidity, and risk intelligence for OKX AI A2MCP."
   },
@@ -147,7 +147,7 @@
         "required": ["request_id", "service", "version", "generated_at", "data_source", "data_status", "market_data", "methodology", "query", "unavailable_symbols", "opportunities", "disclaimer"],
         "properties": {
           "request_id": { "type": "string" },
-          "service": { "const": "HyperDesk Scout" },
+          "service": { "const": "LiquidFlux Funding Specialist" },
           "version": { "type": "string" },
           "generated_at": { "type": "string", "format": "date-time" },
           "data_source": { "const": "Hyperliquid mainnet" },
@@ -208,7 +208,7 @@
         "required": ["request_id", "service", "version", "workflow_id", "generated_at", "objective", "execution_included", "approval_required", "workflow", "provenance", "constraints", "unavailable_symbols", "specialist_outputs", "conflicts", "synthesis", "disclaimer"],
         "properties": {
           "request_id": { "type": "string" },
-          "service": { "const": "HyperDesk Orchestrator" },
+          "service": { "const": "LiquidFlux Orchestrator" },
           "version": { "type": "string" },
           "workflow_id": { "type": "string" },
           "generated_at": { "type": "string", "format": "date-time" },

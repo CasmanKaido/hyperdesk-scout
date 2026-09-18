@@ -148,7 +148,7 @@ export async function orchestrateMarketNeutral({
   const availableSymbols = new Set(metrics.map((item) => item.symbol.toUpperCase()));
 
   return {
-    service: "HyperDesk Orchestrator",
+    service: "LiquidFlux Orchestrator",
     version: "0.2.1",
     workflow_id: workflowId,
     generated_at: generatedAt.toISOString(),

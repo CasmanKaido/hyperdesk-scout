@@ -54,7 +54,7 @@ export function createApp({
 if (process.env.NODE_ENV !== "test") {
   const server = createApp();
   server.listen(PORT, "0.0.0.0", () => {
-    console.log(`HyperDesk Scout listening on http://localhost:${PORT}`);
+    console.log(`LiquidFlux listening on http://localhost:${PORT}`);
   });
 
   function shutdown(signal) {

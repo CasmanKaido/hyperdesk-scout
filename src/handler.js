@@ -53,7 +53,7 @@ export function createRequestHandler({
       } else if (method === "GET" && pathname === "/") {
         result = json(200, {
           service: "LiquidFlux",
-          product: "HyperDesk Orchestrator",
+          product: "LiquidFlux Orchestrator",
           version: "0.2.1",
           status: "operational",
           description: "Read-only Hyperliquid specialist orchestration with deterministic funding, liquidity, and risk evidence.",

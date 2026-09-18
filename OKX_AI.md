@@ -56,6 +56,27 @@ Current marketplace state:
 - **User Agent ID:** `13785`
 - **Communication status:** Ready
 
-A live marketplace search by LiquidFlux Agent ID and exact service name returned the Hyperliquid Funding Specialist successfully. The next gate is explicit service selection followed by end-to-end A2MCP invocation.
+A live marketplace search by LiquidFlux Agent ID and exact service name returned the Hyperliquid Funding Specialist successfully.
 
-Next steps are service invocation through OKX.AI and preservation of the returned marketplace evidence.
+## End-to-end A2MCP invocation
+
+On 2026-09-18, `LiquidFlux Tester` selected and invoked the Funding Specialist through the OKX.AI A2MCP flow. This was an OKX.AI marketplace invocation, not a direct `curl` request.
+
+Verified result:
+
+- **Confirmation:** Explicit free-service confirmation completed
+- **HTTP method:** `POST`
+- **HTTP result:** `200`
+- **Fee:** Free
+- **Data source:** Hyperliquid mainnet
+- **Data status:** Fresh
+- **Default query:** BTC, ETH, and SOL; moderate risk tolerance; 0% minimum funding APR
+- **Returned opportunities:** BTC, ETH, and SOL
+- **Snapshot funding APR:** 10.95% for each returned market at invocation time
+- **Generated at:** `2026-09-18T11:43:12.737Z`
+- **Request ID:** `3dc87444-ee1a-475d-a9ac-c450ebbe798b`
+- **Execution:** None
+
+The structured result was delivered synchronously in the same OKX.AI interaction without manual setup. Funding can reverse, and the returned annualized rate is a snapshot rather than a forecast.
+
+Next steps are preserving visual evidence and integrating one real, non-duplicative external OKX.AI specialist.

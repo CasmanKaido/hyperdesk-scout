@@ -1,16 +1,16 @@
-# HyperDesk Strategy: From Scanner to Orchestration Layer
+# LiquidFlux Strategy: From Scanner to Orchestration Layer
 
 ## Market conclusion
 
 The opportunity is not another standalone Hyperliquid data API. OKX.AI already contains services for analytics, risk, execution, fees, and autonomous workflows. Marketplace searches also show many component APIs, while no clear Hyperliquid-focused service-orchestration product appeared for the exact `service marketplace` query. Search is not proof of absence, so the product claim must remain narrow:
 
-> Existing products expose individual analytics, risk, or execution capabilities. HyperDesk coordinates specialist capabilities into a transparent Hyperliquid decision workflow.
+> Existing products expose individual analytics, risk, or execution capabilities. LiquidFlux coordinates specialist capabilities into a transparent Hyperliquid decision workflow.
 
 Never claim that nobody else provides orchestration.
 
 ## Product definition
 
-HyperDesk is an agent-native orchestration layer for Hyperliquid. A caller states an objective and constraints. HyperDesk selects specialist stages, runs them, records their evidence, and synthesizes one structured result. Execution remains outside the MVP and always requires explicit approval.
+LiquidFlux is an agent-native orchestration layer for Hyperliquid. A caller states an objective and constraints. LiquidFlux selects specialist stages, runs them, records their evidence, and synthesizes one structured result. Execution remains outside the MVP and always requires explicit approval.
 
 ### MVP request
 
@@ -88,7 +88,7 @@ Rules:
 
 ## OKX.AI service shape
 
-HyperDesk should eventually expose two complementary services under one ASP identity:
+LiquidFlux should eventually expose two complementary services under one ASP identity:
 
 1. **A2MCP — Hyperliquid Funding Specialist**
    - Existing `POST /api/v1/funding-scan`

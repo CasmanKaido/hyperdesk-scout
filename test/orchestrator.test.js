@@ -53,6 +53,7 @@ test("coordinates specialists and rejects unsafe candidates", async () => {
     workflowId: "workflow_test",
   });
 
+  assert.equal(result.service, "LiquidFlux Orchestrator");
   assert.equal(result.workflow_id, "workflow_test");
   assert.equal(result.execution_included, false);
   assert.equal(result.approval_required, true);
