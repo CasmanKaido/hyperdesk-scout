@@ -13,14 +13,16 @@
 
 The service listing passed the local OKX listing validator with no findings before registration.
 
-## Communication readiness blocker
+## Communication readiness
 
-The ASP identity was created successfully, but the required OKX A2A communication readiness check could not run. Installing `@okxweb3/a2a-node` globally failed with an `EACCES` permission error while writing under `/usr/local/lib/node_modules`, and the `okx-a2a` command is therefore unavailable.
+The OKX A2A runtime is installed under the user-owned `~/.local` prefix. Codex CLI `0.155.0` is installed, authenticated, and configured as the default provider.
 
-Do not claim A2A communication readiness until the official recovery command completes and reports `ready: true`:
+The official readiness command completed successfully:
 
 ```bash
 okx-a2a doctor --fix --json
 ```
 
-After the environment is repaired, continue with listing review, test-user registration, and end-to-end OKX.AI invocation.
+Result: `ready: true`, with all eight checks passing. The daemon is running, autostart is installed, and one LiquidFlux agent identity is active.
+
+The runtime provider can be changed later without recreating Agent ID `13784`. Next steps are listing review, test-user registration, and end-to-end OKX.AI invocation.
