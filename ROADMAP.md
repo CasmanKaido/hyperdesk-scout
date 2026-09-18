@@ -129,7 +129,7 @@ Selected target: **Render Free web service using the repository Dockerfile**. Th
 - [x] Prepare and validate the free A2MCP service listing
 - [x] Register LiquidFlux ASP Agent ID `13784` and the free funding specialist
 - [x] Initialize OKX A2A communication with Codex; official doctor reports `ready: true`
-- [ ] Submit the ASP for listing review
+- [x] Submit LiquidFlux Agent `13784` for English marketplace review — currently under review
 - [ ] Register a test user through the OKX.AI debugging flow
 - [ ] Invoke HyperDesk from OKX.AI
 - [ ] Confirm parameters arrive correctly

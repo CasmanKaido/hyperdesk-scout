@@ -25,4 +25,10 @@ okx-a2a doctor --fix --json
 
 Result: `ready: true`, with all eight checks passing. The daemon is running, autostart is installed, and one LiquidFlux agent identity is active.
 
-The runtime provider can be changed later without recreating Agent ID `13784`. Next steps are listing review, test-user registration, and end-to-end OKX.AI invocation.
+The runtime provider can be changed later without recreating Agent ID `13784`.
+
+## Marketplace review
+
+LiquidFlux was submitted for OKX.AI marketplace listing review in English on 2026-09-18. The submission succeeded and is under review; the Agent is not published yet. Do not claim a public marketplace listing until approval is received.
+
+Next steps are test-user registration, end-to-end OKX.AI invocation after publication, and preservation of listing evidence.
