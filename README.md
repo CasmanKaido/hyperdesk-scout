@@ -2,7 +2,8 @@
 
 HyperDesk is a read-only Hyperliquid specialist-orchestration service for OKX.AI. Its first deployed specialist, HyperDesk Scout, returns deterministic funding, basis, liquidity, and risk evidence; the next API coordinates Funding, Liquidity, and Risk specialists into a traceable market-neutral workflow.
 
-- **Live API:** https://hyperdesk-scout.onrender.com
+- **Service index:** https://hyperdesk-scout.onrender.com
+- **Live API origin:** https://hyperdesk-scout.onrender.com
 - **Health:** https://hyperdesk-scout.onrender.com/health
 - **OpenAPI:** https://hyperdesk-scout.onrender.com/openapi.json
 - **Orchestrator:** `POST https://hyperdesk-scout.onrender.com/api/v1/orchestrate`

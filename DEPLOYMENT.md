@@ -37,7 +37,7 @@ curl -i https://YOUR-SERVICE.example/health
 Expected: `HTTP 200` and:
 
 ```json
-{"status":"ok","service":"hyperdesk-scout","version":"0.2.0"}
+{"status":"ok","service":"hyperdesk-scout","version":"0.2.1"}
 ```
 
 ### OpenAPI contract

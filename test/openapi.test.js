@@ -7,6 +7,7 @@ const spec = JSON.parse(await readFile(new URL("../openapi.json", import.meta.ur
 
 test("publishes an OpenAPI 3.1 contract for every route", () => {
   assert.equal(spec.openapi, "3.1.0");
+  assert.ok(spec.paths["/"].get);
   assert.ok(spec.paths["/health"].get);
   assert.ok(spec.paths["/openapi.json"].get);
   assert.ok(spec.paths["/api/v1/orchestrate"].post);

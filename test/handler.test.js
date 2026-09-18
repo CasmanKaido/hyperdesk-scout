@@ -26,11 +26,16 @@ function handlerWith(getMarketData) {
   });
 }
 
-test("handles health without market data", async () => {
+test("serves a discoverable index and health without market data", async () => {
   const handle = handlerWith(async () => { throw new Error("should not run"); });
+  const index = await handle({ method: "GET", pathname: "/" });
+  assert.equal(index.status, 200);
+  assert.equal(index.body.service, "LiquidFlux");
+  assert.equal(index.body.endpoints.funding_specialist.method, "POST");
+
   const result = await handle({ method: "GET", pathname: "/health" });
   assert.equal(result.status, 200);
-  assert.deepEqual(result.body, { status: "ok", service: "hyperdesk-scout", version: "0.2.0" });
+  assert.deepEqual(result.body, { status: "ok", service: "hyperdesk-scout", version: "0.2.1" });
 });
 
 test("serves the OpenAPI contract when configured", async () => {

@@ -50,8 +50,23 @@ export function createRequestHandler({
       let result;
       if (method === "OPTIONS") {
         result = { status: 204, headers: { ...corsHeaders, "x-request-id": id }, body: null };
+      } else if (method === "GET" && pathname === "/") {
+        result = json(200, {
+          service: "LiquidFlux",
+          product: "HyperDesk Orchestrator",
+          version: "0.2.1",
+          status: "operational",
+          description: "Read-only Hyperliquid specialist orchestration with deterministic funding, liquidity, and risk evidence.",
+          endpoints: {
+            health: { method: "GET", path: "/health" },
+            openapi: { method: "GET", path: "/openapi.json" },
+            funding_specialist: { method: "POST", path: "/api/v1/funding-scan" },
+            orchestrator: { method: "POST", path: "/api/v1/orchestrate" },
+          },
+          execution_included: false,
+        }, id, corsHeaders);
       } else if (method === "GET" && pathname === "/health") {
-        result = json(200, { status: "ok", service: "hyperdesk-scout", version: "0.2.0" }, id, corsHeaders);
+        result = json(200, { status: "ok", service: "hyperdesk-scout", version: "0.2.1" }, id, corsHeaders);
       } else if (method === "GET" && pathname === "/openapi.json" && openApiSpec) {
         result = json(200, openApiSpec, id, corsHeaders);
       } else if (method === "POST" && pathname === "/api/v1/orchestrate") {

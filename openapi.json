@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "HyperDesk Scout API",
-    "version": "0.2.0",
+    "version": "0.2.1",
     "description": "Read-only Hyperliquid funding, basis, liquidity, and risk intelligence for OKX AI A2MCP."
   },
   "servers": [
@@ -10,6 +10,18 @@
     { "url": "http://localhost:3000", "description": "Local development" }
   ],
   "paths": {
+    "/": {
+      "get": {
+        "operationId": "getServiceIndex",
+        "summary": "Describe LiquidFlux and its public endpoints",
+        "responses": {
+          "200": {
+            "description": "Service index",
+            "content": { "application/json": { "schema": { "type": "object" } } }
+          }
+        }
+      }
+    },
     "/health": {
       "get": {
         "operationId": "getHealth",

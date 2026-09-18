@@ -149,7 +149,7 @@ export async function orchestrateMarketNeutral({
 
   return {
     service: "HyperDesk Orchestrator",
-    version: "0.2.0",
+    version: "0.2.1",
     workflow_id: workflowId,
     generated_at: generatedAt.toISOString(),
     objective: input.objective,
