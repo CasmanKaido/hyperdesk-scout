@@ -18,7 +18,7 @@ Hackathon judges are demo observers rather than the product's primary audience. 
 
 ## Product Purpose
 
-LiquidFlux turns current Hyperliquid market data into a traceable market-neutral analysis workflow. A user chooses markets and constraints; Funding, Liquidity, and Risk specialists evaluate the evidence; deterministic synthesis identifies approved, caution, and rejected candidates; and the workflow stops before execution.
+LiquidFlux turns current Hyperliquid market data into a traceable market-neutral orchestration workflow. A user defines an objective and constraints, reviews the specialist and provider plan, approves its service budget, and then receives Funding, Liquidity, Risk, and deterministic Synthesis evidence. The workflow identifies policy-pass, caution, and rejected candidates and stops before execution.
 
 Success means a user can run a live analysis, understand how the result was produced, inspect data freshness and risk evidence, and distinguish an actionable review candidate from a misleading headline funding rate. The product never implies that snapshot funding is guaranteed yield and never executes a trade in the current MVP.
 
@@ -36,7 +36,7 @@ LiquidFlux should not resemble a retail trading terminal built around flashing p
 
 ## Design Principles
 
-1. **Show the reasoning.** Every recommendation should expose the specialist evidence, constraints, conflicts, and provenance that produced it.
+1. **Show the orchestration.** Before any call, expose the selected specialists, provider identity, marketplace status, service fee, and approval boundary; after the call, preserve the evidence trace.
 2. **Make safety visible.** The no-execution boundary, approval requirement, and market-data limitations should be clear without dominating the workflow.
 3. **Prioritize the analyst's decision.** Inputs, candidate comparison, rejection reasons, and next actions matter more than decorative metrics.
 4. **Separate evidence from interpretation.** Funding, liquidity, risk, and synthesis should remain distinguishable so users can challenge the result.

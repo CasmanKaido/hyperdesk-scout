@@ -201,7 +201,8 @@ LiquidFlux is flat by default. Depth comes from surface tone, spacing, and struc
 
 ### Evidence Workflow
 
-- **Structure:** Constraint setup leads to Funding and Liquidity in parallel, dependent Risk Policy, then deterministic Synthesis.
+- **Structure:** Objective and constraints produce a pre-run service manifest: Funding and Liquidity in parallel, dependent Risk Policy, then deterministic Synthesis.
+- **Plan Review:** Every service row exposes provider identity, marketplace status, fee, and whether the stage is connected, skipped, or first-party before approval.
 - **Loading:** Named stages, a bounded progress orbit, and skeleton lines communicate active work without fake percentages.
 - **Results:** Synthesis appears first, candidate rows follow, then workflow trace and expandable specialist evidence.
 - **Boundary:** Every completed state repeats that candidates require review and execution is excluded.

@@ -1,11 +1,15 @@
 const form = document.querySelector("#analysis-form");
-const runButton = document.querySelector("#run-analysis");
+const reviewButton = document.querySelector("#review-plan");
+const approveButton = document.querySelector("#approve-plan");
+const reviseButton = document.querySelector("#revise-plan");
 const retryButton = document.querySelector("#retry-analysis");
-const buttonLabel = runButton.querySelector(".button-label");
+const buttonLabel = reviewButton.querySelector(".button-label");
 const symbolsInput = document.querySelector("#symbols");
 const symbolsError = document.querySelector("#symbols-error");
 const formError = document.querySelector("#form-error");
 const emptyState = document.querySelector("#empty-state");
+const planState = document.querySelector("#plan-state");
+const planObjective = document.querySelector("#plan-objective");
 const loadingState = document.querySelector("#loading-state");
 const errorState = document.querySelector("#error-state");
 const errorMessage = document.querySelector("#error-message");
@@ -18,6 +22,7 @@ const analysisPanel = document.querySelector(".analysis-panel");
 const analysisStatus = document.querySelector("#analysis-status");
 const serviceStatus = document.querySelector("#service-status");
 const headerStatus = document.querySelector(".header-status");
+let pendingInput = null;
 
 const currency = new Intl.NumberFormat("en-US", {
   style: "currency",
@@ -104,6 +109,7 @@ function sentence(value) {
 
 function showView(view) {
   emptyState.hidden = view !== "empty";
+  planState.hidden = view !== "plan";
   loadingState.hidden = view !== "loading";
   errorState.hidden = view !== "error";
   resultState.hidden = view !== "result";
@@ -279,7 +285,13 @@ function renderCandidates(data) {
 function renderWorkflow(data) {
   const section = element("section", { className: "result-section" });
   const trace = data.workflow?.trace || [];
-  section.append(sectionHeading("Workflow trace", "Every specialist completed against the same evidence snapshot.", trace.length));
+  section.append(sectionHeading("Orchestration trace", "Every specialist completed against the same evidence snapshot.", trace.length));
+  section.append(definitionList([
+    ["Router", "LiquidFlux"],
+    ["Marketplace-listed", "Funding Specialist"],
+    ["External services", "None connected"],
+    ["Service spend", "0 USDT"],
+  ], "execution-ledger"));
   section.append(element("div", { className: "workflow-trace" }, trace.map((item) => element("div", { className: "workflow-stage" }, [
     element("span", { className: "workflow-name" }, [
       element("span", { className: "workflow-check", text: "✓", attrs: { "aria-hidden": "true" } }),
@@ -391,13 +403,29 @@ function renderResult(data) {
   });
 }
 
-async function runAnalysis() {
+function reviewPlan() {
   const input = collectInput();
   if (!input) return;
 
+  pendingInput = input;
+  planObjective.textContent = `Objective: evaluate ${input.symbols.join(", ")} for market-neutral funding income under a ${input.risk_tolerance} risk policy, ${formatNumber(input.max_leverage)}× leverage cap, and ${formatCurrency(input.max_notional_usd)} notional limit.`;
+  showView("plan");
+  analysisStatus.textContent = "Specialist plan ready for review. No service has been called.";
+  requestAnimationFrame(() => {
+    planState.scrollIntoView({
+      behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth",
+      block: "start",
+    });
+  });
+}
+
+async function executeAnalysis() {
+  if (!pendingInput) return;
+
   showView("loading");
-  runButton.disabled = true;
-  buttonLabel.textContent = "Running analysis";
+  reviewButton.disabled = true;
+  approveButton.disabled = true;
+  buttonLabel.textContent = "Workflow running";
   analysisStatus.textContent = "Analysis started. Funding and liquidity specialists are reading current Hyperliquid evidence.";
 
   let serviceResponded = false;
@@ -405,7 +433,7 @@ async function runAnalysis() {
     const response = await fetch("/api/v1/orchestrate", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(input),
+      body: JSON.stringify(pendingInput),
     });
     serviceResponded = true;
     const data = await response.json().catch(() => null);
@@ -425,8 +453,9 @@ async function runAnalysis() {
     showView("error");
     analysisStatus.textContent = "Analysis failed. Review the error and try again.";
   } finally {
-    runButton.disabled = false;
-    buttonLabel.textContent = "Run analysis";
+    reviewButton.disabled = false;
+    approveButton.disabled = false;
+    buttonLabel.textContent = "Review specialist plan";
   }
 }
 
@@ -449,9 +478,15 @@ symbolsInput.addEventListener("input", () => {
 });
 form.addEventListener("submit", (event) => {
   event.preventDefault();
-  runAnalysis();
+  reviewPlan();
 });
-retryButton.addEventListener("click", () => form.requestSubmit());
+approveButton.addEventListener("click", executeAnalysis);
+reviseButton.addEventListener("click", () => {
+  showView("empty");
+  analysisStatus.textContent = "Specialist plan closed. Update the constraints and review it again.";
+  symbolsInput.focus();
+});
+retryButton.addEventListener("click", executeAnalysis);
 
 showView("empty");
 checkHealth();

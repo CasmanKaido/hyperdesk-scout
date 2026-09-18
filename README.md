@@ -19,16 +19,18 @@ The deployed funding scanner remains useful as the first A2MCP specialist and is
 
 ## Dashboard
 
-The dependency-free dashboard is served by the existing Node service and calls `POST /api/v1/orchestrate` directly. It includes:
+The dependency-free dashboard is served by the existing Node service and calls `POST /api/v1/orchestrate` only after an explicit plan approval. It includes:
 
-- Constraint controls for markets, risk tolerance, leverage, notional, and minimum funding APR
+- A real objective-and-constraints workflow for market-neutral Hyperliquid income analysis
+- Pre-run specialist planning with provider identity, OKX.AI listing status, service cost, and explicit approval
+- Honest separation between the marketplace-listed Funding Specialist, first-party modules, and the unconnected external-service slot
 - Stage-aware loading, actionable errors, first-run guidance, and no-op outcomes
 - Candidate and rejection reasoning before raw specialist evidence
 - Expandable Funding, Liquidity, and Risk outputs with the complete structured response
 - Visible provenance, freshness, workflow trace, and execution-approval boundary
 - Responsive desktop and mobile layouts, keyboard focus, and reduced-motion support
 
-No wallet connection or trade execution is included.
+No wallet connection, paid service, or trade execution is included. Reviewing a plan performs no service call; approving it runs only the free first-party workflow.
 
 ## Run
 

@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="description" content="LiquidFlux coordinates Hyperliquid funding, liquidity, and risk evidence into transparent, approval-gated workflows.">
   <meta name="theme-color" content="#ffffff">
-  <title>LiquidFlux — Hyperliquid evidence workspace</title>
+  <title>LiquidFlux — Hyperliquid agent orchestration</title>
   <link rel="icon" href="/assets/liquidflux-avatar.png" type="image/png">
   <link rel="stylesheet" href="/styles.css">
   <script src="/app.js" type="module"></script>
@@ -18,7 +18,7 @@
       <img src="/assets/liquidflux-avatar.png" width="40" height="40" alt="">
       <span>
         <strong>LiquidFlux</strong>
-        <small>Hyperliquid evidence workspace</small>
+        <small>Agent orchestration workspace</small>
       </span>
     </a>
 
@@ -36,9 +36,9 @@
   <main id="main-content">
     <section class="workspace-heading" aria-labelledby="page-title">
       <div>
-        <p class="context-line">Market-neutral income · Hyperliquid mainnet</p>
-        <h1 id="page-title">Assess the edge, not the headline.</h1>
-        <p class="workspace-summary">Set your limits. LiquidFlux coordinates funding, liquidity, and risk specialists, then shows the evidence behind every review candidate and rejection.</p>
+        <p class="context-line">Agent orchestration · Hyperliquid mainnet</p>
+        <h1 id="page-title">Coordinate the evidence before capital.</h1>
+        <p class="workspace-summary">Define an objective, review the specialist plan, approve the workflow, and inspect how LiquidFlux reached each decision.</p>
       </div>
       <div class="safety-statement">
         <span class="safety-mark" aria-hidden="true">✓</span>
@@ -50,13 +50,20 @@
       <aside class="control-panel" aria-labelledby="constraints-title">
         <div class="panel-heading">
           <div>
-            <p class="step-label">Analysis setup</p>
-            <h2 id="constraints-title">Define constraints</h2>
+            <p class="step-label">Step 1 · Objective</p>
+            <h2 id="constraints-title">Build the workflow</h2>
           </div>
           <span class="objective-chip">Market neutral</span>
         </div>
 
+        <div class="objective-block">
+          <span>Objective</span>
+          <strong>Find market-neutral funding income with bounded liquidation risk.</strong>
+          <small>Supported workflow: <code>market_neutral_income</code></small>
+        </div>
+
         <form id="analysis-form" novalidate>
+          <p class="form-section-label">Constraints</p>
           <div class="field-group">
             <label for="symbols">Markets</label>
             <p class="field-help" id="symbols-help">Enter 1–20 Hyperliquid symbols, separated by commas.</p>
@@ -99,24 +106,29 @@
             </div>
           </div>
 
+          <div class="budget-summary">
+            <span><strong>Service budget</strong><small>No paid services selected</small></span>
+            <strong>0 USDT</strong>
+          </div>
+
           <p class="form-error" id="form-error" role="alert"></p>
 
-          <button class="primary-action" id="run-analysis" type="submit">
-            <span class="button-label">Run analysis</span>
+          <button class="primary-action" id="review-plan" type="submit">
+            <span class="button-label">Review specialist plan</span>
             <svg aria-hidden="true" viewBox="0 0 20 20" width="20" height="20"><path d="M4 10h11m-4-4 4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
           </button>
 
-          <p class="form-note">Funding is annualized from the current hourly rate. It is evidence, not forecast yield.</p>
+          <p class="form-note">Reviewing the plan does not call a service or spend funds.</p>
         </form>
       </aside>
 
       <section class="analysis-panel" aria-labelledby="analysis-title">
         <div class="analysis-toolbar">
           <div>
-            <p class="step-label">Specialist workflow</p>
-            <h2 id="analysis-title">Decision evidence</h2>
+            <p class="step-label">Steps 2–3 · Review and run</p>
+            <h2 id="analysis-title">Orchestration workspace</h2>
           </div>
-          <span class="approval-chip">Approval required before execution</span>
+          <span class="approval-chip">No execution in this workflow</span>
         </div>
 
         <div id="analysis-status" class="sr-only" aria-live="polite"></div>
@@ -139,14 +151,71 @@
             </div>
           </div>
           <div class="empty-copy">
-            <h3>Start with the evidence.</h3>
-            <p>Run the default BTC, ETH, and SOL analysis or adjust the constraints first. Results will show what passed, what failed, and why.</p>
+            <h3>Start with an objective.</h3>
+            <p>Set the constraints, then review exactly which specialists LiquidFlux will coordinate, what each contributes, and whether any service can spend funds.</p>
           </div>
           <dl class="boundary-list">
             <div><dt>Data source</dt><dd>Hyperliquid mainnet</dd></div>
-            <div><dt>Specialists</dt><dd>Funding, liquidity, risk</dd></div>
+            <div><dt>Marketplace service</dt><dd>Funding Specialist listed</dd></div>
             <div><dt>Execution</dt><dd>Never included</dd></div>
           </dl>
+        </section>
+
+        <section id="plan-state" class="plan-state" hidden aria-labelledby="plan-title">
+          <div class="plan-heading">
+            <span class="plan-mark" aria-hidden="true">✓</span>
+            <div>
+              <p class="step-label">Step 2 · Approval</p>
+              <h3 id="plan-title">Review the specialist plan</h3>
+              <p id="plan-objective">LiquidFlux prepared a workflow for your objective and constraints.</p>
+            </div>
+          </div>
+
+          <div class="service-plan" aria-label="Planned specialist services">
+            <article class="service-row">
+              <span class="service-order">1A</span>
+              <div><strong>Funding Specialist</strong><small>Funding APR, direction, and hedge requirement</small></div>
+              <span class="provider-label">LiquidFlux · OKX.AI listed</span>
+              <span class="fee-label">Free</span>
+            </article>
+            <article class="service-row">
+              <span class="service-order">1B</span>
+              <div><strong>Liquidity Specialist</strong><small>Depth, impact spread, and notional capacity</small></div>
+              <span class="provider-label">LiquidFlux · First-party</span>
+              <span class="fee-label">Free</span>
+            </article>
+            <article class="service-row">
+              <span class="service-order">2</span>
+              <div><strong>Risk Policy Specialist</strong><small>Freshness, leverage, basis, and policy blockers</small></div>
+              <span class="provider-label">LiquidFlux · First-party</span>
+              <span class="fee-label">Free</span>
+            </article>
+            <article class="service-row">
+              <span class="service-order">3</span>
+              <div><strong>Deterministic Synthesis</strong><small>Reconciles evidence and explains the review boundary</small></div>
+              <span class="provider-label">LiquidFlux · First-party</span>
+              <span class="fee-label">Free</span>
+            </article>
+            <article class="service-row service-row-muted">
+              <span class="service-order">+</span>
+              <div><strong>External Cost Specialist</strong><small>Reserved for a compatible OKX.AI provider</small></div>
+              <span class="provider-label">Not connected</span>
+              <span class="fee-label">Skipped</span>
+            </article>
+          </div>
+
+          <div class="plan-boundary">
+            <div><span>Calls in this run</span><strong>4 first-party stages</strong></div>
+            <div><span>External services</span><strong>0 connected</strong></div>
+            <div><span>Maximum spend</span><strong>0 USDT</strong></div>
+          </div>
+
+          <p class="plan-disclosure">Only the Funding Specialist is currently marketplace-listed. Liquidity, Risk, and Synthesis are transparent first-party modules—not independent external agents.</p>
+
+          <div class="plan-actions">
+            <button class="primary-action" id="approve-plan" type="button">Approve plan and run</button>
+            <button class="secondary-action" id="revise-plan" type="button">Revise constraints</button>
+          </div>
         </section>
 
         <section id="loading-state" class="loading-state" hidden aria-label="Analysis in progress">
