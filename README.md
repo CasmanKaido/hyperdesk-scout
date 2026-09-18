@@ -157,7 +157,7 @@ npm run check
 
 The ordered build plan, acceptance criteria, prerequisites, and current next task are maintained in [`ROADMAP.md`](ROADMAP.md).
 
-Current work spans **M3 — OKX.AI integration** and **M6 — Demo interface**. The first router workflow is deployed, the ASP listing is approved, the Funding Specialist completed an end-to-end invocation through OKX.AI, and the analyst dashboard now supports provider-neutral AI objective planning before its approval-gated deterministic workflow. A paid external specialist remains intentionally deferred until a relevant provider works through the official OKX.AI invocation path.
+Current work spans **M3 — OKX.AI integration** and **M6 — Demo interface**. The first router workflow is deployed, the ASP listing is approved, and both the Funding Specialist and complete Market-Neutral Orchestrator have completed end-to-end invocations through OKX.AI. The analyst dashboard supports provider-neutral AI objective planning before its approval-gated deterministic workflow. A paid external specialist remains intentionally deferred until a relevant provider works through the official OKX.AI invocation path.
 
 ## Sources
 

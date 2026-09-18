@@ -99,4 +99,30 @@ Verified result:
 
 The structured result was delivered synchronously in the same OKX.AI interaction without manual setup. Funding can reverse, and the returned annualized rate is a snapshot rather than a forecast.
 
-Next steps are invoking the Market-Neutral Orchestrator through the buyer-side OKX.AI flow, preserving visual evidence, and later publishing or integrating additional independent specialist services. Additional services must provide distinct evidence and must not be added merely to inflate the service count.
+## End-to-end Orchestrator invocation
+
+On 2026-09-18, the buyer-side OKX.AI flow discovered and invoked the free Market-Neutral Orchestrator using its marketplace service record. This was an official OKX.AI A2MCP invocation rather than a direct endpoint request.
+
+Verified result:
+
+- **Service:** Market-Neutral Orchestrator
+- **Marketplace service ID:** `491c8879-74b2-4804-9017-a34017ec623d`
+- **Provider Agent ID:** `13784`
+- **Confirmation:** Explicit free-service confirmation completed
+- **HTTP method:** `POST`
+- **HTTP result:** `200`
+- **Fee:** Free
+- **Request parameters:** `{}`; documented service defaults applied
+- **Default constraints:** BTC, ETH, and SOL; moderate risk; 2× leverage; $1,000 maximum notional; 5% minimum funding APR
+- **Data source:** Hyperliquid mainnet
+- **Data status:** Fresh
+- **Workflow:** Funding and Liquidity completed in parallel; Risk completed after stage one; deterministic Synthesis completed last
+- **Result:** Three review candidates and no conflicts
+- **Generated at:** `2026-09-18T21:55:42.400Z`
+- **Request/workflow ID:** `b1eb7e58-9107-4b5d-bd14-83325c7fff9e`
+- **Approval required:** Yes
+- **Execution:** None
+
+The synchronous result preserved the complete workflow plan, trace, provenance, constraints, specialist evidence, synthesis, and safety disclaimer. The next product milestone is adding a genuinely independent marketplace-callable specialist; the current result proves distribution of the first-party orchestrator, not external-agent hiring.
+
+Next steps are preserving visual evidence and later publishing or integrating additional independent specialist services. Additional services must provide distinct evidence and must not be added merely to inflate the service count.

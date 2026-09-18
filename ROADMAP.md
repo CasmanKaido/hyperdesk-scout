@@ -15,7 +15,7 @@ This is the project's source of truth for build order. Work on one milestone at 
 
 **In progress:** M3 — Hyperliquid orchestration MVP and free OKX.AI integration; M6 — Demo interface
 
-**Next:** Invoke the newly published Market-Neutral Orchestrator through the buyer-side OKX.AI flow, then configure one server-side AI provider key on Render and capture reproducible demo evidence. A paid external specialist is deferred until a relevant provider succeeds through the official OKX.AI invocation path; LiquidFlux will not force an unsafe or incompatible integration merely to claim multi-agent orchestration.
+**Next:** Configure one server-side AI provider key on Render and capture reproducible demo evidence for both AI planning and the verified OKX.AI orchestrator invocation. A paid external specialist is deferred until a relevant provider succeeds through the official OKX.AI invocation path; LiquidFlux will not force an unsafe or incompatible integration merely to claim multi-agent orchestration.
 
 ---
 
@@ -138,7 +138,7 @@ Selected target: **Render Free web service using the repository Dockerfile**. Th
 - [x] Confirm default parameters arrive correctly
 - [x] Confirm structured results are returned without manual setup
 - [ ] Save service/listing URL
-- [ ] Invoke the Market-Neutral Orchestrator through OKX.AI from the buyer test identity
+- [x] Invoke the Market-Neutral Orchestrator through OKX.AI from the buyer test identity
 - [!] Add one real, non-duplicative external OKX.AI specialist integration — deferred after live searches found no suitable current Hyperliquid service and the strongest free candidate failed the official A2MCP transport check
 - [ ] Later: publish additional independent Liquidity or Risk services only when they add distinct marketplace-callable evidence
 - [ ] Capture screenshots or a short recording as evidence
