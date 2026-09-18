@@ -4,12 +4,20 @@ const approveButton = document.querySelector("#approve-plan");
 const reviseButton = document.querySelector("#revise-plan");
 const retryButton = document.querySelector("#retry-analysis");
 const buttonLabel = reviewButton.querySelector(".button-label");
+const objectiveInput = document.querySelector("#objective-message");
+const generatePlanButton = document.querySelector("#generate-plan");
+const plannerButtonLabel = generatePlanButton.querySelector(".planner-button-label");
+const plannerStatus = document.querySelector("#planner-status");
 const symbolsInput = document.querySelector("#symbols");
 const symbolsError = document.querySelector("#symbols-error");
 const formError = document.querySelector("#form-error");
 const emptyState = document.querySelector("#empty-state");
 const planState = document.querySelector("#plan-state");
 const planObjective = document.querySelector("#plan-objective");
+const aiPlanContext = document.querySelector("#ai-plan-context");
+const aiPlanSummary = document.querySelector("#ai-plan-summary");
+const aiPlanProvider = document.querySelector("#ai-plan-provider");
+const aiPlanAssumptions = document.querySelector("#ai-plan-assumptions");
 const loadingState = document.querySelector("#loading-state");
 const errorState = document.querySelector("#error-state");
 const errorMessage = document.querySelector("#error-message");
@@ -23,6 +31,8 @@ const analysisStatus = document.querySelector("#analysis-status");
 const serviceStatus = document.querySelector("#service-status");
 const headerStatus = document.querySelector(".header-status");
 let pendingInput = null;
+let latestAIPlan = null;
+let aiDraftEdited = false;
 
 const currency = new Intl.NumberFormat("en-US", {
   style: "currency",
@@ -403,12 +413,90 @@ function renderResult(data) {
   });
 }
 
+function setPlannerStatus(message, state = "idle") {
+  plannerStatus.textContent = message;
+  plannerStatus.dataset.state = state;
+}
+
+function populateConstraints(plan) {
+  symbolsInput.value = plan.symbols.join(", ");
+  form.elements.max_leverage.value = String(plan.max_leverage);
+  form.elements.max_notional_usd.value = String(plan.max_notional_usd);
+  form.elements.min_funding_apr.value = String(plan.min_funding_apr);
+  const riskInput = form.querySelector(`input[name="risk_tolerance"][value="${plan.risk_tolerance}"]`);
+  if (riskInput) riskInput.checked = true;
+  validateSymbols();
+}
+
+async function generateAIPlan() {
+  const message = objectiveInput.value.trim();
+  if (message.length < 10) {
+    setPlannerStatus("Describe your objective in at least 10 characters, or continue with manual constraints.", "error");
+    objectiveInput.focus();
+    return;
+  }
+
+  generatePlanButton.disabled = true;
+  plannerButtonLabel.textContent = "Interpreting objective";
+  setPlannerStatus("Gemini is interpreting the objective. Groq will be tried if Gemini is unavailable.");
+
+  try {
+    const response = await fetch("/api/v1/plan", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ message }),
+    });
+    const data = await response.json().catch(() => null);
+    if (!response.ok) {
+      const error = new Error(data?.message || `The planner returned HTTP ${response.status}.`);
+      error.code = data?.error;
+      throw error;
+    }
+
+    latestAIPlan = data;
+    aiDraftEdited = false;
+    pendingInput = null;
+    populateConstraints(data);
+    showView("empty");
+    const providerName = data.provider === "groq" ? "Groq" : "Gemini";
+    setPlannerStatus(`${providerName} drafted the constraints. Review or edit them before continuing.`, "success");
+    analysisStatus.textContent = "AI planning complete. No market data was fetched and no specialist was called.";
+    reviewButton.focus();
+  } catch (error) {
+    latestAIPlan = null;
+    if (error.code === "ai_unavailable") {
+      setPlannerStatus("AI planning is not configured on this deployment. You can continue with the manual constraints below.", "error");
+    } else if (error.code === "ai_provider_unavailable") {
+      setPlannerStatus("The configured AI providers are temporarily unavailable. You can continue manually or try again.", "error");
+    } else if (error instanceof TypeError) {
+      setPlannerStatus("The AI planner could not be reached. You can continue with manual constraints.", "error");
+    } else {
+      setPlannerStatus(`${error.message} You can continue with manual constraints.`, "error");
+    }
+  } finally {
+    generatePlanButton.disabled = false;
+    plannerButtonLabel.textContent = "Generate AI plan";
+  }
+}
+
 function reviewPlan() {
   const input = collectInput();
   if (!input) return;
 
   pendingInput = input;
   planObjective.textContent = `Objective: evaluate ${input.symbols.join(", ")} for market-neutral funding income under a ${input.risk_tolerance} risk policy, ${formatNumber(input.max_leverage)}× leverage cap, and ${formatCurrency(input.max_notional_usd)} notional limit.`;
+  if (latestAIPlan) {
+    const notes = [
+      ...latestAIPlan.assumptions.map((item) => `Assumption: ${item}`),
+      ...latestAIPlan.missing_information.map((item) => `Missing: ${item}`),
+    ];
+    aiPlanSummary.textContent = `${latestAIPlan.summary}${aiDraftEdited ? " The generated constraints were edited before review." : ""}`;
+    aiPlanProvider.textContent = `${latestAIPlan.provider} · ${latestAIPlan.model}`;
+    aiPlanAssumptions.textContent = notes.length ? notes.join(" · ") : "No additional assumptions or missing information";
+    aiPlanContext.hidden = false;
+  } else {
+    aiPlanContext.hidden = true;
+  }
   showView("plan");
   analysisStatus.textContent = "Specialist plan ready for review. No service has been called.";
   requestAnimationFrame(() => {
@@ -472,6 +560,22 @@ async function checkHealth() {
   }
 }
 
+generatePlanButton.addEventListener("click", generateAIPlan);
+objectiveInput.addEventListener("input", () => {
+  if (plannerStatus.dataset.state === "error") {
+    setPlannerStatus("Gemini is tried first; Groq is the fallback when configured.");
+  }
+});
+form.addEventListener("input", () => {
+  pendingInput = null;
+  if (!planState.hidden || !resultState.hidden) {
+    showView("empty");
+    analysisStatus.textContent = "Constraints changed. Review the updated specialist plan before running analysis.";
+  }
+  if (!latestAIPlan) return;
+  aiDraftEdited = true;
+  setPlannerStatus("AI-drafted constraints edited. Your current values will be used for review.", "success");
+});
 symbolsInput.addEventListener("blur", validateSymbols);
 symbolsInput.addEventListener("input", () => {
   if (symbolsInput.getAttribute("aria-invalid") === "true") validateSymbols();

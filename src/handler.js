@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import { UpstreamError } from "./hyperliquid.js";
 import { buildFundingScan, validateScanInput, ValidationError } from "./service.js";
 import { orchestrateMarketNeutral, validateOrchestrationInput } from "./orchestrator.js";
+import { PlannerError } from "./ai-planner.js";
 
 const JSON_HEADERS = {
   "content-type": "application/json; charset=utf-8",
@@ -34,6 +35,7 @@ export function createRequestHandler({
   rateLimiter = null,
   corsAllowOrigin = process.env.CORS_ALLOW_ORIGIN || "*",
   openApiSpec = null,
+  planObjective = null,
 } = {}) {
   if (typeof getMarketData !== "function") throw new TypeError("getMarketData is required");
 
@@ -54,21 +56,51 @@ export function createRequestHandler({
         result = json(200, {
           service: "LiquidFlux",
           product: "LiquidFlux Orchestrator",
-          version: "0.2.1",
+          version: "0.3.0",
           status: "operational",
-          description: "Read-only Hyperliquid specialist orchestration with deterministic funding, liquidity, and risk evidence.",
+          description: "AI-assisted planning with approval-gated, deterministic Hyperliquid funding, liquidity, and risk evidence.",
           endpoints: {
             health: { method: "GET", path: "/health" },
             openapi: { method: "GET", path: "/openapi.json" },
+            ai_planner: { method: "POST", path: "/api/v1/plan" },
             funding_specialist: { method: "POST", path: "/api/v1/funding-scan" },
             orchestrator: { method: "POST", path: "/api/v1/orchestrate" },
           },
           execution_included: false,
         }, id, corsHeaders);
       } else if (method === "GET" && pathname === "/health") {
-        result = json(200, { status: "ok", service: "hyperdesk-scout", version: "0.2.1" }, id, corsHeaders);
+        result = json(200, { status: "ok", service: "hyperdesk-scout", version: "0.3.0" }, id, corsHeaders);
       } else if (method === "GET" && pathname === "/openapi.json" && openApiSpec) {
         result = json(200, openApiSpec, id, corsHeaders);
+      } else if (method === "POST" && pathname === "/api/v1/plan") {
+        const rate = rateLimiter?.consume(clientIp);
+        if (rate && !rate.allowed) {
+          result = json(429, {
+            request_id: id,
+            error: "rate_limited",
+            message: "Too many requests",
+          }, id, {
+            ...corsHeaders,
+            "retry-after": String(Math.max(1, Math.ceil((rate.resetAt - Date.now()) / 1000))),
+            "x-ratelimit-limit": String(rate.limit),
+            "x-ratelimit-remaining": "0",
+          });
+        } else if (typeof planObjective !== "function") {
+          result = json(503, {
+            request_id: id,
+            error: "ai_unavailable",
+            message: "AI planning is not configured",
+          }, id, corsHeaders);
+        } else {
+          const plan = await planObjective(parseJsonBody(bodyText));
+          result = json(200, { request_id: id, ...plan }, id, {
+            ...corsHeaders,
+            ...(rate ? {
+              "x-ratelimit-limit": String(rate.limit),
+              "x-ratelimit-remaining": String(rate.remaining),
+            } : {}),
+          });
+        }
       } else if (method === "POST" && pathname === "/api/v1/orchestrate") {
         const rate = rateLimiter?.consume(clientIp);
         if (rate && !rate.allowed) {
@@ -147,9 +179,13 @@ export function createRequestHandler({
       logger.info?.(JSON.stringify({ requestId: id, method, pathname, status: result.status, latencyMs: Date.now() - startedAt }));
       return result;
     } catch (error) {
-      const status = error instanceof ValidationError || error instanceof UpstreamError ? error.status : 500;
+      const status = error instanceof ValidationError || error instanceof UpstreamError || error instanceof PlannerError
+        ? error.status
+        : 500;
       const code = error instanceof ValidationError ? "invalid_request"
-        : error instanceof UpstreamError ? "upstream_unavailable" : "internal_error";
+        : error instanceof UpstreamError ? "upstream_unavailable"
+          : error instanceof PlannerError ? error.code
+            : "internal_error";
       logger.error?.(JSON.stringify({ requestId: id, method, pathname, status, code, latencyMs: Date.now() - startedAt }));
       return json(status, { request_id: id, error: code, message: error.message }, id, corsHeaders);
     }

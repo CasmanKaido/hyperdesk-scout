@@ -57,13 +57,20 @@
         </div>
 
         <div class="objective-block">
-          <span>Objective</span>
-          <strong>Find market-neutral funding income with bounded liquidation risk.</strong>
-          <small>Supported workflow: <code>market_neutral_income</code></small>
+          <label for="objective-message">Describe what you want to evaluate</label>
+          <textarea id="objective-message" name="objective_message" rows="4" minlength="10" maxlength="1000" aria-describedby="objective-help planner-status">Find a low-risk market-neutral opportunity on BTC, ETH, and SOL using no more than $1,000 and no more than 2× leverage.</textarea>
+          <p class="field-help" id="objective-help">AI translates your request into editable constraints. It does not read market data or start the workflow.</p>
+          <button class="planner-action" id="generate-plan" type="button">
+            <span class="planner-button-label">Generate AI plan</span>
+          </button>
+          <p class="planner-status" id="planner-status" aria-live="polite">Gemini is tried first; Groq is the fallback when configured.</p>
         </div>
 
         <form id="analysis-form" novalidate>
-          <p class="form-section-label">Constraints</p>
+          <div class="constraints-heading">
+            <p class="form-section-label">Review or edit constraints</p>
+            <span>Manual available</span>
+          </div>
           <div class="field-group">
             <label for="symbols">Markets</label>
             <p class="field-help" id="symbols-help">Enter 1–20 Hyperliquid symbols, separated by commas.</p>
@@ -171,6 +178,17 @@
             </div>
           </div>
 
+          <div class="ai-plan-context" id="ai-plan-context" hidden>
+            <div>
+              <span>AI interpretation</span>
+              <strong id="ai-plan-summary">Objective translated into editable constraints.</strong>
+            </div>
+            <dl>
+              <div><dt>Provider</dt><dd id="ai-plan-provider">—</dd></div>
+              <div><dt>Assumptions</dt><dd id="ai-plan-assumptions">None</dd></div>
+            </dl>
+          </div>
+
           <div class="service-plan" aria-label="Planned specialist services">
             <article class="service-row">
               <span class="service-order">1A</span>
@@ -210,7 +228,7 @@
             <div><span>Maximum spend</span><strong>0 USDT</strong></div>
           </div>
 
-          <p class="plan-disclosure">Only the Funding Specialist is currently marketplace-listed. Liquidity, Risk, and Synthesis are transparent first-party modules—not independent external agents.</p>
+          <p class="plan-disclosure">Only the Funding Specialist is currently marketplace-listed. Liquidity, Risk, and Synthesis are transparent first-party modules—not independent external agents. Gemini or Groq planning is separate from OKX.AI service discovery and future x402 spend.</p>
 
           <div class="plan-actions">
             <button class="primary-action" id="approve-plan" type="button">Approve plan and run</button>
@@ -248,7 +266,7 @@
 
   <footer class="app-footer">
     <p>LiquidFlux provides informational market analysis. Funding can reverse, basis can move, and returns are not guaranteed.</p>
-    <span>API version 0.2.1</span>
+    <span>API version 0.3.0</span>
   </footer>
 </body>
 </html>

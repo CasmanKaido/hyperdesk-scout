@@ -149,7 +149,7 @@ export async function orchestrateMarketNeutral({
 
   return {
     service: "LiquidFlux Orchestrator",
-    version: "0.2.1",
+    version: "0.3.0",
     workflow_id: workflowId,
     generated_at: generatedAt.toISOString(),
     objective: input.objective,

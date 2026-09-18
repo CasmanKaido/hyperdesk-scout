@@ -1,11 +1,12 @@
 # LiquidFlux
 
-LiquidFlux is a read-only Hyperliquid specialist-orchestration service for OKX.AI. Its deployed Funding Specialist returns deterministic funding, basis, liquidity, and risk evidence, while its orchestration API coordinates Funding, Liquidity, and Risk specialists into a traceable market-neutral workflow.
+LiquidFlux is an AI-assisted, read-only Hyperliquid specialist-orchestration service for OKX.AI. Gemini interprets a natural-language objective into validated constraints, Groq can recover as the fallback provider, and deterministic Funding, Liquidity, Risk, and Synthesis modules produce the actual market evidence only after explicit user approval.
 
 - **Live dashboard:** https://hyperdesk-scout.onrender.com
 - **Live API origin:** https://hyperdesk-scout.onrender.com
 - **Health:** https://hyperdesk-scout.onrender.com/health
 - **OpenAPI:** https://hyperdesk-scout.onrender.com/openapi.json
+- **AI planner:** `POST https://hyperdesk-scout.onrender.com/api/v1/plan`
 - **Orchestrator:** `POST https://hyperdesk-scout.onrender.com/api/v1/orchestrate`
 - **OKX.AI ASP:** LiquidFlux, Agent ID `13784` — listed and eligible for task recommendations
 
@@ -19,8 +20,10 @@ The deployed funding scanner remains useful as the first A2MCP specialist and is
 
 ## Dashboard
 
-The dependency-free dashboard is served by the existing Node service and calls `POST /api/v1/orchestrate` only after an explicit plan approval. It includes:
+The dependency-free dashboard is served by the existing Node service. It can call `POST /api/v1/plan` to draft editable constraints, but it calls `POST /api/v1/orchestrate` only after explicit plan approval. It includes:
 
+- A natural-language objective composer with Gemini primary and Groq fallback
+- Editable deterministic controls and a fully functional manual fallback
 - A real objective-and-constraints workflow for market-neutral Hyperliquid income analysis
 - Pre-run specialist planning with provider identity, OKX.AI listing status, service cost, and explicit approval
 - Honest separation between the marketplace-listed Funding Specialist, first-party modules, and the unconnected external-service slot
@@ -30,7 +33,7 @@ The dependency-free dashboard is served by the existing Node service and calls `
 - Visible provenance, freshness, workflow trace, and execution-approval boundary
 - Responsive desktop and mobile layouts, keyboard focus, and reduced-motion support
 
-No wallet connection, paid service, or trade execution is included. Reviewing a plan performs no service call; approving it runs only the free first-party workflow.
+No wallet connection, paid service, or trade execution is included. AI planning reads no market data and cannot start the workflow. Reviewing the specialist plan performs no service call; approving it runs only the free first-party workflow. Gemini/Groq API usage is infrastructure supplied by the operator and is separate from OKX.AI marketplace invocation or future x402 spend.
 
 ## Run
 
@@ -44,6 +47,14 @@ Health check:
 
 ```bash
 curl http://localhost:3000/health
+```
+
+AI-assisted objective planning (requires at least one configured provider key):
+
+```bash
+curl -X POST http://localhost:3000/api/v1/plan \
+  -H 'Content-Type: application/json' \
+  -d '{"message":"Find a low-risk market-neutral opportunity using no more than $1,000"}'
 ```
 
 Orchestrated market-neutral analysis:
@@ -65,6 +76,12 @@ curl -X POST http://localhost:3000/api/v1/funding-scan \
 ## API
 
 The machine-readable OpenAPI 3.1 contract is available in [`openapi.json`](openapi.json) and is served at `GET /openapi.json`.
+
+### `POST /api/v1/plan`
+
+Uses Gemini first and Groq as a configured fallback to translate one natural-language `message` into validated, editable orchestration constraints. The response identifies the provider/model, assumptions, missing information, fixed specialist plan, and mandatory approval boundary. It always returns `execution_included: false` and does not fetch Hyperliquid market data.
+
+If neither key is configured, the endpoint returns `503 ai_unavailable`; the dashboard remains usable through its manual controls. If all configured providers fail, it returns the opaque `502 ai_provider_unavailable` error without exposing provider responses or keys.
 
 ### `POST /api/v1/orchestrate`
 
@@ -107,6 +124,12 @@ Copy `.env.example` values into your deployment environment. Do not commit a rea
 | `RATE_LIMIT_MAX_REQUESTS` | `60` | Requests allowed per client/window |
 | `RATE_LIMIT_WINDOW_MS` | `60000` | Rate-limit window |
 | `CORS_ALLOW_ORIGIN` | `*` | Allowed browser origin; restrict for a private frontend |
+| `GEMINI_API_KEY` | unset | Server-side Gemini key; never expose it to browser code or commit it |
+| `GROQ_API_KEY` | unset | Server-side Groq fallback key; never expose it to browser code or commit it |
+| `AI_PROVIDER_ORDER` | `gemini,groq` | Ordered provider preference; unconfigured providers are skipped |
+| `AI_PLANNER_TIMEOUT_MS` | `15000` | Timeout applied separately to each configured AI provider |
+| `GEMINI_MODEL` | `gemini-3.8-flash` | Gemini planner model override |
+| `GROQ_MODEL` | `openai/gpt-oss-20b` | Groq planner model override |
 
 ## Deployment
 
@@ -134,7 +157,7 @@ npm run check
 
 The ordered build plan, acceptance criteria, prerequisites, and current next task are maintained in [`ROADMAP.md`](ROADMAP.md).
 
-Current work spans **M3 — OKX.AI integration** and **M6 — Demo interface**. The first router workflow is deployed, the ASP listing is approved, the Funding Specialist completed an end-to-end invocation through OKX.AI, and a production-ready analyst dashboard now exercises the live workflow. A paid external specialist remains intentionally deferred until a relevant provider works through the official OKX.AI invocation path.
+Current work spans **M3 — OKX.AI integration** and **M6 — Demo interface**. The first router workflow is deployed, the ASP listing is approved, the Funding Specialist completed an end-to-end invocation through OKX.AI, and the analyst dashboard now supports provider-neutral AI objective planning before its approval-gated deterministic workflow. A paid external specialist remains intentionally deferred until a relevant provider works through the official OKX.AI invocation path.
 
 ## Sources
 

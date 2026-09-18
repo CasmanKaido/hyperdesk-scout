@@ -4,6 +4,7 @@ import { createMarketDataProvider } from "./market-data.js";
 import { createRateLimiter } from "./rate-limit.js";
 import { loadOpenApiSpec } from "./openapi.js";
 import { getStaticAsset, loadStaticAssets } from "./static.js";
+import { createAIPlanner } from "./ai-planner.js";
 
 const PORT = Number(process.env.PORT || 3000);
 const MAX_BODY_BYTES = 32 * 1024;
@@ -27,8 +28,9 @@ export function createApp({
   logger = console,
   openApiSpec = loadOpenApiSpec(),
   staticAssets = loadStaticAssets(),
+  planObjective = createAIPlanner(),
 } = {}) {
-  const handleRequest = createRequestHandler({ getMarketData, rateLimiter, logger, openApiSpec });
+  const handleRequest = createRequestHandler({ getMarketData, rateLimiter, logger, openApiSpec, planObjective });
 
   return createServer(async (request, response) => {
     try {

@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { createRequestHandler } from "../src/handler.js";
 import { UpstreamError } from "../src/hyperliquid.js";
 import { createRateLimiter } from "../src/rate-limit.js";
+import { createAIPlanner, PlannerError } from "../src/ai-planner.js";
 
 const market = {
   symbol: "ETH",
@@ -17,12 +18,13 @@ const market = {
 
 const silentLogger = { info() {}, error() {} };
 
-function handlerWith(getMarketData) {
+function handlerWith(getMarketData, options = {}) {
   return createRequestHandler({
     getMarketData,
     requestId: () => "req_test",
     now: () => new Date("2026-09-17T00:00:01Z"),
     logger: silentLogger,
+    ...options,
   });
 }
 
@@ -31,11 +33,12 @@ test("serves a discoverable index and health without market data", async () => {
   const index = await handle({ method: "GET", pathname: "/" });
   assert.equal(index.status, 200);
   assert.equal(index.body.service, "LiquidFlux");
+  assert.equal(index.body.endpoints.ai_planner.path, "/api/v1/plan");
   assert.equal(index.body.endpoints.funding_specialist.method, "POST");
 
   const result = await handle({ method: "GET", pathname: "/health" });
   assert.equal(result.status, 200);
-  assert.deepEqual(result.body, { status: "ok", service: "hyperdesk-scout", version: "0.2.1" });
+  assert.deepEqual(result.body, { status: "ok", service: "hyperdesk-scout", version: "0.3.0" });
 });
 
 test("serves the OpenAPI contract when configured", async () => {
@@ -48,6 +51,80 @@ test("serves the OpenAPI contract when configured", async () => {
   const result = await handle({ method: "GET", pathname: "/openapi.json" });
   assert.equal(result.status, 200);
   assert.equal(result.body.openapi, "3.1.0");
+});
+
+test("creates an AI plan without fetching market data", async () => {
+  let marketDataCalled = false;
+  const handle = handlerWith(async () => {
+    marketDataCalled = true;
+    throw new Error("should not run");
+  }, {
+    planObjective: async (input) => ({
+      summary: `Plan for ${input.message}`,
+      objective: "market_neutral_income",
+      symbols: ["BTC"],
+      risk_tolerance: "conservative",
+      max_leverage: 2,
+      max_notional_usd: 1000,
+      min_funding_apr: 5,
+      assumptions: [],
+      missing_information: [],
+      provider: "gemini",
+      model: "test-model",
+      specialist_plan: [],
+      approval_required: true,
+      execution_included: false,
+    }),
+  });
+
+  const result = await handle({
+    method: "POST",
+    pathname: "/api/v1/plan",
+    bodyText: JSON.stringify({ message: "Find a conservative BTC opportunity" }),
+  });
+
+  assert.equal(result.status, 200);
+  assert.equal(result.body.provider, "gemini");
+  assert.equal(result.body.approval_required, true);
+  assert.equal(result.body.execution_included, false);
+  assert.equal(marketDataCalled, false);
+});
+
+test("returns safe planner errors for invalid prompts and unavailable providers", async () => {
+  const handle = handlerWith(async () => { throw new Error("should not run"); }, {
+    planObjective: createAIPlanner({ env: {} }),
+  });
+
+  const invalid = await handle({
+    method: "POST",
+    pathname: "/api/v1/plan",
+    bodyText: JSON.stringify({ message: "short" }),
+  });
+  assert.equal(invalid.status, 400);
+  assert.equal(invalid.body.error, "invalid_request");
+
+  const unavailable = await handle({
+    method: "POST",
+    pathname: "/api/v1/plan",
+    bodyText: JSON.stringify({ message: "Find a conservative BTC opportunity" }),
+  });
+  assert.equal(unavailable.status, 503);
+  assert.equal(unavailable.body.error, "ai_unavailable");
+
+  const exhausted = await handlerWith(async () => { throw new Error("should not run"); }, {
+    planObjective: async () => {
+      throw new PlannerError("All configured AI planning providers failed", {
+        status: 502,
+        code: "ai_provider_unavailable",
+      });
+    },
+  })({
+    method: "POST",
+    pathname: "/api/v1/plan",
+    bodyText: JSON.stringify({ message: "Find a conservative BTC opportunity" }),
+  });
+  assert.equal(exhausted.status, 502);
+  assert.equal(exhausted.body.error, "ai_provider_unavailable");
 });
 
 test("returns a structured funding scan with freshness metadata", async () => {
@@ -142,6 +219,27 @@ test("supports CORS preflight and limits scan requests", async () => {
     clientIp: "127.0.0.1",
     bodyText: JSON.stringify({ symbols: ["ETH"], risk_tolerance: "aggressive" }),
   };
+  assert.equal((await handle(request)).status, 200);
+  const limited = await handle(request);
+  assert.equal(limited.status, 429);
+  assert.equal(limited.body.error, "rate_limited");
+});
+
+test("rate limits AI planning requests", async () => {
+  const handle = createRequestHandler({
+    getMarketData: async () => { throw new Error("should not run"); },
+    planObjective: async () => ({ approval_required: true, execution_included: false }),
+    requestId: () => "req_test",
+    rateLimiter: createRateLimiter({ limit: 1 }),
+    logger: silentLogger,
+  });
+  const request = {
+    method: "POST",
+    pathname: "/api/v1/plan",
+    clientIp: "127.0.0.2",
+    bodyText: JSON.stringify({ message: "Find a conservative BTC opportunity" }),
+  };
+
   assert.equal((await handle(request)).status, 200);
   const limited = await handle(request);
   assert.equal(limited.status, 429);

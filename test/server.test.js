@@ -43,5 +43,5 @@ test("serves the dashboard and preserves JSON health checks", async (context) =>
   const health = await fetch(`${origin}/health`);
   assert.equal(health.status, 200);
   assert.match(health.headers.get("content-type"), /application\/json/);
-  assert.deepEqual(await health.json(), { status: "ok", service: "hyperdesk-scout", version: "0.2.1" });
+  assert.deepEqual(await health.json(), { status: "ok", service: "hyperdesk-scout", version: "0.3.0" });
 });

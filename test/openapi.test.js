@@ -10,6 +10,7 @@ test("publishes an OpenAPI 3.1 contract for every route", () => {
   assert.ok(spec.paths["/"].get);
   assert.ok(spec.paths["/health"].get);
   assert.ok(spec.paths["/openapi.json"].get);
+  assert.ok(spec.paths["/api/v1/plan"].post);
   assert.ok(spec.paths["/api/v1/orchestrate"].post);
   assert.ok(spec.paths["/api/v1/funding-scan"].post);
   assert.ok(spec.components.schemas.FundingScanResponse.required.includes("market_data"));
@@ -36,6 +37,22 @@ test("the documented required response fields match an actual response", async (
     requestId: () => "req_contract",
     now: () => new Date("2026-09-17T00:00:01Z"),
     logger: { info() {}, error() {} },
+    planObjective: async () => ({
+      summary: "Review BTC under conservative constraints.",
+      objective: "market_neutral_income",
+      symbols: ["BTC"],
+      risk_tolerance: "conservative",
+      max_leverage: 2,
+      max_notional_usd: 1000,
+      min_funding_apr: 5,
+      assumptions: [],
+      missing_information: [],
+      provider: "gemini",
+      model: "test-model",
+      specialist_plan: [],
+      approval_required: true,
+      execution_included: false,
+    }),
   });
   const response = await handle({
     method: "POST",
@@ -48,6 +65,15 @@ test("the documented required response fields match an actual response", async (
   }
   for (const field of spec.components.schemas.Opportunity.required) {
     assert.ok(Object.hasOwn(response.body.opportunities[0], field), `missing opportunity field: ${field}`);
+  }
+
+  const plan = await handle({
+    method: "POST",
+    pathname: "/api/v1/plan",
+    bodyText: JSON.stringify({ message: "Find a conservative BTC opportunity" }),
+  });
+  for (const field of spec.components.schemas.PlannerResponse.required) {
+    assert.ok(Object.hasOwn(plan.body, field), `missing planner field: ${field}`);
   }
 
   const orchestration = await handle({

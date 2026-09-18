@@ -18,7 +18,9 @@ Creating the service remains a manual authorization step because you must accept
 8. Copy the assigned HTTPS URL, such as `https://hyperdesk-scout.onrender.com`.
 9. Replace the placeholder deployment URL in the README and OpenAPI `servers` list.
 
-No secrets are needed for the current read-only service. Do not add OKX credentials until the later x402 milestone.
+The deterministic read-only workflow requires no secrets. AI planning is optional and requires at least one server-side provider key. In the Render service, open **Environment**, add `GEMINI_API_KEY` and/or `GROQ_API_KEY`, and redeploy. Never put either key in browser code, `render.yaml`, a committed `.env`, logs, or screenshots. Do not add OKX credentials until the later x402 milestone.
+
+Optional planner settings are `AI_PROVIDER_ORDER` (default `gemini,groq`), `AI_PLANNER_TIMEOUT_MS` (default `15000` per provider), `GEMINI_MODEL`, and `GROQ_MODEL`. With no AI key, `POST /api/v1/plan` intentionally returns `503 ai_unavailable`, while manual planning and deterministic analysis continue to work.
 
 ## Free-plan limitations
 
@@ -37,7 +39,7 @@ curl -i https://YOUR-SERVICE.example/health
 Expected: `HTTP 200` and:
 
 ```json
-{"status":"ok","service":"hyperdesk-scout","version":"0.2.1"}
+{"status":"ok","service":"hyperdesk-scout","version":"0.3.0"}
 ```
 
 ### OpenAPI contract
@@ -47,6 +49,16 @@ curl -i https://YOUR-SERVICE.example/openapi.json
 ```
 
 Expected: `HTTP 200` and an OpenAPI document with version `3.1.0`.
+
+### AI planner
+
+```bash
+curl -i -X POST https://YOUR-SERVICE.example/api/v1/plan \
+  -H 'Content-Type: application/json' \
+  -d '{"message":"Find a low-risk market-neutral opportunity using no more than $1,000"}'
+```
+
+Expected with a valid provider key: `HTTP 200`, a `provider` of `gemini` or `groq`, editable constraints, `approval_required: true`, and `execution_included: false`. Expected without a key: `HTTP 503` with `error: "ai_unavailable"`.
 
 ### Live funding scan
 
@@ -91,6 +103,7 @@ After deployment, update `ROADMAP.md` and `README.md` with:
 - **Cache sequence:** `miss`, `hit`, `hit` across three consecutive successful scans
 - **Container verification:** Render successfully built the Dockerfile and passed `/health`
 - **Orchestrator version:** `0.2.0`, verified 2026-09-17 17:19 UTC
+- **AI planner version:** `0.3.0`; production provider verification pending a server-side Render key
 - **Orchestration endpoint:** `POST /api/v1/orchestrate` returned `HTTP 200`
 - **Workflow trace:** Funding and Liquidity completed in stage 1; Risk completed in stage 2; deterministic synthesis completed in stage 3
 - **Safety boundary:** `execution_included: false` and `approval_required: true`

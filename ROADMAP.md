@@ -15,7 +15,7 @@ This is the project's source of truth for build order. Work on one milestone at 
 
 **In progress:** M3 — Hyperliquid orchestration MVP and free OKX.AI integration; M6 — Demo interface
 
-**Next:** Deploy and verify the new analyst dashboard, then capture reproducible visual evidence. A paid external specialist is deferred until a relevant provider succeeds through the official OKX.AI invocation path; LiquidFlux will not force an unsafe or incompatible integration merely to claim multi-agent orchestration.
+**Next:** Configure one server-side AI provider key on Render, verify natural-language planning in production, and capture reproducible demo evidence. A paid external specialist is deferred until a relevant provider succeeds through the official OKX.AI invocation path; LiquidFlux will not force an unsafe or incompatible integration merely to claim multi-agent orchestration.
 
 ---
 
@@ -226,6 +226,9 @@ Selected target: **Render Free web service using the repository Dockerfile**. Th
 - [x] Show live opportunities and risk flags
 - [ ] Show the OKX AI invocation
 - [ ] Show the unpaid and paid request flow
+- [x] Add provider-neutral natural-language objective planning with Gemini primary and Groq fallback
+- [x] Validate AI-generated constraints before displaying or using them
+- [x] Preserve explicit human approval and manual fallback when AI is unavailable
 - [ ] Add an optional natural-language explanation generated from structured results
 - [x] Keep all numerical controls deterministic
 - [x] Add loading, empty, stale-data, and failure states
