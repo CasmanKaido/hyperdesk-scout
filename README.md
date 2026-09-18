@@ -6,12 +6,13 @@ HyperDesk is a read-only Hyperliquid specialist-orchestration service for OKX.AI
 - **Health:** https://hyperdesk-scout.onrender.com/health
 - **OpenAPI:** https://hyperdesk-scout.onrender.com/openapi.json
 - **Orchestrator:** `POST https://hyperdesk-scout.onrender.com/api/v1/orchestrate`
+- **OKX.AI ASP:** LiquidFlux, Agent ID `13784`
 
 ## Product direction
 
 Existing marketplace products already expose individual Hyperliquid analytics, risk, and execution capabilities. HyperDesk is therefore evolving from a standalone scanner into the orchestration layer that selects specialist stages, combines their evidence, reports conflicts, and stops at an explicit execution-approval boundary.
 
-The deployed funding scanner remains useful as the first A2MCP specialist. See [`STRATEGY.md`](STRATEGY.md) for the validated positioning, narrow router MVP, safety boundary, and external-agent integration plan.
+The deployed funding scanner remains useful as the first A2MCP specialist and is registered under the LiquidFlux ASP identity. See [`STRATEGY.md`](STRATEGY.md) for the validated positioning, narrow router MVP, safety boundary, and external-agent integration plan, and [`OKX_AI.md`](OKX_AI.md) for marketplace integration status.
 
 ## Run
 

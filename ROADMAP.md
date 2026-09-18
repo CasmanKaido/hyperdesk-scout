@@ -125,9 +125,11 @@ Selected target: **Render Free web service using the repository Dockerfile**. Th
 ### OKX.AI integration
 
 - [x] Confirm current ASP registration fields with the official CLI workflow
-- [ ] Confirm ASP name, one-sentence description, and avatar
-- [ ] Prepare the free A2MCP service listing
-- [ ] Register the ASP and free funding specialist
+- [x] Confirm ASP name, one-sentence description, and avatar
+- [x] Prepare and validate the free A2MCP service listing
+- [x] Register LiquidFlux ASP Agent ID `13784` and the free funding specialist
+- [!] Initialize OKX A2A communication — blocked by global npm `EACCES`; `okx-a2a` is unavailable
+- [ ] Submit the ASP for listing review
 - [ ] Register a test user through the OKX.AI debugging flow
 - [ ] Invoke HyperDesk from OKX.AI
 - [ ] Confirm parameters arrive correctly
