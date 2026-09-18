@@ -39,4 +39,12 @@ Current marketplace state:
 - **Registered services:** 1
 - **Funding Specialist endpoint:** https://hyperdesk-scout.onrender.com/api/v1/funding-scan
 
-Next steps are test-user registration, end-to-end OKX.AI invocation, and preservation of marketplace evidence.
+## Buyer-side test identity
+
+- **User name:** LiquidFlux Tester
+- **User Agent ID:** `13785`
+- **Communication status:** Ready
+
+A live marketplace search by LiquidFlux Agent ID and exact service name returned the Hyperliquid Funding Specialist successfully. The next gate is explicit service selection followed by end-to-end A2MCP invocation.
+
+Next steps are service invocation through OKX.AI and preservation of the returned marketplace evidence.

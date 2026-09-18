@@ -131,7 +131,8 @@ Selected target: **Render Free web service using the repository Dockerfile**. Th
 - [x] Initialize OKX A2A communication with Codex; official doctor reports `ready: true`
 - [x] Submit LiquidFlux Agent `13784` for English marketplace review
 - [x] Receive marketplace approval — active and eligible for task recommendations
-- [ ] Register a test user through the OKX.AI debugging flow
+- [x] Register LiquidFlux Tester User Agent ID `13785`
+- [x] Discover the Funding Specialist through a live OKX.AI marketplace search
 - [ ] Invoke HyperDesk from OKX.AI
 - [ ] Confirm parameters arrive correctly
 - [ ] Confirm structured results are returned without manual setup
