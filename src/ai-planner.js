@@ -22,28 +22,27 @@ const OUTPUT_SCHEMA = {
   additionalProperties: false,
   required: OUTPUT_FIELDS,
   properties: {
-    summary: { type: "string", minLength: 1 },
-    objective: { type: "string", const: "market_neutral_income" },
+    summary: { type: "string" },
+    objective: { type: "string", enum: ["market_neutral_income"] },
     symbols: {
       type: "array",
       minItems: 1,
       maxItems: 20,
-      uniqueItems: true,
-      items: { type: "string", pattern: "^[A-Za-z0-9:_-]{1,30}$" },
+      items: { type: "string" },
     },
     risk_tolerance: { type: "string", enum: ["conservative", "moderate", "aggressive"] },
     max_leverage: { type: "number", minimum: 1, maximum: 10 },
-    max_notional_usd: { type: "number", exclusiveMinimum: 0, maximum: 1_000_000 },
+    max_notional_usd: { type: "number", minimum: 0, maximum: 1_000_000 },
     min_funding_apr: { type: "number", minimum: 0, maximum: 10_000 },
     assumptions: {
       type: "array",
       maxItems: 8,
-      items: { type: "string", minLength: 1 },
+      items: { type: "string" },
     },
     missing_information: {
       type: "array",
       maxItems: 5,
-      items: { type: "string", minLength: 1 },
+      items: { type: "string" },
     },
   },
 };
@@ -226,16 +225,31 @@ async function callProvider(config, message, fetchImpl, timeoutMs) {
   try {
     const request = providerRequest(config, message, controller.signal);
     const response = await fetchImpl(request.url, request.options);
-    if (!response || response.ok !== true) throw new Error("Provider request failed");
+    if (!response || response.ok !== true) {
+      const error = new Error("Provider request failed");
+      error.reason = `http_${response?.status || "unknown"}`;
+      throw error;
+    }
     const body = await response.json();
     const content = config.provider === "gemini"
       ? body?.output_text
       : body?.choices?.[0]?.message?.content;
-    if (typeof content !== "string") throw new Error("Provider response was incomplete");
+    if (typeof content !== "string") {
+      const error = new Error("Provider response was incomplete");
+      error.reason = "incomplete_response";
+      throw error;
+    }
     return validatePlannerOutput(JSON.parse(content));
   } finally {
     clearTimeout(timer);
   }
+}
+
+function providerFailureReason(error) {
+  if (error?.name === "AbortError") return "timeout";
+  if (error instanceof PlannerError) return error.code;
+  if (error instanceof SyntaxError) return "invalid_json";
+  return error?.reason || "request_failed";
 }
 
 function cloneSpecialistPlan() {
@@ -246,6 +260,7 @@ export function createAIPlanner({
   env = process.env,
   fetchImpl = globalThis.fetch,
   timeoutMs = Number(env.AI_PLANNER_TIMEOUT_MS || DEFAULT_TIMEOUT_MS),
+  logger = null,
 } = {}) {
   if (typeof fetchImpl !== "function") throw new TypeError("fetchImpl must be a function");
   if (!Number.isFinite(timeoutMs) || timeoutMs <= 0) throw new TypeError("timeoutMs must be positive");
@@ -268,8 +283,13 @@ export function createAIPlanner({
           approval_required: true,
           execution_included: false,
         };
-      } catch {
-        // Provider details are deliberately suppressed; the next configured provider may recover.
+      } catch (error) {
+        logger?.warn?.(JSON.stringify({
+          event: "ai_provider_failed",
+          provider: config.provider,
+          model: config.model,
+          reason: providerFailureReason(error),
+        }));
       }
     }
 

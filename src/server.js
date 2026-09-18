@@ -28,7 +28,7 @@ export function createApp({
   logger = console,
   openApiSpec = loadOpenApiSpec(),
   staticAssets = loadStaticAssets(),
-  planObjective = createAIPlanner(),
+  planObjective = createAIPlanner({ logger }),
 } = {}) {
   const handleRequest = createRequestHandler({ getMarketData, rateLimiter, logger, openApiSpec, planObjective });
 

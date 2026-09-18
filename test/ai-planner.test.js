@@ -87,6 +87,11 @@ test("uses Gemini and appends deterministic planner metadata", async () => {
   assert.equal(requestBody.response_format.type, "text");
   assert.equal(requestBody.response_format.mime_type, "application/json");
   assert.equal(requestBody.response_format.schema.additionalProperties, false);
+  assert.deepEqual(requestBody.response_format.schema.properties.objective.enum, ["market_neutral_income"]);
+  assert.doesNotMatch(
+    JSON.stringify(requestBody.response_format.schema),
+    /"const"|"pattern"|"uniqueItems"|"exclusiveMinimum"|"minLength"/,
+  );
   assert.match(requestBody.input, /JSON only/);
   assert.match(requestBody.input, /BTC, ETH, SOL/);
   assert.match(requestBody.input, /Do not calculate or invent market data/);
@@ -146,6 +151,7 @@ test("returns 503 without keys and does not call fetch", async () => {
 
 test("returns one opaque 502 only after all configured providers fail", async () => {
   let calls = 0;
+  const warnings = [];
   const planner = createAIPlanner({
     env: { GEMINI_API_KEY: "do-not-leak", GROQ_API_KEY: "also-secret" },
     fetchImpl: async () => {
@@ -153,6 +159,7 @@ test("returns one opaque 502 only after all configured providers fail", async ()
       if (calls === 1) return jsonResponse({ output_text: "not json: do-not-leak" });
       throw new Error("network included also-secret and raw response");
     },
+    logger: { warn(message) { warnings.push(message); } },
   });
 
   await assert.rejects(
@@ -164,6 +171,9 @@ test("returns one opaque 502 only after all configured providers fail", async ()
     },
   );
   assert.equal(calls, 2);
+  assert.equal(warnings.length, 2);
+  assert.doesNotMatch(warnings.join("\n"), /do-not-leak|also-secret|raw response/);
+  assert.match(warnings[0], /invalid_json/);
 });
 
 test("times out a provider request and falls back", async () => {
