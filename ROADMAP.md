@@ -15,7 +15,7 @@ This is the project's source of truth for build order. Work on one milestone at 
 
 **In progress:** M3 — Hyperliquid orchestration MVP and free OKX.AI integration; M6 — Demo interface
 
-**Next:** Configure one server-side AI provider key on Render, verify natural-language planning in production, and capture reproducible demo evidence. A paid external specialist is deferred until a relevant provider succeeds through the official OKX.AI invocation path; LiquidFlux will not force an unsafe or incompatible integration merely to claim multi-agent orchestration.
+**Next:** Invoke the newly published Market-Neutral Orchestrator through the buyer-side OKX.AI flow, then configure one server-side AI provider key on Render and capture reproducible demo evidence. A paid external specialist is deferred until a relevant provider succeeds through the official OKX.AI invocation path; LiquidFlux will not force an unsafe or incompatible integration merely to claim multi-agent orchestration.
 
 ---
 
@@ -128,6 +128,7 @@ Selected target: **Render Free web service using the repository Dockerfile**. Th
 - [x] Confirm ASP name, one-sentence description, and avatar
 - [x] Prepare and validate the free A2MCP service listing
 - [x] Register LiquidFlux ASP Agent ID `13784` and the free funding specialist
+- [x] Publish the free Market-Neutral Orchestrator A2MCP service
 - [x] Initialize OKX A2A communication with Codex; official doctor reports `ready: true`
 - [x] Submit LiquidFlux Agent `13784` for English marketplace review
 - [x] Receive marketplace approval — active and eligible for task recommendations
@@ -137,7 +138,9 @@ Selected target: **Render Free web service using the repository Dockerfile**. Th
 - [x] Confirm default parameters arrive correctly
 - [x] Confirm structured results are returned without manual setup
 - [ ] Save service/listing URL
+- [ ] Invoke the Market-Neutral Orchestrator through OKX.AI from the buyer test identity
 - [!] Add one real, non-duplicative external OKX.AI specialist integration — deferred after live searches found no suitable current Hyperliquid service and the strongest free candidate failed the official A2MCP transport check
+- [ ] Later: publish additional independent Liquidity or Risk services only when they add distinct marketplace-callable evidence
 - [ ] Capture screenshots or a short recording as evidence
 
 ### Exit criteria

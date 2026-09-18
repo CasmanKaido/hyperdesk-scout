@@ -8,13 +8,13 @@ LiquidFlux is an AI-assisted, read-only Hyperliquid specialist-orchestration ser
 - **OpenAPI:** https://hyperdesk-scout.onrender.com/openapi.json
 - **AI planner:** `POST https://hyperdesk-scout.onrender.com/api/v1/plan`
 - **Orchestrator:** `POST https://hyperdesk-scout.onrender.com/api/v1/orchestrate`
-- **OKX.AI ASP:** LiquidFlux, Agent ID `13784` — listed and eligible for task recommendations
+- **OKX.AI ASP:** LiquidFlux, Agent ID `13784` — Funding Specialist and Market-Neutral Orchestrator published as free A2MCP services
 
 ## Product direction
 
 Existing marketplace products already expose individual Hyperliquid analytics, risk, and execution capabilities. LiquidFlux is therefore evolving from a standalone scanner into the orchestration layer that selects specialist stages, combines their evidence, reports conflicts, and stops at an explicit execution-approval boundary.
 
-The deployed funding scanner remains useful as the first A2MCP specialist and is registered under the LiquidFlux ASP identity. A live buyer-side invocation through OKX.AI returned fresh Hyperliquid mainnet evidence synchronously with no manual setup. The root URL now serves the actual analyst workspace: users set constraints, run the deployed orchestration workflow, and inspect the resulting evidence and rejection reasons. See [`STRATEGY.md`](STRATEGY.md) for the validated positioning, narrow router MVP, safety boundary, and external-agent integration plan, and [`OKX_AI.md`](OKX_AI.md) for marketplace evidence.
+The deployed funding scanner remains useful as the first A2MCP specialist and is registered under the LiquidFlux ASP identity. A live buyer-side invocation through OKX.AI returned fresh Hyperliquid mainnet evidence synchronously with no manual setup. The complete Market-Neutral Orchestrator is now also published as a free A2MCP service using the deployed `/api/v1/orchestrate` endpoint. The root URL serves the analyst workspace: users set constraints, run the deployed orchestration workflow, and inspect the resulting evidence and rejection reasons. See [`STRATEGY.md`](STRATEGY.md) for the validated positioning, narrow router MVP, safety boundary, and external-agent integration plan, and [`OKX_AI.md`](OKX_AI.md) for marketplace evidence.
 
 ![LiquidFlux analysis workspace](assets/screenshots/dashboard-result.png)
 
