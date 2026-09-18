@@ -7,7 +7,7 @@ HyperDesk is a read-only Hyperliquid specialist-orchestration service for OKX.AI
 - **Health:** https://hyperdesk-scout.onrender.com/health
 - **OpenAPI:** https://hyperdesk-scout.onrender.com/openapi.json
 - **Orchestrator:** `POST https://hyperdesk-scout.onrender.com/api/v1/orchestrate`
-- **OKX.AI ASP:** LiquidFlux, Agent ID `13784`
+- **OKX.AI ASP:** LiquidFlux, Agent ID `13784` — listed and eligible for task recommendations
 
 ## Product direction
 

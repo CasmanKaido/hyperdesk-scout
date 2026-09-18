@@ -29,6 +29,14 @@ The runtime provider can be changed later without recreating Agent ID `13784`.
 
 ## Marketplace review
 
-LiquidFlux was submitted for OKX.AI marketplace listing review in English on 2026-09-18. The submission succeeded and is under review; the Agent is not published yet. Do not claim a public marketplace listing until approval is received.
+LiquidFlux was submitted for OKX.AI marketplace listing review in English on 2026-09-18 and has been approved.
 
-Next steps are test-user registration, end-to-end OKX.AI invocation after publication, and preservation of listing evidence.
+Current marketplace state:
+
+- **Agent status:** Active
+- **Approval:** Listed — eligible for task recommendations
+- **Category:** Finance
+- **Registered services:** 1
+- **Funding Specialist endpoint:** https://hyperdesk-scout.onrender.com/api/v1/funding-scan
+
+Next steps are test-user registration, end-to-end OKX.AI invocation, and preservation of marketplace evidence.
