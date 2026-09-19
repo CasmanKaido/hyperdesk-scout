@@ -38,7 +38,7 @@ test("serves a discoverable index and health without market data", async () => {
 
   const result = await handle({ method: "GET", pathname: "/health" });
   assert.equal(result.status, 200);
-  assert.deepEqual(result.body, { status: "ok", service: "hyperdesk-scout", version: "0.3.0" });
+  assert.deepEqual(result.body, { status: "ok", service: "hyperdesk-scout", version: "0.4.0" });
 });
 
 test("serves the OpenAPI contract when configured", async () => {
@@ -60,6 +60,8 @@ test("creates an AI plan without fetching market data", async () => {
     throw new Error("should not run");
   }, {
     planObjective: async (input) => ({
+      intent: "plan_update",
+      reply: "I prepared the requested plan.",
       summary: `Plan for ${input.message}`,
       objective: "market_neutral_income",
       symbols: ["BTC"],

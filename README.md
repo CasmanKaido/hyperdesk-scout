@@ -20,10 +20,12 @@ The deployed funding scanner remains useful as the first A2MCP specialist and is
 
 ## Dashboard
 
-The dependency-free dashboard is served by the existing Node service. It can call `POST /api/v1/plan` to draft editable constraints, but it calls `POST /api/v1/orchestrate` only after explicit plan approval. It includes:
+The dependency-free dashboard is served by the existing Node service. Its conversational workspace calls `POST /api/v1/plan` to create, refine, or explain the active plan, but it calls `POST /api/v1/orchestrate` only after explicit plan approval. It includes:
 
-- A natural-language objective composer with Gemini primary and Groq fallback
-- Editable deterministic controls and a fully functional manual fallback
+- A persistent natural-language conversation with Gemini primary and Groq fallback
+- Follow-up plan revisions that preserve validated current constraints
+- Evidence-grounded questions after analysis using a reduced, bounded result context
+- Compact plan summaries in the conversation plus editable deterministic controls and a manual fallback
 - A real objective-and-constraints workflow for market-neutral Hyperliquid income analysis
 - Pre-run specialist planning with provider identity, OKX.AI listing status, service cost, and explicit approval
 - Honest separation between the marketplace-listed Funding Specialist, first-party modules, and the unconnected external-service slot
@@ -79,7 +81,7 @@ The machine-readable OpenAPI 3.1 contract is available in [`openapi.json`](opena
 
 ### `POST /api/v1/plan`
 
-Uses Gemini first and Groq as a configured fallback to translate one natural-language `message` into validated, editable orchestration constraints. The response identifies the provider/model, assumptions, missing information, fixed specialist plan, and mandatory approval boundary. It always returns `execution_included: false` and does not fetch Hyperliquid market data.
+Uses Gemini first and Groq as a configured fallback for a bounded natural-language conversation. A request contains a `message` and may include the complete validated `current_plan` plus a reduced `analysis_context`. The model classifies the message as a plan update, result explanation, clarification, or unsupported request; it always returns a complete validated plan, a concise reply, provider/model identity, assumptions, and the mandatory approval boundary. It always returns `execution_included: false` and does not fetch Hyperliquid market data.
 
 If neither key is configured, the endpoint returns `503 ai_unavailable`; the dashboard remains usable through its manual controls. If all configured providers fail, it returns the opaque `502 ai_provider_unavailable` error without exposing provider responses or keys.
 

@@ -1,4 +1,7 @@
 const form = document.querySelector("#analysis-form");
+const chatForm = document.querySelector("#chat-form");
+const conversationLog = document.querySelector("#conversation-log");
+const constraintsDisclosure = document.querySelector("#constraints-disclosure");
 const reviewButton = document.querySelector("#review-plan");
 const approveButton = document.querySelector("#approve-plan");
 const reviseButton = document.querySelector("#revise-plan");
@@ -32,7 +35,9 @@ const serviceStatus = document.querySelector("#service-status");
 const headerStatus = document.querySelector(".header-status");
 let pendingInput = null;
 let latestAIPlan = null;
+let latestAnalysis = null;
 let aiDraftEdited = false;
+let hasActivePlan = false;
 
 const currency = new Intl.NumberFormat("en-US", {
   style: "currency",
@@ -413,6 +418,72 @@ function renderResult(data) {
   });
 }
 
+function planFields(plan) {
+  return {
+    objective: "market_neutral_income",
+    symbols: [...plan.symbols],
+    risk_tolerance: plan.risk_tolerance,
+    max_leverage: plan.max_leverage,
+    max_notional_usd: plan.max_notional_usd,
+    min_funding_apr: plan.min_funding_apr,
+  };
+}
+
+function analysisContext(data) {
+  if (!data) return null;
+  return {
+    generated_at: data.generated_at,
+    provenance: {
+      source: data.provenance?.source,
+      data_status: data.provenance?.data_status,
+      fetched_at: data.provenance?.fetched_at,
+    },
+    constraints: data.constraints,
+    opportunities: (data.synthesis?.opportunities || []).map((item) => ({
+      symbol: item.symbol,
+      decision: item.decision,
+      funding_apr_percent: item.funding_apr_percent,
+      liquidity_score: item.liquidity_score,
+      impact_spread_bps: item.impact_spread_bps,
+      risk_score: item.risk_score,
+      basis_percent: item.basis_percent,
+      cautions: item.cautions,
+    })),
+    rejected: data.synthesis?.rejected || [],
+    conflicts: data.conflicts || [],
+    unavailable_symbols: data.unavailable_symbols || [],
+    next_action: data.synthesis?.next_action,
+  };
+}
+
+function planSnapshot(plan) {
+  return definitionList([
+    ["Markets", plan.symbols.join(", ")],
+    ["Risk", sentence(plan.risk_tolerance)],
+    ["Leverage", `${formatNumber(plan.max_leverage)}× max`],
+    ["Notional", formatCurrency(plan.max_notional_usd)],
+    ["Funding", `${formatNumber(plan.min_funding_apr)}% min APR`],
+  ], "chat-plan-grid");
+}
+
+function appendMessage(role, text, { meta = "", plan = null, pending = false } = {}) {
+  const message = element("article", {
+    className: `message message-${role}`,
+    attrs: pending ? { "data-state": "pending" } : {},
+  }, [
+    element("span", { className: "message-author", text: role === "user" ? "You" : "LiquidFlux" }),
+    element("p", { text }),
+    meta ? element("span", { className: "message-meta", text: meta }) : null,
+    plan ? planSnapshot(plan) : null,
+  ]);
+  conversationLog.append(message);
+  conversationLog.scrollTo({
+    top: conversationLog.scrollHeight,
+    behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth",
+  });
+  return message;
+}
+
 function setPlannerStatus(message, state = "idle") {
   plannerStatus.textContent = message;
   plannerStatus.dataset.state = state;
@@ -431,20 +502,32 @@ function populateConstraints(plan) {
 async function generateAIPlan() {
   const message = objectiveInput.value.trim();
   if (message.length < 10) {
-    setPlannerStatus("Describe your objective in at least 10 characters, or continue with manual constraints.", "error");
+    setPlannerStatus("Write at least 10 characters so I can understand the request.", "error");
     objectiveInput.focus();
     return;
   }
 
+  const payload = { message };
+  if (hasActivePlan) {
+    const currentInput = collectInput();
+    if (!currentInput) return;
+    payload.current_plan = planFields(currentInput);
+  }
+  const context = analysisContext(latestAnalysis);
+  if (context) payload.analysis_context = context;
+
+  appendMessage("user", message);
+  objectiveInput.value = "";
   generatePlanButton.disabled = true;
-  plannerButtonLabel.textContent = "Interpreting objective";
-  setPlannerStatus("Gemini is interpreting the objective. Groq will be tried if Gemini is unavailable.");
+  plannerButtonLabel.textContent = "Thinking";
+  setPlannerStatus("LiquidFlux is interpreting your message and preserving the approval boundary.");
+  const pendingMessage = appendMessage("assistant", "Reviewing the current plan and available evidence…", { pending: true });
 
   try {
     const response = await fetch("/api/v1/plan", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ message }),
+      body: JSON.stringify(payload),
     });
     const data = await response.json().catch(() => null);
     if (!response.ok) {
@@ -453,29 +536,46 @@ async function generateAIPlan() {
       throw error;
     }
 
+    pendingMessage.remove();
     latestAIPlan = data;
+    hasActivePlan = true;
     aiDraftEdited = false;
-    pendingInput = null;
     populateConstraints(data);
-    showView("empty");
     const providerName = data.provider === "groq" ? "Groq" : "Gemini";
-    setPlannerStatus(`${providerName} drafted the constraints. Review or edit them before continuing.`, "success");
-    analysisStatus.textContent = "AI planning complete. No market data was fetched and no specialist was called.";
-    reviewButton.focus();
-  } catch (error) {
-    latestAIPlan = null;
-    if (error.code === "ai_unavailable") {
-      setPlannerStatus("AI planning is not configured on this deployment. You can continue with the manual constraints below.", "error");
-    } else if (error.code === "ai_provider_unavailable") {
-      setPlannerStatus("The configured AI providers are temporarily unavailable. You can continue manually or try again.", "error");
-    } else if (error instanceof TypeError) {
-      setPlannerStatus("The AI planner could not be reached. You can continue with manual constraints.", "error");
+    appendMessage("assistant", data.reply, {
+      meta: `${providerName} · ${data.intent.replaceAll("_", " ")}`,
+      plan: data.intent === "plan_update" ? data : null,
+    });
+
+    if (data.intent === "plan_update") {
+      pendingInput = null;
+      latestAnalysis = null;
+      showView("empty");
+      analysisStatus.textContent = "Conversation updated the plan. No market-data service was called.";
+      setPlannerStatus("Plan updated. Continue the conversation or review the specialist plan.", "success");
+    } else if (data.intent === "result_explanation") {
+      setPlannerStatus("Answer grounded in the latest displayed analysis evidence.", "success");
     } else {
-      setPlannerStatus(`${error.message} You can continue with manual constraints.`, "error");
+      setPlannerStatus("Reply received. You can clarify naturally or continue with manual controls.", "success");
     }
+    objectiveInput.focus();
+  } catch (error) {
+    pendingMessage.remove();
+    let fallback;
+    if (error.code === "ai_unavailable") {
+      fallback = "AI conversation is not configured on this deployment. You can still edit the constraints manually.";
+    } else if (error.code === "ai_provider_unavailable") {
+      fallback = "The AI providers are temporarily unavailable. Your current plan is unchanged, and manual controls still work.";
+    } else if (error instanceof TypeError) {
+      fallback = "I could not reach the planner. Your current plan is unchanged; try again or use manual controls.";
+    } else {
+      fallback = `${error.message} Your current plan is unchanged.`;
+    }
+    appendMessage("assistant", fallback, { meta: "Conversation error" });
+    setPlannerStatus(fallback, "error");
   } finally {
     generatePlanButton.disabled = false;
-    plannerButtonLabel.textContent = "Generate AI plan";
+    plannerButtonLabel.textContent = "Send";
   }
 }
 
@@ -528,7 +628,15 @@ async function executeAnalysis() {
     if (!response.ok) {
       throw new Error(data?.message || `The service returned HTTP ${response.status}.`);
     }
+    latestAnalysis = data;
     renderResult(data);
+    const candidateCount = data.synthesis?.opportunities?.length || 0;
+    const rejectedCount = data.synthesis?.rejected?.length || 0;
+    appendMessage("assistant", candidateCount
+      ? `${candidateCount} market${candidateCount === 1 ? " reached" : "s reached"} the review boundary. Ask me about any decision, risk score, rejection, or constraint in this result.`
+      : `No market passed every active constraint. ${rejectedCount} market${rejectedCount === 1 ? " was" : "s were"} rejected; ask me why or revise the plan naturally.`, {
+      meta: "Live Hyperliquid evidence · no execution",
+    });
   } catch (error) {
     if (!serviceResponded) {
       errorMessage.textContent = "We could not reach LiquidFlux. Check your connection and try again.";
@@ -560,7 +668,16 @@ async function checkHealth() {
   }
 }
 
-generatePlanButton.addEventListener("click", generateAIPlan);
+chatForm.addEventListener("submit", (event) => {
+  event.preventDefault();
+  generateAIPlan();
+});
+objectiveInput.addEventListener("keydown", (event) => {
+  if (event.key === "Enter" && !event.shiftKey && !event.isComposing) {
+    event.preventDefault();
+    chatForm.requestSubmit();
+  }
+});
 objectiveInput.addEventListener("input", () => {
   if (plannerStatus.dataset.state === "error") {
     setPlannerStatus("Gemini is tried first; Groq is the fallback when configured.");
@@ -568,6 +685,8 @@ objectiveInput.addEventListener("input", () => {
 });
 form.addEventListener("input", () => {
   pendingInput = null;
+  latestAnalysis = null;
+  hasActivePlan = true;
   if (!planState.hidden || !resultState.hidden) {
     showView("empty");
     analysisStatus.textContent = "Constraints changed. Review the updated specialist plan before running analysis.";
@@ -584,11 +703,12 @@ form.addEventListener("submit", (event) => {
   event.preventDefault();
   reviewPlan();
 });
+reviewButton.addEventListener("click", reviewPlan);
 approveButton.addEventListener("click", executeAnalysis);
 reviseButton.addEventListener("click", () => {
   showView("empty");
-  analysisStatus.textContent = "Specialist plan closed. Update the constraints and review it again.";
-  symbolsInput.focus();
+  analysisStatus.textContent = "Specialist plan closed. Continue the conversation or edit the constraints.";
+  objectiveInput.focus();
 });
 retryButton.addEventListener("click", executeAnalysis);
 

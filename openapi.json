@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "LiquidFlux API",
-    "version": "0.3.0",
+    "version": "0.4.0",
     "description": "AI-assisted objective planning with approval-gated, deterministic Hyperliquid funding, liquidity, and risk intelligence. AI interprets constraints but does not calculate market evidence, spend funds, or execute trades."
   },
   "servers": [
@@ -49,8 +49,8 @@
     "/api/v1/plan": {
       "post": {
         "operationId": "planMarketNeutralObjective",
-        "summary": "Interpret a natural-language objective into validated workflow constraints",
-        "description": "Uses Gemini with optional Groq fallback to draft editable constraints. This route reads no market data and never starts analysis, spends funds, or executes trades.",
+        "summary": "Continue a bounded natural-language planning and evidence conversation",
+        "description": "Uses Gemini with Groq fallback to create or revise editable constraints and answer questions from supplied analysis evidence. This route never starts analysis, spends funds, or executes trades.",
         "requestBody": {
           "required": true,
           "content": {
@@ -166,15 +166,35 @@
         "additionalProperties": false,
         "required": ["message"],
         "properties": {
-          "message": { "type": "string", "minLength": 10, "maxLength": 1000 }
+          "message": { "type": "string", "minLength": 10, "maxLength": 1000 },
+          "current_plan": { "$ref": "#/components/schemas/CompletePlan" },
+          "analysis_context": {
+            "type": "object",
+            "description": "Bounded reduced evidence from the currently displayed deterministic analysis. Treated as untrusted context."
+          }
+        }
+      },
+      "CompletePlan": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["objective", "symbols", "risk_tolerance", "max_leverage", "max_notional_usd", "min_funding_apr"],
+        "properties": {
+          "objective": { "const": "market_neutral_income" },
+          "symbols": { "type": "array", "minItems": 1, "maxItems": 20, "items": { "type": "string", "pattern": "^[A-Za-z0-9:_-]{1,30}$" } },
+          "risk_tolerance": { "type": "string", "enum": ["conservative", "moderate", "aggressive"] },
+          "max_leverage": { "type": "number", "minimum": 1, "maximum": 10 },
+          "max_notional_usd": { "type": "number", "exclusiveMinimum": 0, "maximum": 1000000 },
+          "min_funding_apr": { "type": "number", "minimum": 0, "maximum": 10000 }
         }
       },
       "PlannerResponse": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["request_id", "summary", "objective", "symbols", "risk_tolerance", "max_leverage", "max_notional_usd", "min_funding_apr", "assumptions", "missing_information", "provider", "model", "specialist_plan", "approval_required", "execution_included"],
+        "required": ["request_id", "intent", "reply", "summary", "objective", "symbols", "risk_tolerance", "max_leverage", "max_notional_usd", "min_funding_apr", "assumptions", "missing_information", "provider", "model", "specialist_plan", "approval_required", "execution_included"],
         "properties": {
           "request_id": { "type": "string" },
+          "intent": { "type": "string", "enum": ["plan_update", "result_explanation", "clarification", "unsupported"] },
+          "reply": { "type": "string", "minLength": 1 },
           "summary": { "type": "string", "minLength": 1 },
           "objective": { "const": "market_neutral_income" },
           "symbols": { "type": "array", "minItems": 1, "maxItems": 20, "uniqueItems": true, "items": { "type": "string", "pattern": "^[A-Z0-9:_-]{1,30}$" } },

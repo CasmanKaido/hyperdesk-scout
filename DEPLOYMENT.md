@@ -39,7 +39,7 @@ curl -i https://YOUR-SERVICE.example/health
 Expected: `HTTP 200` and:
 
 ```json
-{"status":"ok","service":"hyperdesk-scout","version":"0.3.0"}
+{"status":"ok","service":"hyperdesk-scout","version":"0.4.0"}
 ```
 
 ### OpenAPI contract
@@ -103,7 +103,7 @@ After deployment, update `ROADMAP.md` and `README.md` with:
 - **Cache sequence:** `miss`, `hit`, `hit` across three consecutive successful scans
 - **Container verification:** Render successfully built the Dockerfile and passed `/health`
 - **Orchestrator version:** `0.2.0`, verified 2026-09-17 17:19 UTC
-- **AI planner version:** `0.3.0`
+- **AI planner version:** `0.4.0`
 - **AI planner verification:** `HTTP 200` on 2026-09-18 through the configured Groq fallback (`openai/gpt-oss-20b`)
 - **AI safety boundary:** validated constraints, `approval_required: true`, `execution_included: false`, and no market-data fetch during planning
 - **Gemini status:** the primary attempt currently falls back to Groq; inspect Render's safe `ai_provider_failed` log reason to distinguish key access, quota, or provider HTTP rejection

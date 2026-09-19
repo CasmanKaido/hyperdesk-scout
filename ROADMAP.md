@@ -230,10 +230,13 @@ Selected target: **Render Free web service using the repository Dockerfile**. Th
 - [ ] Show the OKX AI invocation
 - [ ] Show the unpaid and paid request flow
 - [x] Add provider-neutral natural-language objective planning with Gemini primary and Groq fallback
+- [x] Replace the one-shot objective form with a persistent conversational planning workspace
+- [x] Support natural-language plan revisions using the validated current plan
+- [x] Support evidence-grounded result questions using bounded analysis context
 - [x] Configure production provider keys and verify a successful Groq fallback plan
 - [x] Validate AI-generated constraints before displaying or using them
 - [x] Preserve explicit human approval and manual fallback when AI is unavailable
-- [ ] Add an optional natural-language explanation generated from structured results
+- [x] Add an optional natural-language explanation generated from structured results
 - [x] Keep all numerical controls deterministic
 - [x] Add loading, empty, stale-data, and failure states
 - [x] Add a visible informational-use disclaimer

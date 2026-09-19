@@ -199,9 +199,12 @@ LiquidFlux is flat by default. Depth comes from surface tone, spacing, and struc
 
 - **Style:** A sticky, white utility header with the LiquidFlux avatar, product label, service status, OpenAPI, and GitHub links. Mobile preserves the brand and status dot while visually hiding the longer status label.
 
-### Evidence Workflow
+### Conversational Evidence Workflow
 
-- **Structure:** Objective and constraints produce a pre-run service manifest: Funding and Liquidity in parallel, dependent Risk Policy, then deterministic Synthesis.
+- **Conversation:** A bounded message thread is the primary input. User requests, AI replies, compact plan snapshots, and deterministic result summaries share one chronological surface.
+- **Follow-ups:** Natural-language revisions carry the complete validated current plan; result questions carry only reduced current evidence. Unsupported requests stay conversational without creating new capabilities.
+- **Manual fallback:** Detailed controls remain available in a disclosure and always reflect the active conversational plan.
+- **Structure:** Conversation and constraints produce a pre-run service manifest: Funding and Liquidity in parallel, dependent Risk Policy, then deterministic Synthesis.
 - **Plan Review:** Every service row exposes provider identity, marketplace status, fee, and whether the stage is connected, skipped, or first-party before approval.
 - **Loading:** Named stages, a bounded progress orbit, and skeleton lines communicate active work without fake percentages.
 - **Results:** Synthesis appears first, candidate rows follow, then workflow trace and expandable specialist evidence.

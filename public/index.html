@@ -47,30 +47,45 @@
     </section>
 
     <div class="workspace-shell">
-      <aside class="control-panel" aria-labelledby="constraints-title">
+      <aside class="control-panel conversation-panel" aria-labelledby="constraints-title">
         <div class="panel-heading">
           <div>
-            <p class="step-label">Step 1 · Objective</p>
-            <h2 id="constraints-title">Build the workflow</h2>
+            <p class="step-label">Step 1 · Conversation</p>
+            <h2 id="constraints-title">Ask LiquidFlux</h2>
           </div>
           <span class="objective-chip">Market neutral</span>
         </div>
 
-        <div class="objective-block">
-          <label for="objective-message">Describe what you want to evaluate</label>
-          <textarea id="objective-message" name="objective_message" rows="4" minlength="10" maxlength="1000" aria-describedby="objective-help planner-status">Find a low-risk market-neutral opportunity on BTC, ETH, and SOL using no more than $1,000 and no more than 2× leverage.</textarea>
-          <p class="field-help" id="objective-help">AI translates your request into editable constraints. It does not read market data or start the workflow.</p>
-          <button class="planner-action" id="generate-plan" type="button">
-            <span class="planner-button-label">Generate AI plan</span>
-          </button>
-          <p class="planner-status" id="planner-status" aria-live="polite">Gemini is tried first; Groq is the fallback when configured.</p>
+        <div class="conversation-log" id="conversation-log" role="log" aria-live="polite" aria-label="Conversation with LiquidFlux">
+          <article class="message message-assistant">
+            <span class="message-author">LiquidFlux</span>
+            <p>Tell me what you want to evaluate. You can refine the plan in natural language, then review every constraint before any specialist runs.</p>
+          </article>
         </div>
 
-        <form id="analysis-form" novalidate>
-          <div class="constraints-heading">
-            <p class="form-section-label">Review or edit constraints</p>
-            <span>Manual available</span>
+        <form class="chat-composer" id="chat-form">
+          <label class="sr-only" for="objective-message">Message LiquidFlux</label>
+          <textarea id="objective-message" name="objective_message" rows="3" minlength="10" maxlength="1000" placeholder="Ask for a low-risk BTC and ETH review under $1,000…" aria-describedby="objective-help planner-status"></textarea>
+          <p class="field-help" id="objective-help">Ask a follow-up anytime. AI interprets intent; deterministic code validates every constraint.</p>
+          <div class="composer-actions">
+            <span>Enter to send · Shift+Enter for a new line</span>
+            <button class="planner-action" id="generate-plan" type="submit">
+              <span class="planner-button-label">Send</span>
+              <svg aria-hidden="true" viewBox="0 0 20 20" width="18" height="18"><path d="m4 10 11-6-3 12-2.5-4.5L4 10Z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>
+            </button>
           </div>
+          <p class="planner-status" id="planner-status" aria-live="polite">Gemini is tried first; Groq continues the conversation if needed.</p>
+        </form>
+
+        <button class="secondary-action review-action" id="review-plan" type="button">
+          <span class="button-label">Review specialist plan</span>
+          <svg aria-hidden="true" viewBox="0 0 20 20" width="20" height="20"><path d="M4 10h11m-4-4 4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+        <p class="form-note">Reviewing does not call a service or spend funds.</p>
+
+        <details class="constraint-disclosure" id="constraints-disclosure">
+          <summary><span>Review or edit constraints</span><small>Manual controls</small></summary>
+          <form id="analysis-form" novalidate>
           <div class="field-group">
             <label for="symbols">Markets</label>
             <p class="field-help" id="symbols-help">Enter 1–20 Hyperliquid symbols, separated by commas.</p>
@@ -118,15 +133,9 @@
             <strong>0 USDT</strong>
           </div>
 
-          <p class="form-error" id="form-error" role="alert"></p>
-
-          <button class="primary-action" id="review-plan" type="submit">
-            <span class="button-label">Review specialist plan</span>
-            <svg aria-hidden="true" viewBox="0 0 20 20" width="20" height="20"><path d="M4 10h11m-4-4 4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
-          </button>
-
-          <p class="form-note">Reviewing the plan does not call a service or spend funds.</p>
-        </form>
+            <p class="form-error" id="form-error" role="alert"></p>
+          </form>
+        </details>
       </aside>
 
       <section class="analysis-panel" aria-labelledby="analysis-title">
@@ -158,8 +167,8 @@
             </div>
           </div>
           <div class="empty-copy">
-            <h3>Start with an objective.</h3>
-            <p>Set the constraints, then review exactly which specialists LiquidFlux will coordinate, what each contributes, and whether any service can spend funds.</p>
+            <h3>Start with a message.</h3>
+            <p>Ask naturally, refine the plan in conversation, then review exactly which specialists LiquidFlux will coordinate and whether any service can spend funds.</p>
           </div>
           <dl class="boundary-list">
             <div><dt>Data source</dt><dd>Hyperliquid mainnet</dd></div>
@@ -266,7 +275,7 @@
 
   <footer class="app-footer">
     <p>LiquidFlux provides informational market analysis. Funding can reverse, basis can move, and returns are not guaranteed.</p>
-    <span>API version 0.3.0</span>
+    <span>API version 0.4.0</span>
   </footer>
 </body>
 </html>

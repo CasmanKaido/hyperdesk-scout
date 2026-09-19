@@ -18,7 +18,7 @@ Hackathon judges are demo observers rather than the product's primary audience. 
 
 ## Product Purpose
 
-LiquidFlux turns a natural-language objective and current Hyperliquid market data into a traceable market-neutral orchestration workflow. An AI planner may translate the user's request into editable, validated constraints; the user then reviews the specialist and provider plan, approves its service budget, and receives deterministic Funding, Liquidity, Risk, and Synthesis evidence. The workflow identifies policy-pass, caution, and rejected candidates and stops before execution.
+LiquidFlux turns a natural-language conversation and current Hyperliquid market data into a traceable market-neutral orchestration workflow. Users can create and refine a plan in ordinary language, inspect the resulting editable constraints, and ask evidence-grounded follow-up questions after analysis. The user still reviews the specialist and provider plan, approves its service budget, and receives deterministic Funding, Liquidity, Risk, and Synthesis evidence. The workflow identifies policy-pass, caution, and rejected candidates and stops before execution.
 
 Success means a user can run a live analysis, understand how the result was produced, inspect data freshness and risk evidence, and distinguish an actionable review candidate from a misleading headline funding rate. The product never implies that snapshot funding is guaranteed yield and never executes a trade in the current MVP.
 
@@ -40,7 +40,7 @@ LiquidFlux should not resemble a retail trading terminal built around flashing p
 2. **Make safety visible.** The no-execution boundary, approval requirement, and market-data limitations should be clear without dominating the workflow.
 3. **Prioritize the analyst's decision.** Inputs, candidate comparison, rejection reasons, and next actions matter more than decorative metrics.
 4. **Separate evidence from interpretation.** Funding, liquidity, risk, and synthesis should remain distinguishable so users can challenge the result.
-5. **Keep AI in its lane.** Gemini or Groq may interpret intent and explain assumptions, but deterministic code validates constraints, calculates market evidence, and enforces the approval boundary.
+5. **Keep AI in its lane.** Gemini or Groq may interpret intent, revise a validated plan, and explain supplied evidence, but deterministic code validates constraints, calculates market evidence, and enforces the approval boundary.
 6. **Demonstrate the real product.** The interface should run the deployed workflow rather than acting as a static hackathon presentation.
 
 ## Accessibility & Inclusion

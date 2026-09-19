@@ -38,6 +38,8 @@ test("the documented required response fields match an actual response", async (
     now: () => new Date("2026-09-17T00:00:01Z"),
     logger: { info() {}, error() {} },
     planObjective: async () => ({
+      intent: "plan_update",
+      reply: "I prepared a conservative BTC review.",
       summary: "Review BTC under conservative constraints.",
       objective: "market_neutral_income",
       symbols: ["BTC"],
