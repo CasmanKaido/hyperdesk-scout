@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "LiquidFlux API",
-    "version": "0.4.1",
+    "version": "0.4.2",
     "description": "AI-assisted objective planning with approval-gated, deterministic Hyperliquid funding, liquidity, and risk intelligence. AI interprets constraints but does not calculate market evidence, spend funds, or execute trades."
   },
   "servers": [
@@ -167,6 +167,20 @@
         "required": ["message"],
         "properties": {
           "message": { "type": "string", "minLength": 10, "maxLength": 1000 },
+          "conversation": {
+            "type": "array",
+            "maxItems": 12,
+            "description": "Chronological bounded user/assistant history used to resolve follow-up references. The current message is not duplicated here.",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["role", "content"],
+              "properties": {
+                "role": { "type": "string", "enum": ["user", "assistant"] },
+                "content": { "type": "string", "minLength": 1, "maxLength": 1000 }
+              }
+            }
+          },
           "current_plan": { "$ref": "#/components/schemas/CompletePlan" },
           "analysis_context": {
             "type": "object",

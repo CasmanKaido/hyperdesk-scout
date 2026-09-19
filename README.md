@@ -81,7 +81,7 @@ The machine-readable OpenAPI 3.1 contract is available in [`openapi.json`](opena
 
 ### `POST /api/v1/plan`
 
-Uses Gemini first and Groq as a configured fallback for a bounded natural-language conversation. A request contains a `message` and may include the complete validated `current_plan` plus a reduced `analysis_context`. The model classifies the message as a plan update, result explanation, clarification, or unsupported request; it always returns a complete validated plan, a concise reply, provider/model identity, assumptions, and the mandatory approval boundary. It always returns `execution_included: false` and does not fetch Hyperliquid market data.
+Uses Gemini first and Groq as a configured fallback for a bounded natural-language conversation. A request contains the current `message` and may include up to 12 chronological `conversation` turns, the complete validated `current_plan`, and a reduced `analysis_context`. The model uses history to resolve follow-up references without repeatedly asking for information the user already supplied. It classifies the message as a plan update, result explanation, clarification, or unsupported request; it always returns a complete validated plan, a concise reply, provider/model identity, assumptions, and the mandatory approval boundary. It always returns `execution_included: false` and does not fetch Hyperliquid market data.
 
 If neither key is configured, the endpoint returns `503 ai_unavailable`; the dashboard remains usable through its manual controls. If all configured providers fail, it returns the opaque `502 ai_provider_unavailable` error without exposing provider responses or keys.
 

@@ -36,6 +36,7 @@ const headerStatus = document.querySelector(".header-status");
 let pendingInput = null;
 let latestAIPlan = null;
 let latestAnalysis = null;
+let conversationHistory = [];
 let aiDraftEdited = false;
 let hasActivePlan = false;
 
@@ -466,6 +467,11 @@ function planSnapshot(plan) {
   ], "chat-plan-grid");
 }
 
+function rememberTurn(role, content) {
+  conversationHistory.push({ role, content });
+  conversationHistory = conversationHistory.slice(-12);
+}
+
 function appendMessage(role, text, { meta = "", plan = null, pending = false } = {}) {
   const message = element("article", {
     className: `message message-${role}`,
@@ -508,6 +514,7 @@ async function generateAIPlan() {
   }
 
   const payload = { message };
+  if (conversationHistory.length) payload.conversation = [...conversationHistory];
   const hadActivePlan = hasActivePlan;
   if (hasActivePlan) {
     const currentInput = collectInput();
@@ -538,6 +545,8 @@ async function generateAIPlan() {
     }
 
     pendingMessage.remove();
+    rememberTurn("user", message);
+    rememberTurn("assistant", data.reply);
     const providerName = data.provider === "groq" ? "Groq" : "Gemini";
     const messageMeta = {
       plan_update: `${providerName} · plan updated`,
@@ -641,11 +650,13 @@ async function executeAnalysis() {
     renderResult(data);
     const candidateCount = data.synthesis?.opportunities?.length || 0;
     const rejectedCount = data.synthesis?.rejected?.length || 0;
-    appendMessage("assistant", candidateCount
+    const resultMessage = candidateCount
       ? `${candidateCount} market${candidateCount === 1 ? " reached" : "s reached"} the review boundary. Ask me about any decision, risk score, rejection, or constraint in this result.`
-      : `No market passed every active constraint. ${rejectedCount} market${rejectedCount === 1 ? " was" : "s were"} rejected; ask me why or revise the plan naturally.`, {
+      : `No market passed every active constraint. ${rejectedCount} market${rejectedCount === 1 ? " was" : "s were"} rejected; ask me why or revise the plan naturally.`;
+    appendMessage("assistant", resultMessage, {
       meta: "Live Hyperliquid evidence · no execution",
     });
+    rememberTurn("assistant", resultMessage);
   } catch (error) {
     if (!serviceResponded) {
       errorMessage.textContent = "We could not reach LiquidFlux. Check your connection and try again.";

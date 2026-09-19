@@ -232,6 +232,7 @@ Selected target: **Render Free web service using the repository Dockerfile**. Th
 - [x] Add provider-neutral natural-language objective planning with Gemini primary and Groq fallback
 - [x] Replace the one-shot objective form with a persistent conversational planning workspace
 - [x] Support natural-language plan revisions using the validated current plan
+- [x] Preserve bounded chronological conversation memory across clarification turns
 - [x] Support evidence-grounded result questions using bounded analysis context
 - [x] Verify create → revise → analyze → explain conversation against production
 - [x] Configure production provider keys and verify a successful Groq fallback plan
