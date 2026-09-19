@@ -16,6 +16,17 @@ LiquidFlux should answer conversational Hyperliquid information requests without
 - `OKX_AI.md` records historical free A2MCP invocations: funding request `3dc87444-ee1a-475d-a9ac-c450ebbe798b` and orchestrator request `b1eb7e58-9107-4b5d-bd14-83325c7fff9e`, dated 2026-09-18. These are repository records, not independently replayed evidence from this audit.
 - Integration validation: 62/62 automated tests passed; recursive JavaScript syntax and JSON checks passed. A direct live Hyperliquid BTC overview returned source/fetch metadata and calculated facts on 2026-09-19. Frontend tests use a simulated DOM and mocked responses. No production, marketplace, real AI-provider, payment, or visual-browser validation is implied; no visual/accessibility/performance scores are assigned.
 
+## Production API verification — 2026-09-19
+
+Render reported version `0.5.0` after implementation commit `94384f6` was pushed. Direct HTTPS checks (not a browser or official marketplace invocation) passed:
+
+- “Tell me about BTC” → `market_information`, BTC only, all four topics, no financial constraints; request `1b61b7bf-622d-4d86-a9f4-c84ce80d5831`.
+- BTC overview → HTTP 200 with live Hyperliquid facts, calculations, freshness and limitation notices; request `c976249e-cf26-4d64-8f44-1a70aac9811e`.
+- “Funding rates and other info” with preceding conversation → BTC information retained; request `46a18df3-a9b0-40c2-b4ac-a533d57a3671`.
+- Explicit BTC/ETH strategy → preserved $5,000 and 2×; moderate risk and 5% minimum APR explicitly disclosed as defaults; request `467284ee-67dc-4cf7-a56f-9fde08c7ff78`.
+
+All three planner calls selected Groq `openai/gpt-oss-20b`. Gemini remains unverified. These samples do not guarantee general model accuracy. Information replies used premature “here’s an overview” wording despite returning only an information proposal; the browser correctly presents the free fetch confirmation. Improve that wording without treating model text as fetch authorization. Visual desktop/mobile validation remains outstanding; exact-query “yes” confirmation is covered by automated frontend tests.
+
 ## Findings and priorities
 
 ### P0 — Complete and validate the information/strategy split
