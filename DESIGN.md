@@ -197,7 +197,7 @@ LiquidFlux is flat by default. Depth comes from surface tone, spacing, and struc
 
 ### Navigation
 
-- **Style:** A sticky, white utility header with the LiquidFlux avatar, product label, service status, OpenAPI, and GitHub links. Mobile preserves the brand and status dot while visually hiding the longer status label.
+- **Style:** A quiet white header with avatar, product identity, service status, and read-only boundary. API and source links live under Tools & service details. One centered chat column replaces the dashboard split; the composer stays available at the bottom.
 
 ### Conversational Evidence Workflow
 
@@ -207,11 +207,11 @@ These are interaction requirements, not a production-verification claim. As of 2
 - **Explicit strategy transition:** Only an explicit strategy request opens the strategy journey. Present user-provided, inherited, interpreted, and defaulted values distinctly; suggestions are not user preferences.
 - **Conversation:** A bounded message thread is the primary input. User requests, AI replies, compact plan snapshots, and deterministic result summaries share one chronological surface.
 - **Follow-ups:** Strategy revisions carry the complete validated current plan; information follow-ups preserve resolved symbols/topics. Result questions carry reduced current evidence, and answers disclose when it is insufficient. Current browser memory is in-session and bounded, not durable history; client-supplied context is untrusted.
-- **Manual fallback:** Detailed controls remain available in a disclosure and always reflect the active conversational plan.
+- **Manual fallback:** Detailed controls are secondary, nested under Tools & service details, and reflect the active conversational plan. No default strategy button is displayed on the opening screen.
 - **Structure:** Conversation and constraints produce a pre-run service manifest: Funding and Liquidity in parallel, dependent Risk Policy, then deterministic Synthesis.
-- **Plan Review:** Every strategy service row exposes provider identity, dated marketplace status, fee, and whether the stage is local first-party or external/disconnected before approval. The current gate is browser review, not server-side authorization. Free service fees exclude operator AI infrastructure costs.
-- **Loading:** Named stages, a bounded progress orbit, and skeleton lines communicate active work without fake percentages.
-- **Results:** Synthesis appears first, candidate rows follow, then workflow trace and expandable specialist evidence.
+- **Plan Review:** An inline review shows exact limits, suggested defaults, material assumptions, first-party stages, zero service spend, and no-execution scope. Coordination details are expandable instead of permanently displayed service rows. The current gate is browser review, not server-side authorization. Free service fees exclude operator AI infrastructure costs.
+- **Loading:** A concise inline research status communicates pending work; no fake percentages or simulated per-specialist progress.
+- **Results:** Readable deterministic market summaries or strategy synthesis appear in the conversation first. Facts, candidate comparison, workflow trace, and structured evidence are expandable. Previous results are retained as collapsed, read-only snapshots without duplicate DOM IDs.
 - **Boundary:** Every completed strategy state repeats that candidates require review and execution is excluded. “Policy pass” means passing implemented heuristics, not safe-to-trade certification. Information results must not inherit strategy approval language.
 - **Evidence honesty:** Snapshot annualization is not forecast yield; mark/oracle deviation is not executable basis; volume and impact prices are not fill guarantees. Missing facts display as unknown, not zero. Fetch time is not an exchange event timestamp.
 - **Async integrity:** Editing scope or constraints invalidates applicable pending review/results; obsolete responses must not overwrite newer state. Define retries, reset, truncation, and provider failure behavior explicitly.

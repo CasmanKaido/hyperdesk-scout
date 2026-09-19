@@ -18,6 +18,8 @@ Hackathon judges are demo observers rather than the product's primary audience. 
 
 ## Product Purpose
 
+The chatbot is the product’s primary workspace: one centered conversation, a persistent composer, and contextual research actions. There is no always-visible orchestration dashboard. LiquidFlux coordinates the next step; users inspect and confirm proposals inline. Supporting evidence and specialist activity are expandable, and manual controls are a secondary fallback under Tools & service details.
+
 LiquidFlux has two distinct product journeys:
 
 1. **Market information:** “Tell me about BTC” requests Hyperliquid facts and clearly labeled calculations, not a strategy. Follow-ups such as “yes” or “funding” retain the resolved information scope. No risk tolerance, leverage, or investment budget is required.

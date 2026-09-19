@@ -14,6 +14,9 @@ class Node {
   querySelectorAll() { return Object.values(this.elements || {}); }
   addEventListener(type, callback) { this.listeners[type] = callback; }
   remove() { this.removed = true; }
+  removeAttribute(key) { delete this.attrs[key]; }
+  before() {}
+  cloneNode() { const node = new Node(); node.textContent = this.textContent; node.children = this.children.map(child => child.cloneNode()); return node; }
   focus() {}
   scrollTo() {}
   scrollIntoView() {}
@@ -31,7 +34,7 @@ function setup() {
   const calls = [];
   const responses = [];
   const context = vm.createContext({
-    document: { querySelector: get, createElement: () => new Node() },
+    document: { querySelector: get, querySelectorAll: () => [], createElement: () => new Node() },
     window: { matchMedia: () => ({ matches: true }) },
     requestAnimationFrame: (fn) => fn(), console,
     fetch: async (url, options) => {
@@ -59,7 +62,11 @@ const text = (node) => [node.textContent, ...node.children.map(text)].join(' ');
 test('information confirms the exact query without AI and preserves evidence for short followups', async () => {
   const app = setup();
   assert.equal(app.get('#review-plan').disabled, true);
+  assert.equal(app.get('#review-plan').hidden, true);
+  assert.equal(app.get('.analysis-panel').hidden, true);
   await app.send('BTC', information);
+  assert.equal(app.get('#chat-welcome').hidden, true);
+  assert.ok(app.get('#conversation-log').children.includes(app.get('#info-confirmation')));
   assert.equal(app.run('hasActivePlan'), false);
   assert.equal(app.get('#review-plan').disabled, true);
   app.run('reviewPlan()');
@@ -68,6 +75,8 @@ test('information confirms the exact query without AI and preserves evidence for
   assert.deepEqual(app.calls.map(c => c.url), ['/api/v1/plan', '/api/v1/market-overview']);
   assert.deepEqual(app.calls[1].body, { symbols: ['BTC'], topics: ['funding'] });
   assert.equal(app.get('#overview-state').hidden, false);
+  assert.ok(app.get('#conversation-log').children.includes(app.get('.analysis-panel')));
+  assert.match(text(app.get('#overview-state')), /Inspect market facts/);
   assert.match(text(app.get('#overview-state')), /8.76%/);
   assert.match(text(app.get('#overview-state')), /0.00001/);
   assert.match(text(app.get('#overview-state')), /not a forecast/);
@@ -94,9 +103,9 @@ test('other messages clear stale information actions while retaining scope in hi
 test('only actual plan updates replace latestAIPlan; review and chat label defaults', async () => {
   const app = setup();
   await app.send('Create a strategy', plan);
-  assert.match(text(app.get('#conversation-log')), /Suggested defaults.*Max leverage/);
+  assert.match(text(app.get('#conversation-log')), /Suggested defaults.*leverage cap/);
   app.run('reviewPlan()');
-  assert.match(app.get('#review-defaults').textContent, /Max leverage/);
+  assert.match(app.get('#review-defaults').textContent, /leverage cap/);
   assert.notEqual(app.run('pendingInput'), null);
   await app.send('explain', { intent: 'result_explanation', reply: 'Explanation without strategy fields.' });
   assert.equal(app.run('latestAIPlan.summary'), 'ETH strategy');
@@ -116,7 +125,7 @@ test('manual edits do not activate defaults; explicit manual use does and labels
   app.get('#use-manual-plan').listeners.click();
   assert.equal(app.run('hasActivePlan'), true);
   assert.match(app.get('#review-defaults').textContent, /not user-supplied/);
-  assert.doesNotMatch(app.get('#review-defaults').textContent, /Max leverage/);
+  assert.doesNotMatch(app.get('#review-defaults').textContent, /leverage cap/);
 });
 
 test('shared busy guard blocks overlapping chat, info, analysis and manual changes', async () => {

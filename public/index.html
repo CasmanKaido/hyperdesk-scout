@@ -7,88 +7,99 @@
   <meta name="theme-color" content="#ffffff">
   <title>LiquidFlux — Hyperliquid agent orchestration</title>
   <link rel="icon" href="/assets/liquidflux-avatar.png" type="image/png">
-  <link rel="stylesheet" href="/styles.css">
-  <script src="/app.js" type="module"></script>
+  <link rel="stylesheet" href="/styles.css?v=0.6.0">
+  <script src="/app.js?v=0.6.0" type="module"></script>
 </head>
 <body>
-  <a class="skip-link" href="#main-content">Skip to analysis workspace</a>
+  <a class="skip-link" href="#main-content">Skip to conversation</a>
 
   <header class="app-header">
     <a class="brand" href="/" aria-label="LiquidFlux home">
-      <img src="/assets/liquidflux-avatar.png" width="40" height="40" alt="">
-      <span>
-        <strong>LiquidFlux</strong>
-        <small>Agent orchestration workspace</small>
-      </span>
+      <img src="/assets/liquidflux-avatar.png" width="36" height="36" alt="">
+      <span><strong>LiquidFlux</strong><small>Your Hyperliquid research assistant</small></span>
     </a>
-
-    <div class="header-status" aria-label="Service status">
-      <span class="status-dot" aria-hidden="true"></span>
-      <span id="service-status">Checking service</span>
-    </div>
-
-    <nav class="header-links" aria-label="Resources">
-      <a href="/openapi.json">OpenAPI</a>
-      <a href="https://github.com/CasmanKaido/hyperdesk-scout" rel="noreferrer">GitHub</a>
-    </nav>
+    <div class="header-status" aria-label="Service status"><span class="status-dot" aria-hidden="true"></span><span id="service-status">Checking service</span></div>
+    <span class="header-boundary">Read-only · no trades</span>
   </header>
-
-  <main id="main-content">
-    <section class="workspace-heading" aria-labelledby="page-title">
-      <div>
-        <p class="context-line">Agent orchestration · Hyperliquid mainnet</p>
-        <h1 id="page-title">Coordinate the evidence before capital.</h1>
-        <p class="workspace-summary">Define an objective, review the specialist plan, approve the workflow, and inspect how LiquidFlux reached each decision.</p>
-      </div>
-      <div class="safety-statement">
-        <span class="safety-mark" aria-hidden="true">✓</span>
-        <span><strong>Analysis only</strong>No trade execution or wallet connection</span>
-      </div>
-    </section>
-
-    <div class="workspace-shell">
-      <aside class="control-panel conversation-panel" aria-labelledby="constraints-title">
-        <div class="panel-heading">
-          <div>
-            <p class="step-label">Step 1 · Conversation</p>
-            <h2 id="constraints-title">Ask LiquidFlux</h2>
-          </div>
-          <span class="objective-chip">Market neutral</span>
+  <main id="main-content" class="chat-workspace">
+    <section class="conversation-panel" aria-label="Conversation workspace">
+      <div id="chat-welcome" class="chat-welcome">
+        <h1>What would you like to know?</h1>
+        <p>Ask about Hyperliquid markets or work through a strategy. I’ll coordinate the research and show you the evidence.</p>
+        <div class="starter-prompts" aria-label="Conversation starters">
+          <button type="button" data-prompt="What is BTC’s funding rate?">Check BTC funding</button>
+          <button type="button" data-prompt="How liquid is ETH?">Understand ETH liquidity</button>
+          <button type="button" data-prompt="Help me evaluate a market-neutral strategy for BTC and ETH">Explore a strategy</button>
         </div>
-
-        <div class="conversation-log" id="conversation-log" role="log" aria-live="polite" aria-label="Conversation with LiquidFlux">
-          <article class="message message-assistant">
-            <span class="message-author">LiquidFlux</span>
-            <p>Ask about a market for free, read-only facts, or request a strategy review. I’ll confirm the information scope or show editable strategy constraints before fetching evidence.</p>
-          </article>
-        </div>
-
-        <form class="chat-composer" id="chat-form">
-          <label class="sr-only" for="objective-message">Message LiquidFlux</label>
-          <textarea id="objective-message" name="objective_message" rows="3" minlength="1" maxlength="1000" placeholder="What is BTC’s funding rate? Or ask for a strategy review…" aria-describedby="objective-help planner-status"></textarea>
-          <p class="field-help" id="objective-help">Ask a follow-up anytime. AI interprets intent; deterministic code validates every constraint.</p>
-          <div class="composer-actions">
-            <span>Enter to send · Shift+Enter for a new line</span>
-            <button class="planner-action" id="generate-plan" type="submit">
-              <span class="planner-button-label">Send</span>
-              <svg aria-hidden="true" viewBox="0 0 20 20" width="18" height="18"><path d="m4 10 11-6-3 12-2.5-4.5L4 10Z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>
-            </button>
+      </div>
+      <div class="conversation-log" id="conversation-log" role="log" aria-live="polite" aria-label="Conversation with LiquidFlux"></div>
+      <section id="info-confirmation" class="chat-action" hidden aria-label="Confirm market information">
+        <p id="info-query"></p>
+        <p class="field-help">I’ll fetch this from Hyperliquid. Free and read-only.</p>
+        <button id="fetch-overview" class="primary-action" type="button">Fetch information · Free</button>
+      </section>
+      <button class="secondary-action review-action" id="review-plan" type="button" hidden disabled><span class="button-label">Review specialist plan</span></button>
+      <section class="analysis-panel" hidden aria-label="Current research action">
+        <div id="analysis-status" class="sr-only" aria-live="polite"></div>
+        <div id="empty-state" hidden></div>
+        <section id="plan-state" class="plan-state" hidden aria-labelledby="plan-title">
+          <div class="plan-heading">
+            <span class="plan-mark" aria-hidden="true">✓</span>
+            <div>
+              <p class="field-help">Your confirmation is required</p>
+              <h3 id="plan-title">Review the specialist plan</h3>
+              <p id="plan-objective">LiquidFlux prepared a workflow for your objective and constraints.</p>
+            </div>
           </div>
-          <p class="planner-status" id="planner-status" aria-live="polite">Gemini is tried first; Groq continues the conversation if needed.</p>
-        </form>
 
-        <section id="info-confirmation" class="ai-plan-context" hidden aria-label="Confirm market information">
-          <p id="info-query"></p>
-          <p>Free, read-only Hyperliquid facts. No strategy, payment, or trade execution.</p>
-          <button id="fetch-overview" class="secondary-action" type="button">Fetch market information · Free</button>
+          <div class="ai-plan-context" id="ai-plan-context" hidden>
+            <div>
+              <span>AI interpretation</span>
+              <strong id="ai-plan-summary">Objective translated into editable constraints.</strong>
+            </div>
+            <dl>
+              <div><dt>Provider</dt><dd id="ai-plan-provider">—</dd></div>
+              <div><dt>Assumptions</dt><dd id="ai-plan-assumptions">None</dd></div>
+            </dl>
+          </div>
+
+          <div id="review-constraints"></div>
+          <p id="review-defaults" class="field-help"></p>
+
+          <p class="plan-disclosure">LiquidFlux will run Funding, Liquidity, Risk, and Synthesis using Hyperliquid data. These are first-party modules. Free analysis · no payment or trade execution.</p>
+          <details class="supporting-details"><summary>How the specialists coordinate</summary><p>Funding and Liquidity read the same snapshot in parallel. Risk checks your constraints, then Synthesis explains the decisions. No independent external agents are hired.</p></details>
+
+          <div class="plan-actions">
+            <button class="primary-action" id="approve-plan" type="button">Approve plan and run</button>
+            <button class="secondary-action" id="revise-plan" type="button">Revise constraints</button>
+          </div>
         </section>
 
-        <button class="secondary-action review-action" id="review-plan" type="button" disabled>
-          <span class="button-label">Review specialist plan</span>
-          <svg aria-hidden="true" viewBox="0 0 20 20" width="20" height="20"><path d="M4 10h11m-4-4 4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
-        </button>
-        <p class="form-note">Reviewing does not call a service or spend funds.</p>
-
+        <section id="loading-state" class="loading-state" hidden aria-label="Analysis in progress">
+          <h3>Coordinating your research…</h3>
+          <p>Reading Hyperliquid data and checking your constraints. I’ll explain the result here.</p>
+        </section>
+        <section id="error-state" class="error-state" hidden role="alert">
+          <div><h3>Research could not complete</h3><p id="error-message"></p><button id="retry-analysis" class="text-action" type="button">Try again</button></div>
+        </section>
+        <section id="overview-state" hidden aria-label="Market information"></section>
+        <section id="result-state" hidden>
+          <div id="result-summary"></div>
+          <details class="supporting-details"><summary>Compare markets and decisions</summary><div id="candidate-results"></div></details>
+          <details class="supporting-details"><summary>Specialist activity and source evidence</summary><div id="workflow-results"></div><div id="evidence-results"></div></details>
+        </section>
+      </section>
+      <div class="composer-dock">
+        <form class="chat-composer" id="chat-form">
+          <label class="sr-only" for="objective-message">Message LiquidFlux</label>
+          <textarea id="objective-message" name="objective_message" rows="2" minlength="1" maxlength="1000" placeholder="Ask LiquidFlux…" aria-describedby="objective-help planner-status" required></textarea>
+          <div class="composer-actions">
+            <span id="objective-help">Enter to send · Shift+Enter for a new line</span>
+            <button class="planner-action" id="generate-plan" type="submit"><span class="planner-button-label">Send</span><span aria-hidden="true">↑</span></button>
+          </div>
+        </form>
+        <p class="planner-status" id="planner-status" aria-live="polite">Hyperliquid evidence. Your confirmation before a research run.</p>
+        <details class="chat-settings"><summary>Tools &amp; service details</summary>
         <details class="constraint-disclosure" id="constraints-disclosure">
           <summary><span>Review or edit constraints</span><small>Manual controls</small></summary>
           <p class="field-help">Initial values are suggested defaults, not values you supplied. Editing does not activate a strategy.</p>
@@ -144,151 +155,12 @@
             <p class="form-error" id="form-error" role="alert"></p>
           </form>
         </details>
-      </aside>
-
-      <section class="analysis-panel" aria-labelledby="analysis-title">
-        <div class="analysis-toolbar">
-          <div>
-            <p class="step-label">Steps 2–3 · Review and run</p>
-            <h2 id="analysis-title">Orchestration workspace</h2>
-          </div>
-          <span class="approval-chip">No execution in this workflow</span>
-        </div>
-
-        <div id="analysis-status" class="sr-only" aria-live="polite"></div>
-
-        <section id="empty-state" class="empty-state">
-          <div class="workflow-preview" aria-label="LiquidFlux workflow">
-            <div class="preview-stage">
-              <span class="stage-index">1</span>
-              <span><strong>Funding + Liquidity</strong><small>Run in parallel</small></span>
-            </div>
-            <span class="flow-arrow" aria-hidden="true">→</span>
-            <div class="preview-stage">
-              <span class="stage-index">2</span>
-              <span><strong>Risk policy</strong><small>Tests constraints</small></span>
-            </div>
-            <span class="flow-arrow" aria-hidden="true">→</span>
-            <div class="preview-stage">
-              <span class="stage-index">3</span>
-              <span><strong>Synthesis</strong><small>Explains the decision</small></span>
-            </div>
-          </div>
-          <div class="empty-copy">
-            <h3>Start with a message.</h3>
-            <p>Ask naturally, refine the plan in conversation, then review exactly which specialists LiquidFlux will coordinate and whether any service can spend funds.</p>
-          </div>
-          <dl class="boundary-list">
-            <div><dt>Data source</dt><dd>Hyperliquid mainnet</dd></div>
-            <div><dt>Marketplace service</dt><dd>Funding Specialist listed</dd></div>
-            <div><dt>Execution</dt><dd>Never included</dd></div>
-          </dl>
-        </section>
-
-        <section id="plan-state" class="plan-state" hidden aria-labelledby="plan-title">
-          <div class="plan-heading">
-            <span class="plan-mark" aria-hidden="true">✓</span>
-            <div>
-              <p class="step-label">Step 2 · Approval</p>
-              <h3 id="plan-title">Review the specialist plan</h3>
-              <p id="plan-objective">LiquidFlux prepared a workflow for your objective and constraints.</p>
-            </div>
-          </div>
-
-          <div class="ai-plan-context" id="ai-plan-context" hidden>
-            <div>
-              <span>AI interpretation</span>
-              <strong id="ai-plan-summary">Objective translated into editable constraints.</strong>
-            </div>
-            <dl>
-              <div><dt>Provider</dt><dd id="ai-plan-provider">—</dd></div>
-              <div><dt>Assumptions</dt><dd id="ai-plan-assumptions">None</dd></div>
-            </dl>
-          </div>
-
-          <div id="review-constraints"></div>
-          <p id="review-defaults" class="field-help"></p>
-
-          <div class="service-plan" aria-label="Planned specialist services">
-            <article class="service-row">
-              <span class="service-order">1A</span>
-              <div><strong>Funding Specialist</strong><small>Funding APR, direction, and hedge requirement</small></div>
-              <span class="provider-label">LiquidFlux · OKX.AI listed</span>
-              <span class="fee-label">Free</span>
-            </article>
-            <article class="service-row">
-              <span class="service-order">1B</span>
-              <div><strong>Liquidity Specialist</strong><small>Depth, impact spread, and notional capacity</small></div>
-              <span class="provider-label">LiquidFlux · First-party</span>
-              <span class="fee-label">Free</span>
-            </article>
-            <article class="service-row">
-              <span class="service-order">2</span>
-              <div><strong>Risk Policy Specialist</strong><small>Freshness, leverage, basis, and policy blockers</small></div>
-              <span class="provider-label">LiquidFlux · First-party</span>
-              <span class="fee-label">Free</span>
-            </article>
-            <article class="service-row">
-              <span class="service-order">3</span>
-              <div><strong>Deterministic Synthesis</strong><small>Reconciles evidence and explains the review boundary</small></div>
-              <span class="provider-label">LiquidFlux · First-party</span>
-              <span class="fee-label">Free</span>
-            </article>
-            <article class="service-row service-row-muted">
-              <span class="service-order">+</span>
-              <div><strong>External Cost Specialist</strong><small>Reserved for a compatible OKX.AI provider</small></div>
-              <span class="provider-label">Not connected</span>
-              <span class="fee-label">Skipped</span>
-            </article>
-          </div>
-
-          <div class="plan-boundary">
-            <div><span>Calls in this run</span><strong>4 first-party stages</strong></div>
-            <div><span>External services</span><strong>0 connected</strong></div>
-            <div><span>Maximum spend</span><strong>0 USDT</strong></div>
-          </div>
-
-          <p class="plan-disclosure">Only the Funding Specialist is currently marketplace-listed. Liquidity, Risk, and Synthesis are transparent first-party modules—not independent external agents. Gemini or Groq planning is separate from OKX.AI service discovery and future x402 spend.</p>
-
-          <div class="plan-actions">
-            <button class="primary-action" id="approve-plan" type="button">Approve plan and run</button>
-            <button class="secondary-action" id="revise-plan" type="button">Revise constraints</button>
-          </div>
-        </section>
-
-        <section id="loading-state" class="loading-state" hidden aria-label="Analysis in progress">
-          <div class="loading-heading">
-            <span class="loading-orbit" aria-hidden="true"></span>
-            <div><h3>Coordinating specialists</h3><p>Fetching current Hyperliquid evidence and applying your constraints.</p></div>
-          </div>
-          <ol class="loading-stages">
-            <li><span></span><div><strong>Funding and liquidity</strong><small>Reading the same market snapshot in parallel</small></div></li>
-            <li><span></span><div><strong>Risk policy</strong><small>Waiting for stage-one evidence</small></div></li>
-            <li><span></span><div><strong>Deterministic synthesis</strong><small>Waiting for risk decisions</small></div></li>
-          </ol>
-          <div class="skeleton-block" aria-hidden="true"><i></i><i></i><i></i></div>
-        </section>
-
-        <section id="error-state" class="error-state" hidden role="alert">
-          <span class="error-mark" aria-hidden="true">!</span>
-          <div><h3>Analysis could not complete</h3><p id="error-message">We could not reach the analysis service.</p><button id="retry-analysis" class="text-action" type="button">Try the analysis again</button></div>
-        </section>
-
-        <section id="overview-state" hidden aria-label="Market information"></section>
-
-        <section id="result-state" hidden>
-          <div id="result-summary"></div>
-          <div id="candidate-results"></div>
-          <div id="workflow-results"></div>
-          <div id="evidence-results"></div>
-        </section>
-      </section>
-    </div>
+          <p class="field-help">AI interprets requests; deterministic code calculates market evidence. Conversation history stays in this tab and resets on reload. Messages and supplied context are sent to configured AI providers.</p>
+          <nav class="resource-links" aria-label="Resources"><a href="/openapi.json">API documentation</a><a href="https://github.com/CasmanKaido/hyperdesk-scout" rel="noreferrer">Source code</a></nav>
+        </details>
+      </div>
+    </section>
   </main>
-
-  <footer class="app-footer">
-    <p>LiquidFlux provides informational market analysis. Funding can reverse, basis can move, and returns are not guaranteed.</p>
-    <span>API version 0.4.2</span>
-  </footer>
+  <footer class="app-footer"><p>Market snapshots are not forecasts. Funding can reverse; returns are not guaranteed.</p></footer>
 </body>
 </html>

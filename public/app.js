@@ -52,6 +52,7 @@ function syncControls() {
   generatePlanButton.disabled = busy;
   objectiveInput.disabled = busy;
   reviewButton.disabled = busy || !hasActivePlan;
+  reviewButton.hidden = !hasActivePlan || Boolean(pendingInfo) || Boolean(pendingInput) || busy;
   approveButton.disabled = busy || !pendingInput;
   retryButton.disabled = busy || !pendingInput;
   reviseButton.disabled = busy;
@@ -61,6 +62,7 @@ function syncControls() {
 }
 
 function clearApprovals() {
+  archiveResearch();
   pendingInput = null;
   pendingInfo = null;
   infoConfirmation.hidden = true;
@@ -68,9 +70,24 @@ function clearApprovals() {
   syncControls();
 }
 
+function archiveResearch() {
+  const active = !overviewState.hidden ? overviewState : !resultState.hidden ? resultState : null;
+  if (!active || analysisPanel.hidden) return;
+  const snapshot = active.cloneNode(true);
+  snapshot.removeAttribute("id");
+  for (const node of snapshot.querySelectorAll("[id]")) node.removeAttribute("id");
+  const archive = element("details", { className: "supporting-details research-archive" }, [
+    element("summary", { text: active === overviewState ? `Previous market evidence · ${latestAnalysis?.query?.symbols?.join(", ") || "snapshot"}` : "Previous strategy result" }),
+    snapshot,
+  ]);
+  analysisPanel.before(archive);
+  showView("empty");
+}
+
 function defaultsLabel() {
+  const labels = { symbols: "markets", risk_tolerance: "risk tolerance", max_leverage: "leverage cap", max_notional_usd: "notional limit", min_funding_apr: "funding threshold", objective: "objective" };
   return suggestedDefaults.length
-    ? `Suggested defaults (not user-supplied): ${suggestedDefaults.map(sentence).join(", ")}.`
+    ? `Suggested defaults (not user-supplied): ${suggestedDefaults.map(field => labels[field] || sentence(field)).join(", ")}.`
     : "No suggested defaults remain in these constraints.";
 }
 
@@ -158,6 +175,8 @@ function sentence(value) {
 }
 
 function showView(view) {
+  analysisPanel.hidden = view === "empty";
+  if (view !== "empty") conversationLog.append(analysisPanel);
   overviewState.hidden = view !== "overview";
   emptyState.hidden = view !== "empty";
   planState.hidden = view !== "plan";
@@ -518,11 +537,12 @@ function appendMessage(role, text, { meta = "", plan = null, pending = false } =
     meta ? element("span", { className: "message-meta", text: meta }) : null,
     plan ? planSnapshot(plan) : null,
   ]);
+  document.querySelector("#chat-welcome").hidden = true;
   conversationLog.append(message);
-  conversationLog.scrollTo({
-    top: conversationLog.scrollHeight,
+  requestAnimationFrame(() => message.scrollIntoView({
+    block: "nearest",
     behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth",
-  });
+  }));
   return message;
 }
 
@@ -574,8 +594,8 @@ async function generateAIPlan() {
   busy = true;
   syncControls();
   plannerButtonLabel.textContent = "Thinking";
-  setPlannerStatus("LiquidFlux is interpreting your message and preserving the approval boundary.");
-  const pendingMessage = appendMessage("assistant", "Reviewing the current plan and available evidence…", { pending: true });
+  setPlannerStatus("Understanding your request…");
+  const pendingMessage = appendMessage("assistant", "Thinking through your request…", { pending: true });
 
   try {
     const response = await fetch("/api/v1/plan", {
@@ -603,7 +623,7 @@ async function generateAIPlan() {
       clarification: `${providerName} · clarification`,
       unsupported: `${providerName} · outside current scope`,
     };
-    appendMessage("assistant", data.reply, {
+    const replyMessage = appendMessage("assistant", data.reply, {
       meta: messageMeta[data.intent],
       plan: data.intent === "plan_update" ? data : null,
     });
@@ -611,19 +631,21 @@ async function generateAIPlan() {
     if (data.intent === "plan_update") {
       latestAIPlan = data;
       suggestedDefaults = [...(data.suggested_defaults || [])];
-      appendMessage("assistant", defaultsLabel(), { meta: "Constraint provenance" });
+      replyMessage.append(element("p", { className: "default-note", text: defaultsLabel() }));
       hasActivePlan = true;
       aiDraftEdited = false;
       populateConstraints(data);
       pendingInput = null;
       latestAnalysis = null;
       showView("empty");
+      conversationLog.append(reviewButton);
       analysisStatus.textContent = "Conversation updated the plan. No market-data service was called.";
       setPlannerStatus("Plan updated. Continue the conversation or review the specialist plan.", "success");
     } else if (data.intent === "market_information") {
       pendingInfo = { symbols: [...data.symbols], topics: [...data.topics] };
       infoQuery.textContent = `Fetch ${pendingInfo.topics.map(sentence).join(", ")} for ${pendingInfo.symbols.join(", ")}?`;
       infoConfirmation.hidden = false;
+      conversationLog.append(infoConfirmation);
       setPlannerStatus("Confirm with the free fetch button or reply yes. Other messages replace this pending request.", "success");
     } else if (data.intent === "result_explanation") {
       setPlannerStatus("Answer grounded in the latest displayed analysis evidence.", "success");
@@ -664,7 +686,7 @@ function reviewPlan() {
   document.querySelector("#review-constraints").replaceChildren(planSnapshot(input));
   document.querySelector("#review-defaults").textContent = defaultsLabel();
   syncControls();
-  planObjective.textContent = `Objective: evaluate ${input.symbols.join(", ")} for market-neutral funding income under a ${input.risk_tolerance} risk policy, ${formatNumber(input.max_leverage)}× leverage cap, and ${formatCurrency(input.max_notional_usd)} notional limit.`;
+  planObjective.textContent = `I’ll evaluate ${input.symbols.join(", ")} for market-neutral funding income using the limits below.`;
   if (latestAIPlan) {
     const notes = [
       ...latestAIPlan.assumptions.map((item) => `Assumption: ${item}`),
@@ -673,7 +695,7 @@ function reviewPlan() {
     aiPlanSummary.textContent = `${latestAIPlan.summary}${aiDraftEdited ? " The generated constraints were edited before review." : ""}`;
     aiPlanProvider.textContent = `${latestAIPlan.provider} · ${latestAIPlan.model}`;
     aiPlanAssumptions.textContent = notes.length ? notes.join(" · ") : "No additional assumptions or missing information";
-    aiPlanContext.hidden = false;
+    aiPlanContext.hidden = notes.length === 0;
   } else {
     aiPlanContext.hidden = true;
   }
@@ -739,6 +761,20 @@ async function executeAnalysis() {
   }
 }
 
+function overviewSummary(data) {
+  return (data.markets || []).map((market) => {
+    if (market.status !== "available") return `${market.symbol}: market data is unavailable.`;
+    const facts = market.facts || {};
+    const calculations = market.calculations || {};
+    const parts = [];
+    if (facts.funding) parts.push(`hourly funding is ${Number.isFinite(facts.funding.hourly_rate) ? `${facts.funding.hourly_rate * 100}%` : "unavailable"} (${formatPercent(calculations.funding?.annualized_simple_percent)} simple annualized snapshot, not a forecast)`);
+    if (facts.basis) parts.push(`mark/oracle deviation is ${formatPercent(calculations.basis?.mark_oracle_deviation_percent)}, not executable spot/perp basis`);
+    if (facts.liquidity) parts.push(`24-hour volume is ${formatCurrency(facts.liquidity.volume_24h_usd, true)} and impact spread is ${formatNumber(calculations.liquidity?.impact_spread_bps)} bps`);
+    if (facts.risk) parts.push(`the venue leverage limit is ${formatNumber(facts.risk.max_leverage)}×, not a recommendation`);
+    return `${market.symbol}: ${parts.join("; ")}.`;
+  }).join("\n\n");
+}
+
 function renderOverview(data) {
   const evidence = data.evidence || {};
   overviewState.replaceChildren(sectionHeading("Market information", "Read-only snapshot · no strategy or execution"));
@@ -783,6 +819,16 @@ function renderOverview(data) {
     element("summary", { text: "Inspect source evidence and calculations" }),
     element("pre", { text: JSON.stringify(data, null, 2) }),
   ]));
+  const details = element("details", { className: "supporting-details" }, [
+    element("summary", { text: "Inspect market facts, calculations, and limitations" }),
+    ...overviewState.children,
+  ]);
+  overviewState.replaceChildren(
+    element("span", { className: "message-author", text: "LiquidFlux · market evidence" }),
+    element("p", { className: "overview-answer", text: overviewSummary(data) }),
+    element("p", { className: "message-meta", text: `${evidence.source || "Unknown source"} · fetched ${formatDate(evidence.fetched_at)} · ${sentence(evidence.data_status)} at retrieval` }),
+    details,
+  );
   showView("overview");
 }
 
@@ -805,9 +851,8 @@ async function fetchOverview() {
     renderOverview(data);
     latestAnalysis = data;
     const reply = `Market information fetched for ${query.symbols.join(", ")}: ${query.topics.join(", ")}. Source: ${data.evidence?.source || "unavailable"}; fetched ${formatDate(data.evidence?.fetched_at)}. No strategy or execution was included.`;
-    appendMessage("assistant", reply);
-    rememberTurn("assistant", reply);
-    setPlannerStatus("Information ready. Ask a follow-up about the displayed evidence.", "success");
+    rememberTurn("assistant", `${overviewSummary(data)} ${reply}`);
+    setPlannerStatus("Ask me about these facts, compare another market, or explore a strategy.", "success");
   } catch (error) {
     // Retry only the still-visible exact query; any new message invalidates it.
     pendingInfo = query;
@@ -846,7 +891,7 @@ objectiveInput.addEventListener("keydown", (event) => {
 });
 objectiveInput.addEventListener("input", () => {
   if (plannerStatus.dataset.state === "error") {
-    setPlannerStatus("Gemini is tried first; Groq is the fallback when configured.");
+    setPlannerStatus("Ask a question or tell me what you’d like to research.");
   }
 });
 form.addEventListener("input", (event) => {
@@ -891,6 +936,14 @@ manualPlanButton.addEventListener("click", () => {
   syncControls();
   reviewPlan();
 });
+
+for (const starter of document.querySelectorAll("[data-prompt]")) {
+  starter.addEventListener("click", () => {
+    if (busy) return;
+    objectiveInput.value = starter.dataset.prompt;
+    objectiveInput.focus();
+  });
+}
 
 showView("empty");
 syncControls();
