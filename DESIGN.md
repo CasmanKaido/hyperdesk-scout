@@ -99,7 +99,7 @@ components:
 
 **Creative North Star: "The Evidence Desk"**
 
-LiquidFlux is a composed analyst's workspace in clear daylight. Evidence is easy to compare, workflow stages remain visible, and every decision can be traced to current market data. Confidence comes from hierarchy, provenance, and restraint rather than decorative spectacle.
+LiquidFlux is a composed analyst's workspace in clear daylight. Evidence should be easy to compare, workflow stages visible, and each market claim traceable to a dated source with explicit limitations. Confidence comes from hierarchy, provenance, and restraint rather than decorative spectacle.
 
 The system combines Stripe Dashboard's financial clarity, Linear's disciplined workflow states, and GitHub Actions' transparent execution traces. Its primary desktop composition uses a compact constraint rail beside a wider evidence workspace; mobile preserves the same information architecture in one deliberate column.
 
@@ -201,14 +201,21 @@ LiquidFlux is flat by default. Depth comes from surface tone, spacing, and struc
 
 ### Conversational Evidence Workflow
 
+These are interaction requirements, not a production-verification claim. As of 2026-09-19, `market_information`, `POST /api/v1/market-overview`, and short-reply integration are integrated locally with automated flow coverage; visual and live-provider validation remain separate. See [`AUDIT.md`](AUDIT.md).
+
+- **Information first:** Asset questions and short follow-ups remain information requests. Show facts, calculations, source/fetch time, stale or missing evidence, and limitations without strategy constraints or an approval-to-invest implication.
+- **Explicit strategy transition:** Only an explicit strategy request opens the strategy journey. Present user-provided, inherited, interpreted, and defaulted values distinctly; suggestions are not user preferences.
 - **Conversation:** A bounded message thread is the primary input. User requests, AI replies, compact plan snapshots, and deterministic result summaries share one chronological surface.
-- **Follow-ups:** Natural-language revisions carry the complete validated current plan; result questions carry only reduced current evidence. Unsupported requests stay conversational without creating new capabilities.
+- **Follow-ups:** Strategy revisions carry the complete validated current plan; information follow-ups preserve resolved symbols/topics. Result questions carry reduced current evidence, and answers disclose when it is insufficient. Current browser memory is in-session and bounded, not durable history; client-supplied context is untrusted.
 - **Manual fallback:** Detailed controls remain available in a disclosure and always reflect the active conversational plan.
 - **Structure:** Conversation and constraints produce a pre-run service manifest: Funding and Liquidity in parallel, dependent Risk Policy, then deterministic Synthesis.
-- **Plan Review:** Every service row exposes provider identity, marketplace status, fee, and whether the stage is connected, skipped, or first-party before approval.
+- **Plan Review:** Every strategy service row exposes provider identity, dated marketplace status, fee, and whether the stage is local first-party or external/disconnected before approval. The current gate is browser review, not server-side authorization. Free service fees exclude operator AI infrastructure costs.
 - **Loading:** Named stages, a bounded progress orbit, and skeleton lines communicate active work without fake percentages.
 - **Results:** Synthesis appears first, candidate rows follow, then workflow trace and expandable specialist evidence.
-- **Boundary:** Every completed state repeats that candidates require review and execution is excluded.
+- **Boundary:** Every completed strategy state repeats that candidates require review and execution is excluded. “Policy pass” means passing implemented heuristics, not safe-to-trade certification. Information results must not inherit strategy approval language.
+- **Evidence honesty:** Snapshot annualization is not forecast yield; mark/oracle deviation is not executable basis; volume and impact prices are not fill guarantees. Missing facts display as unknown, not zero. Fetch time is not an exchange event timestamp.
+- **Async integrity:** Editing scope or constraints invalidates applicable pending review/results; obsolete responses must not overwrite newer state. Define retries, reset, truncation, and provider failure behavior explicitly.
+- **Known gaps:** Default-origin tracking and result authenticity remain audit priorities. The integrated browser dispatches information intent, accepts short replies, clears stale actions, and uses shared busy guards. Simulated-DOM tests do not establish visual quality or live-model understanding.
 
 ## 6. Do's and Don'ts
 

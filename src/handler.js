@@ -3,6 +3,7 @@ import { UpstreamError } from "./hyperliquid.js";
 import { buildFundingScan, validateScanInput, ValidationError } from "./service.js";
 import { orchestrateMarketNeutral, validateOrchestrationInput } from "./orchestrator.js";
 import { PlannerError } from "./ai-planner.js";
+import { buildMarketOverview, validateMarketOverviewInput } from "./market-overview.js";
 
 const JSON_HEADERS = {
   "content-type": "application/json; charset=utf-8",
@@ -56,7 +57,7 @@ export function createRequestHandler({
         result = json(200, {
           service: "LiquidFlux",
           product: "LiquidFlux Orchestrator",
-          version: "0.4.2",
+          version: "0.5.0",
           status: "operational",
           description: "AI-assisted planning with approval-gated, deterministic Hyperliquid funding, liquidity, and risk evidence.",
           endpoints: {
@@ -64,12 +65,13 @@ export function createRequestHandler({
             openapi: { method: "GET", path: "/openapi.json" },
             ai_planner: { method: "POST", path: "/api/v1/plan" },
             funding_specialist: { method: "POST", path: "/api/v1/funding-scan" },
+            market_overview: { method: "POST", path: "/api/v1/market-overview" },
             orchestrator: { method: "POST", path: "/api/v1/orchestrate" },
           },
           execution_included: false,
         }, id, corsHeaders);
       } else if (method === "GET" && pathname === "/health") {
-        result = json(200, { status: "ok", service: "hyperdesk-scout", version: "0.4.2" }, id, corsHeaders);
+        result = json(200, { status: "ok", service: "hyperdesk-scout", version: "0.5.0" }, id, corsHeaders);
       } else if (method === "GET" && pathname === "/openapi.json" && openApiSpec) {
         result = json(200, openApiSpec, id, corsHeaders);
       } else if (method === "POST" && pathname === "/api/v1/plan") {
@@ -130,6 +132,38 @@ export function createRequestHandler({
               },
               generatedAt: now(),
               workflowId: id,
+            }),
+          }, id, {
+            ...corsHeaders,
+            ...(rate ? {
+              "x-ratelimit-limit": String(rate.limit),
+              "x-ratelimit-remaining": String(rate.remaining),
+            } : {}),
+          });
+        }
+      } else if (method === "POST" && pathname === "/api/v1/market-overview") {
+        const rate = rateLimiter?.consume(clientIp);
+        if (rate && !rate.allowed) {
+          result = json(429, {
+            request_id: id,
+            error: "rate_limited",
+            message: "Too many requests",
+          }, id, {
+            ...corsHeaders,
+            "retry-after": String(Math.max(1, Math.ceil((rate.resetAt - Date.now()) / 1000))),
+            "x-ratelimit-limit": String(rate.limit),
+            "x-ratelimit-remaining": "0",
+          });
+        } else {
+          const input = validateMarketOverviewInput(parseJsonBody(bodyText));
+          const marketData = await getMarketData();
+          result = json(200, {
+            request_id: id,
+            ...buildMarketOverview(marketData.markets, input, {
+              generatedAt: now(),
+              fetchedAt: marketData.fetchedAt,
+              ageMs: marketData.ageMs,
+              cacheStatus: marketData.cacheStatus,
             }),
           }, id, {
             ...corsHeaders,

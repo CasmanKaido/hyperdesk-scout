@@ -4,18 +4,34 @@ This is the project's source of truth for build order. Work on one milestone at 
 
 ## Status legend
 
-- `[x]` Complete
+- `[x]` Recorded complete in the existing project history; not automatically reverified by the 2026-09-19 documentation audit
 - `[>]` In progress
 - `[ ]` Not started
 - `[!]` Blocked or needs a decision
 
 ## Current position
 
-**Completed:** M0 — Read-only funding scanner; M1 — Production API hardening (GitHub Actions remains externally blocked by account billing); M2 — Public HTTPS deployment
+**Historically recorded complete:** M0 — Read-only funding scanner; M1 — API hardening (the prior record reports GitHub Actions blocked by account billing); M2 — Public HTTPS deployment. Current deployment, CI, provider, and marketplace state were not reverified in this documentation audit.
 
 **In progress:** M3 — Hyperliquid orchestration MVP and free OKX.AI integration; M6 — Demo interface
 
-**Next:** Record the 2–4 minute demo showing the production conversation, approval gate, live evidence, and verified OKX.AI orchestrator invocation; then diagnose why Gemini currently hands off to the working Groq fallback. A paid external specialist is deferred until a relevant provider succeeds through the official OKX.AI invocation path; LiquidFlux will not force an unsafe or incompatible integration merely to claim multi-agent orchestration.
+**Next:** Verify the integrated information/strategy split with real providers and deployed browser journeys before recording a new demo. `market_information`, `POST /api/v1/market-overview`, and short replies pass local automated coverage (62/62 tests); a direct live Hyperliquid BTC overview also passed. Diagnose Gemini against the real provider contract; its adapter compatibility and failure cause are unknown from mocked tests. Paid external specialists remain deferred. Existing modules run locally; OKX.AI distributes first-party services.
+
+## Audit-driven priorities (2026-09-19)
+
+[`AUDIT.md`](AUDIT.md) provides code evidence, impact, and acceptance criteria. This queue takes precedence over the historical milestone order below.
+
+- [>] **P0 — Information versus strategy:** Integrate and validate information intent, overview endpoint, and short replies. Test BTC → yes → funding without financial defaults, rankings, or `/orchestrate`; test a separate explicit strategy → review → run journey. Align browser, OpenAPI, and tests. Do not mark deployed from local edits.
+- [ ] **P1 — Default provenance:** Preserve explicit/inherited/interpreted/defaulted field origins and display suggestions before strategy approval. The local `suggested_defaults` field is model-reported, not deterministic proof.
+- [ ] **P1 — Approval semantics:** Keep current browser review distinct from an unauthenticated free analysis API. Before any future paid/execution feature, implement server-side identity, plan/provider/fee binding, expiry, replay protection, and spend limits.
+- [ ] **P1 — Provider validation:** Verify Gemini endpoint/schema/response/model separately from Groq fallback; capture sanitized provider-specific evidence. Do not infer a root cause from fallback success.
+- [ ] **P1 — Evidence integrity:** Address invalid-to-zero strategy scoring, required missing evidence, configurable source labels, and fetch-versus-exchange timestamps. Preserve the new overview's null/fact/calculation/notice semantics through the shared adapter.
+- [ ] **P1 — Context/security:** Bind explanations to trusted, current result evidence; test forged history, injected context, stale/cross-result facts, and unsupported claims. Document provider data sharing and assess public AI cost/concurrency controls.
+- [ ] **P2 — History/state:** Define reset/truncation/reload behavior and resolved information scope. Test retries and concurrent planner/analysis/manual edits; discard obsolete responses using request/plan versions.
+- [ ] **P2 — Distribution evidence:** Reconcile static listing copy with dated records and preserve clean-session official invocation evidence. No external-agent hiring claim without a genuine independent call; payments require their own evidence.
+- [ ] **Release evidence:** Run focused/full tests and syntax checks on the settled revision, then browser/provider smoke tests and an explicitly identified deployment check. Record dates, revisions, request IDs, provider identity, and remaining limitations.
+
+No runtime tests or production/provider/marketplace calls were performed for this documentation audit. Historical checkboxes below remain a record, not a fresh certification.
 
 ---
 
@@ -152,13 +168,15 @@ Selected target: **Render Free web service using the repository Dockerfile**. Th
 - [ ] The OKX.AI listing or integration URL is public and documented
 - [ ] The workflow can be repeated from a clean session
 
-**Next after completion:** M4 — x402 payment on X Layer testnet.
+**Next after completion:** Finish the audit-driven information/strategy validation queue. M4 is deferred and is not required to prove the free read-only product.
 
 ---
 
 ## M4 — Paid A2MCP endpoint on X Layer testnet
 
-**Goal:** Prove the business model using the official OKX Payment SDK before using real funds.
+**Status:** Deferred; no implemented payment or external paid-specialist capability is claimed. This possible premium-endpoint milestone is distinct from buying an independent specialist's evidence.
+
+**Goal:** If resumed after the audit priorities, prove the business model using the official OKX Payment SDK before using real funds.
 
 ### Prerequisites
 
@@ -238,7 +256,7 @@ Selected target: **Render Free web service using the repository Dockerfile**. Th
 - [x] Verify create → revise → analyze → explain conversation against production
 - [x] Configure production provider keys and verify a successful Groq fallback plan
 - [x] Validate AI-generated constraints before displaying or using them
-- [x] Preserve explicit human approval and manual fallback when AI is unavailable
+- [x] Preserve browser strategy review and manual fallback when AI is unavailable (not server-side approval enforcement)
 - [x] Add an optional natural-language explanation generated from structured results
 - [x] Keep all numerical controls deterministic
 - [x] Add loading, empty, stale-data, and failure states
@@ -294,7 +312,7 @@ Execution is not required for a compelling hackathon demo. A reliable paid intel
 | Primary hackathon track | Build a Company | Core product is an agent/API service distributed through OKX AI |
 | Product position | Hyperliquid specialist orchestrator | Individual analytics APIs are crowded; coordination and synthesis are the differentiated workflow |
 | First OKX AI service type | A2MCP | The existing funding specialist is already a standardized parameter-in/result-out task |
-| Second OKX AI service type | A2A | Multi-step strategy orchestration requires clarification, coordination, and an approval boundary |
+| Second recorded OKX AI service type | Free A2MCP orchestrator | `OKX_AI.md` records publication/invocation; A2A is a future direction, not this implementation |
 | Initial Hyperliquid access | Read-only | Safest way to prove value and integration |
 | Initial pricing mode | Free | Validate the marketplace workflow before adding payment dependencies |
 | Payment network | X Layer testnet first | Demonstrate x402 without risking real funds |

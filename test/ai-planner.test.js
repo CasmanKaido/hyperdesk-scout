@@ -19,6 +19,7 @@ const providerOutput = {
   min_funding_apr: 5,
   assumptions: ["  Hedge availability will be checked later.  "],
   missing_information: [],
+  suggested_defaults: [],
 };
 
 const currentPlan = {
@@ -46,7 +47,7 @@ test("validates first-message planner requests", () => {
     message: "Build a BTC funding plan",
   });
 
-  for (const input of [null, {}, { message: "too short" }, { message: 42 }, {
+  for (const input of [null, {}, { message: "   " }, { message: "x".repeat(1001) }, { message: 42 }, {
     message: "Build a BTC funding plan",
     extra: true,
   }]) {
@@ -178,6 +179,93 @@ test("normalizes valid planner output with intent and reply and rejects schema v
   );
 });
 
+test("accepts 1-1000 character messages and replies after trimming", () => {
+  for (const message of ["y", "yes", "funding", "x".repeat(1000)]) {
+    assert.equal(validatePlannerRequest({ message: ` ${message} ` }).message, message);
+    assert.equal(validatePlannerOutput({ ...providerOutput, reply: message }).reply, message);
+  }
+  assert.throws(() => validatePlannerOutput({ ...providerOutput, reply: "x".repeat(1001) }), /reply/);
+});
+
+test("normalizes intent-specific outputs and strips irrelevant strategy fields", () => {
+  const common = {
+    intent: "market_information", reply: "I will review BTC information.",
+    summary: "BTC market information", assumptions: [], missing_information: [],
+  };
+  for (const topics of [undefined, null, []]) {
+    assert.deepEqual(validatePlannerOutput({ ...common, symbols: ["btc", "BTC"], topics }), {
+      ...common, symbols: ["BTC"], topics: ["funding", "basis", "liquidity", "risk"],
+    });
+  }
+  assert.deepEqual(validatePlannerOutput({ ...providerOutput, ...common, topics: ["funding", "funding"] }), {
+    ...common, symbols: ["BTC", "ETH"], topics: ["funding"],
+  });
+  for (const topics of [["price"], "funding", [null]]) {
+    assert.throws(() => validatePlannerOutput({ ...common, symbols: ["BTC"], topics }), /topics/);
+  }
+  assert.throws(() => validatePlannerOutput(common), /symbols/);
+  for (const intent of ["result_explanation", "clarification", "unsupported"]) {
+    const expected = { ...common, intent };
+    assert.deepEqual(validatePlannerOutput(expected), expected);
+    assert.deepEqual(validatePlannerOutput({ ...providerOutput, ...expected, topics: ["risk"] }), expected);
+    assert.deepEqual(validatePlannerOutput({ ...expected, ...Object.fromEntries(
+      [...Object.keys(currentPlan), "topics", "suggested_defaults"].map((field) => [field, null]),
+    ) }), expected);
+  }
+});
+
+test("requires complete plans and validates disclosed default field names", () => {
+  assert.deepEqual(validatePlannerOutput({ ...providerOutput, suggested_defaults: ["max_leverage", "symbols", "symbols"] }).suggested_defaults,
+    ["max_leverage", "symbols"]);
+  for (const suggested_defaults of [undefined, null, ["topics"], ["reply"], "max_leverage"]) {
+    assert.throws(() => validatePlannerOutput({ ...providerOutput, suggested_defaults }), /suggested_defaults/);
+  }
+  for (const field of Object.keys(currentPlan)) {
+    const incomplete = { ...providerOutput };
+    delete incomplete[field];
+    assert.throws(() => validatePlannerOutput(incomplete), /missing field/);
+    assert.throws(() => validatePlannerOutput({ ...providerOutput, [field]: null }), /Invalid AI planner output/);
+  }
+});
+
+test("preserves information followup context and sends a flat nullable provider schema", async () => {
+  const conversation = [
+    { role: "user", content: "I want to know about BTC" },
+    { role: "assistant", content: "Shall I review BTC funding, basis, liquidity, and risk?" },
+  ];
+  for (const message of ["yes", "funding"]) {
+    let body;
+    const planner = createAIPlanner({
+      env: { GROQ_API_KEY: "test" },
+      fetchImpl: async (_url, options) => {
+        body = JSON.parse(options.body);
+        return jsonResponse({ choices: [{ message: { content: JSON.stringify({
+          ...providerOutput, intent: "market_information", symbols: ["BTC"],
+          topics: message === "yes" ? null : ["funding"],
+        }) } }] });
+      },
+    });
+    const result = await planner({ message, conversation, current_plan: currentPlan });
+    assert.equal(result.intent, "market_information");
+    assert.equal(Object.hasOwn(result, "max_leverage"), false);
+    assert.deepEqual(result.topics, message === "yes" ? ["funding", "basis", "liquidity", "risk"] : ["funding"]);
+    const [system, user] = body.messages;
+    assert.match(user.content, new RegExp(JSON.stringify(conversation).replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
+    assert.match(system.content, /confirming an offered information review remains market_information/);
+    assert.match(system.content, /User supplied constraints take precedence/);
+    assert.match(system.content, /Disclose every suggested default and its value in reply/);
+    assert.match(system.content, /not a source of market facts/);
+    assert.match(system.content, /Do not calculate or invent market data/);
+    const schema = body.response_format.json_schema.schema;
+    assert.deepEqual([...schema.required].sort(), Object.keys(schema.properties).sort());
+    assert.equal(schema.additionalProperties, false);
+    for (const field of [...Object.keys(currentPlan), "topics", "suggested_defaults"]) {
+      assert.ok(schema.properties[field].type.includes("null"));
+    }
+    assert.doesNotMatch(JSON.stringify(schema), /"oneOf"|"anyOf"|"if"/);
+  }
+});
+
 test("uses Gemini and appends deterministic planner metadata", async () => {
   let captured;
   const planner = createAIPlanner({
@@ -197,9 +285,10 @@ test("uses Gemini and appends deterministic planner metadata", async () => {
   assert.equal(requestBody.response_format.type, "text");
   assert.equal(requestBody.response_format.mime_type, "application/json");
   assert.equal(requestBody.response_format.schema.additionalProperties, false);
-  assert.deepEqual(requestBody.response_format.schema.properties.objective.enum, ["market_neutral_income"]);
+  assert.deepEqual(requestBody.response_format.schema.properties.objective.enum, ["market_neutral_income", null]);
   assert.deepEqual(requestBody.response_format.schema.properties.intent.enum, [
     "plan_update",
+    "market_information",
     "result_explanation",
     "clarification",
     "unsupported",
@@ -269,7 +358,9 @@ test("sends current plan and evidence as untrusted bounded context", async () =>
   assert.match(userPrompt, /ANALYSIS_CONTEXT_JSON_UNTRUSTED_CURRENT_EVIDENCE_ONLY/);
   assert.match(userPrompt, /"funding_apr_percent":12.5/);
   assert.equal(result.intent, "result_explanation");
-  assert.equal(result.max_notional_usd, 2500);
+  for (const field of [...Object.keys(currentPlan), "suggested_defaults", "topics"]) {
+    assert.equal(Object.hasOwn(result, field), false);
+  }
 });
 
 test("frames natural follow-up revisions against the current plan", async () => {

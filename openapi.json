@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "LiquidFlux API",
-    "version": "0.4.2",
+    "version": "0.5.0",
     "description": "AI-assisted objective planning with approval-gated, deterministic Hyperliquid funding, liquidity, and risk intelligence. AI interprets constraints but does not calculate market evidence, spend funds, or execute trades."
   },
   "servers": [
@@ -62,13 +62,42 @@
         },
         "responses": {
           "200": {
-            "description": "Objective interpreted into an editable specialist plan",
+            "description": "Intent-specific plan, market-information request, explanation, clarification, or unsupported response",
             "content": { "application/json": { "schema": { "$ref": "#/components/schemas/PlannerResponse" } } }
           },
           "400": { "$ref": "#/components/responses/BadRequest" },
           "429": { "$ref": "#/components/responses/RateLimited" },
           "502": { "$ref": "#/components/responses/AIProviderError" },
           "503": { "$ref": "#/components/responses/AIUnavailable" }
+        }
+      }
+    },
+    "/api/v1/market-overview": {
+      "post": {
+        "operationId": "getMarketOverview",
+        "summary": "Read unranked Hyperliquid market facts and deterministic calculations",
+        "description": "Returns requested topics from the shared snapshot. Annualized funding is not a forecast; mark/oracle deviation is not executable basis; liquidity metrics are not fill guarantees. Never executes trades.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {"$ref": "#/components/schemas/MarketOverviewRequest"}
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Market evidence including unavailable symbols and nullable facts",
+            "content": {
+              "application/json": {
+                "schema": {"$ref": "#/components/schemas/MarketOverviewResponse"}
+              }
+            }
+          },
+          "400": {"$ref": "#/components/responses/BadRequest"},
+          "429": {"$ref": "#/components/responses/RateLimited"},
+          "502": {"$ref": "#/components/responses/UpstreamError"},
+          "504": {"$ref": "#/components/responses/UpstreamError"}
         }
       }
     },
@@ -166,7 +195,7 @@
         "additionalProperties": false,
         "required": ["message"],
         "properties": {
-          "message": { "type": "string", "minLength": 10, "maxLength": 1000 },
+          "message": { "type": "string", "minLength": 1, "maxLength": 1000, "description": "Validated after trimming; must contain 1–1000 characters." },
           "conversation": {
             "type": "array",
             "maxItems": 12,
@@ -202,29 +231,357 @@
         }
       },
       "PlannerResponse": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": ["request_id", "intent", "reply", "summary", "objective", "symbols", "risk_tolerance", "max_leverage", "max_notional_usd", "min_funding_apr", "assumptions", "missing_information", "provider", "model", "specialist_plan", "approval_required", "execution_included"],
-        "properties": {
-          "request_id": { "type": "string" },
-          "intent": { "type": "string", "enum": ["plan_update", "result_explanation", "clarification", "unsupported"] },
-          "reply": { "type": "string", "minLength": 1 },
-          "summary": { "type": "string", "minLength": 1 },
-          "objective": { "const": "market_neutral_income" },
-          "symbols": { "type": "array", "minItems": 1, "maxItems": 20, "uniqueItems": true, "items": { "type": "string", "pattern": "^[A-Z0-9:_-]{1,30}$" } },
-          "risk_tolerance": { "type": "string", "enum": ["conservative", "moderate", "aggressive"] },
-          "max_leverage": { "type": "number", "minimum": 1, "maximum": 10 },
-          "max_notional_usd": { "type": "number", "exclusiveMinimum": 0, "maximum": 1000000 },
-          "min_funding_apr": { "type": "number", "minimum": 0, "maximum": 10000 },
-          "assumptions": { "type": "array", "maxItems": 8, "items": { "type": "string" } },
-          "missing_information": { "type": "array", "maxItems": 5, "items": { "type": "string" } },
-          "provider": { "type": "string", "enum": ["gemini", "groq"] },
-          "model": { "type": "string" },
-          "specialist_plan": { "type": "array", "items": { "type": "object" } },
-          "approval_required": { "const": true },
-          "execution_included": { "const": false }
+        "description": "Normalized public outputs omit inapplicable fields from the internal flat nullable provider schema. All intents retain provider metadata and approval/execution boundaries.",
+        "oneOf": [{"$ref": "#/components/schemas/PlannerPlanUpdateResponse"}, {"$ref": "#/components/schemas/PlannerMarketInformationResponse"}, {"$ref": "#/components/schemas/PlannerResultExplanationResponse"}, {"$ref": "#/components/schemas/PlannerClarificationResponse"}, {"$ref": "#/components/schemas/PlannerUnsupportedResponse"}],
+        "discriminator": {
+          "propertyName": "intent",
+          "mapping": {"plan_update": "#/components/schemas/PlannerPlanUpdateResponse", "market_information": "#/components/schemas/PlannerMarketInformationResponse", "result_explanation": "#/components/schemas/PlannerResultExplanationResponse", "clarification": "#/components/schemas/PlannerClarificationResponse", "unsupported": "#/components/schemas/PlannerUnsupportedResponse"}
         }
       },
+      "PlannerPlanUpdateResponse": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["request_id", "intent", "reply", "summary", "assumptions", "missing_information", "provider", "model", "specialist_plan", "approval_required", "execution_included", "objective", "symbols", "risk_tolerance", "max_leverage", "max_notional_usd", "min_funding_apr", "suggested_defaults"],
+        "properties": {
+          "request_id": {"type": "string"},
+          "intent": {"const": "plan_update"},
+          "reply": {"type": "string", "minLength": 1, "maxLength": 1000},
+          "summary": {"type": "string", "minLength": 1},
+          "assumptions": {
+            "type": "array",
+            "maxItems": 8,
+            "items": {"type": "string", "minLength": 1}
+          },
+          "missing_information": {
+            "type": "array",
+            "maxItems": 5,
+            "items": {"type": "string", "minLength": 1}
+          },
+          "provider": {"type": "string", "enum": ["gemini", "groq"]},
+          "model": {"type": "string"},
+          "specialist_plan": {
+            "type": "array",
+            "items": {"type": "object"}
+          },
+          "approval_required": {"const": true},
+          "execution_included": {"const": false},
+          "objective": {"const": "market_neutral_income"},
+          "symbols": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 20,
+            "uniqueItems": true,
+            "items": {"type": "string", "pattern": "^[A-Z0-9:_-]{1,30}$"}
+          },
+          "risk_tolerance": {"type": "string", "enum": ["conservative", "moderate", "aggressive"]},
+          "max_leverage": {"type": "number", "minimum": 1, "maximum": 10},
+          "max_notional_usd": {"type": "number", "exclusiveMinimum": 0, "maximum": 1000000},
+          "min_funding_apr": {"type": "number", "minimum": 0, "maximum": 10000},
+          "suggested_defaults": {
+            "type": "array",
+            "maxItems": 6,
+            "uniqueItems": true,
+            "items": {"type": "string", "enum": ["objective", "symbols", "risk_tolerance", "max_leverage", "max_notional_usd", "min_funding_apr"]}
+          }
+        }
+      },
+      "PlannerMarketInformationResponse": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["request_id", "intent", "reply", "summary", "assumptions", "missing_information", "provider", "model", "specialist_plan", "approval_required", "execution_included", "symbols", "topics"],
+        "properties": {
+          "request_id": {"type": "string"},
+          "intent": {"const": "market_information"},
+          "reply": {"type": "string", "minLength": 1, "maxLength": 1000},
+          "summary": {"type": "string", "minLength": 1},
+          "assumptions": {
+            "type": "array",
+            "maxItems": 8,
+            "items": {"type": "string", "minLength": 1}
+          },
+          "missing_information": {
+            "type": "array",
+            "maxItems": 5,
+            "items": {"type": "string", "minLength": 1}
+          },
+          "provider": {"type": "string", "enum": ["gemini", "groq"]},
+          "model": {"type": "string"},
+          "specialist_plan": {
+            "type": "array",
+            "items": {"type": "object"}
+          },
+          "approval_required": {"const": true},
+          "execution_included": {"const": false},
+          "symbols": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 20,
+            "uniqueItems": true,
+            "items": {"type": "string", "pattern": "^[A-Z0-9:_-]{1,30}$"}
+          },
+          "topics": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 4,
+            "items": {"type": "string", "enum": ["funding", "basis", "liquidity", "risk"]},
+            "uniqueItems": true
+          }
+        }
+      },
+      "PlannerResultExplanationResponse": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["request_id", "intent", "reply", "summary", "assumptions", "missing_information", "provider", "model", "specialist_plan", "approval_required", "execution_included"],
+        "properties": {
+          "request_id": {"type": "string"},
+          "intent": {"const": "result_explanation"},
+          "reply": {"type": "string", "minLength": 1, "maxLength": 1000},
+          "summary": {"type": "string", "minLength": 1},
+          "assumptions": {
+            "type": "array",
+            "maxItems": 8,
+            "items": {"type": "string", "minLength": 1}
+          },
+          "missing_information": {
+            "type": "array",
+            "maxItems": 5,
+            "items": {"type": "string", "minLength": 1}
+          },
+          "provider": {"type": "string", "enum": ["gemini", "groq"]},
+          "model": {"type": "string"},
+          "specialist_plan": {
+            "type": "array",
+            "items": {"type": "object"}
+          },
+          "approval_required": {"const": true},
+          "execution_included": {"const": false}
+        }
+      },
+      "PlannerClarificationResponse": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["request_id", "intent", "reply", "summary", "assumptions", "missing_information", "provider", "model", "specialist_plan", "approval_required", "execution_included"],
+        "properties": {
+          "request_id": {"type": "string"},
+          "intent": {"const": "clarification"},
+          "reply": {"type": "string", "minLength": 1, "maxLength": 1000},
+          "summary": {"type": "string", "minLength": 1},
+          "assumptions": {
+            "type": "array",
+            "maxItems": 8,
+            "items": {"type": "string", "minLength": 1}
+          },
+          "missing_information": {
+            "type": "array",
+            "maxItems": 5,
+            "items": {"type": "string", "minLength": 1}
+          },
+          "provider": {"type": "string", "enum": ["gemini", "groq"]},
+          "model": {"type": "string"},
+          "specialist_plan": {
+            "type": "array",
+            "items": {"type": "object"}
+          },
+          "approval_required": {"const": true},
+          "execution_included": {"const": false}
+        }
+      },
+      "PlannerUnsupportedResponse": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["request_id", "intent", "reply", "summary", "assumptions", "missing_information", "provider", "model", "specialist_plan", "approval_required", "execution_included"],
+        "properties": {
+          "request_id": {"type": "string"},
+          "intent": {"const": "unsupported"},
+          "reply": {"type": "string", "minLength": 1, "maxLength": 1000},
+          "summary": {"type": "string", "minLength": 1},
+          "assumptions": {
+            "type": "array",
+            "maxItems": 8,
+            "items": {"type": "string", "minLength": 1}
+          },
+          "missing_information": {
+            "type": "array",
+            "maxItems": 5,
+            "items": {"type": "string", "minLength": 1}
+          },
+          "provider": {"type": "string", "enum": ["gemini", "groq"]},
+          "model": {"type": "string"},
+          "specialist_plan": {
+            "type": "array",
+            "items": {"type": "object"}
+          },
+          "approval_required": {"const": true},
+          "execution_included": {"const": false}
+        }
+      },
+      "MarketOverviewRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["symbols"],
+        "properties": {
+          "symbols": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 50,
+            "items": {"type": "string", "pattern": "^[A-Za-z0-9:_-]{1,30}$"}
+          },
+          "topics": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 4,
+            "items": {"type": "string", "enum": ["funding", "basis", "liquidity", "risk"]},
+            "default": ["funding", "basis", "liquidity", "risk"]
+          }
+        }
+      },
+      "MarketOverviewMarket": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["symbol", "status", "facts", "calculations", "notices"],
+        "properties": {
+          "symbol": {"type": "string"},
+          "status": {"enum": ["available", "unavailable"]},
+          "facts": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "funding": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["hourly_rate"],
+                "properties": {
+                  "hourly_rate": {"type": ["number", "null"]}
+                }
+              },
+              "basis": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["mark_price", "oracle_price"],
+                "properties": {
+                  "mark_price": {"type": ["number", "null"]},
+                  "oracle_price": {"type": ["number", "null"]}
+                }
+              },
+              "liquidity": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["mark_price", "open_interest_base", "volume_24h_usd", "impact_bid_price", "impact_ask_price"],
+                "properties": {
+                  "mark_price": {"type": ["number", "null"]},
+                  "open_interest_base": {"type": ["number", "null"]},
+                  "volume_24h_usd": {"type": ["number", "null"]},
+                  "impact_bid_price": {"type": ["number", "null"]},
+                  "impact_ask_price": {"type": ["number", "null"]}
+                }
+              },
+              "risk": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["max_leverage", "is_delisted"],
+                "properties": {
+                  "max_leverage": {"type": ["number", "null"]},
+                  "is_delisted": {"type": ["boolean", "null"]}
+                }
+              }
+            }
+          },
+          "calculations": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "funding": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["annualized_simple_percent"],
+                "properties": {
+                  "annualized_simple_percent": {"type": ["number", "null"]}
+                }
+              },
+              "basis": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["mark_oracle_deviation_percent"],
+                "properties": {
+                  "mark_oracle_deviation_percent": {"type": ["number", "null"]}
+                }
+              },
+              "liquidity": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["open_interest_notional_usd", "impact_spread_bps"],
+                "properties": {
+                  "open_interest_notional_usd": {"type": ["number", "null"]},
+                  "impact_spread_bps": {"type": ["number", "null"]}
+                }
+              }
+            }
+          },
+          "notices": {
+            "type": "array",
+            "items": {"type": "string"}
+          }
+        },
+        "description": "One entry per normalized requested symbol, including unavailable markets. Only requested topics appear; risk has no calculations. Missing or invalid inputs and non-finite calculations produce null and notices. No ranking or financial filtering."
+      },
+      "MarketOverviewEvidence": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["source", "endpoint", "request_type", "fetched_at", "age_ms", "cache_status", "data_status"],
+        "properties": {
+          "source": {"const": "Hyperliquid"},
+          "endpoint": {"const": "/info"},
+          "request_type": {"const": "metaAndAssetCtxs"},
+          "fetched_at": {"type": ["string", "null"], "format": "date-time"},
+          "age_ms": {"type": ["number", "null"], "minimum": 0},
+          "cache_status": {"type": ["string", "null"]},
+          "data_status": {"enum": ["fresh", "stale", "unknown"]}
+        },
+        "description": "Shared provider snapshot metadata; fetched_at is a fetch timestamp, not an exchange timestamp. Missing metadata is null."
+      },
+      "MarketOverviewResponse": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["request_id", "generated_at", "query", "evidence", "markets", "notices", "execution_included"],
+        "properties": {
+          "request_id": {"type": "string"},
+          "generated_at": {"type": "string", "format": "date-time"},
+          "query": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["symbols", "topics"],
+            "properties": {
+              "symbols": {
+                "type": "array",
+                "minItems": 1,
+                "maxItems": 50,
+                "items": {"type": "string", "pattern": "^[A-Za-z0-9:_-]{1,30}$"},
+                "uniqueItems": true
+              },
+              "topics": {
+                "type": "array",
+                "minItems": 1,
+                "maxItems": 4,
+                "items": {"type": "string", "enum": ["funding", "basis", "liquidity", "risk"]},
+                "uniqueItems": true
+              }
+            }
+          },
+          "evidence": {"$ref": "#/components/schemas/MarketOverviewEvidence"},
+          "markets": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 50,
+            "items": {"$ref": "#/components/schemas/MarketOverviewMarket"}
+          },
+          "notices": {
+            "type": "array",
+            "items": {"type": "string"}
+          },
+          "execution_included": {"const": false}
+        }
+      },
+
       "FundingScanRequest": {
         "type": "object",
         "additionalProperties": false,

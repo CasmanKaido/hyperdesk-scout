@@ -39,6 +39,40 @@ let latestAnalysis = null;
 let conversationHistory = [];
 let aiDraftEdited = false;
 let hasActivePlan = false;
+let busy = false;
+let pendingInfo = null;
+let suggestedDefaults = ["symbols", "risk_tolerance", "max_leverage", "max_notional_usd", "min_funding_apr"];
+const infoConfirmation = document.querySelector("#info-confirmation");
+const infoQuery = document.querySelector("#info-query");
+const fetchOverviewButton = document.querySelector("#fetch-overview");
+const manualPlanButton = document.querySelector("#use-manual-plan");
+const overviewState = document.querySelector("#overview-state");
+
+function syncControls() {
+  generatePlanButton.disabled = busy;
+  objectiveInput.disabled = busy;
+  reviewButton.disabled = busy || !hasActivePlan;
+  approveButton.disabled = busy || !pendingInput;
+  retryButton.disabled = busy || !pendingInput;
+  reviseButton.disabled = busy;
+  manualPlanButton.disabled = busy;
+  fetchOverviewButton.disabled = busy || !pendingInfo;
+  for (const input of form.querySelectorAll("input, select, textarea, button")) input.disabled = busy;
+}
+
+function clearApprovals() {
+  pendingInput = null;
+  pendingInfo = null;
+  infoConfirmation.hidden = true;
+  if (!planState.hidden) showView("empty");
+  syncControls();
+}
+
+function defaultsLabel() {
+  return suggestedDefaults.length
+    ? `Suggested defaults (not user-supplied): ${suggestedDefaults.map(sentence).join(", ")}.`
+    : "No suggested defaults remain in these constraints.";
+}
 
 const currency = new Intl.NumberFormat("en-US", {
   style: "currency",
@@ -124,6 +158,7 @@ function sentence(value) {
 }
 
 function showView(view) {
+  overviewState.hidden = view !== "overview";
   emptyState.hidden = view !== "empty";
   planState.hidden = view !== "plan";
   loadingState.hidden = view !== "loading";
@@ -432,6 +467,7 @@ function planFields(plan) {
 
 function analysisContext(data) {
   if (!data) return null;
+  if (data.markets && data.evidence) return data;
   return {
     generated_at: data.generated_at,
     provenance: {
@@ -468,7 +504,7 @@ function planSnapshot(plan) {
 }
 
 function rememberTurn(role, content) {
-  conversationHistory.push({ role, content });
+  conversationHistory.push({ role, content: String(content ?? "").slice(0, 1000) });
   conversationHistory = conversationHistory.slice(-12);
 }
 
@@ -506,16 +542,25 @@ function populateConstraints(plan) {
 }
 
 async function generateAIPlan() {
+  if (busy) return;
   const message = objectiveInput.value.trim();
-  if (message.length < 10) {
-    setPlannerStatus("Write at least 10 characters so I can understand the request.", "error");
+  if (message.length < 1 || message.length > 1000) {
+    setPlannerStatus("Write between 1 and 1,000 characters.", "error");
     objectiveInput.focus();
     return;
   }
 
+  if (pendingInfo && /^(yes|y|ok|okay|confirm|sure|go ahead)[.!]?$/i.test(message)) {
+    appendMessage("user", message);
+    rememberTurn("user", message);
+    objectiveInput.value = "";
+    await fetchOverview();
+    return;
+  }
+  clearApprovals();
   const payload = { message };
   if (conversationHistory.length) payload.conversation = [...conversationHistory];
-  const hadActivePlan = hasActivePlan;
+
   if (hasActivePlan) {
     const currentInput = collectInput();
     if (!currentInput) return;
@@ -526,7 +571,8 @@ async function generateAIPlan() {
 
   appendMessage("user", message);
   objectiveInput.value = "";
-  generatePlanButton.disabled = true;
+  busy = true;
+  syncControls();
   plannerButtonLabel.textContent = "Thinking";
   setPlannerStatus("LiquidFlux is interpreting your message and preserving the approval boundary.");
   const pendingMessage = appendMessage("assistant", "Reviewing the current plan and available evidence…", { pending: true });
@@ -546,9 +592,12 @@ async function generateAIPlan() {
 
     pendingMessage.remove();
     rememberTurn("user", message);
-    rememberTurn("assistant", data.reply);
+    rememberTurn("assistant", data.intent === "market_information"
+      ? `Information scope: symbols=${JSON.stringify(data.symbols)}; topics=${JSON.stringify(data.topics)}. ${data.reply}`
+      : data.reply);
     const providerName = data.provider === "groq" ? "Groq" : "Gemini";
     const messageMeta = {
+      market_information: `${providerName} · information only`,
       plan_update: `${providerName} · plan updated`,
       result_explanation: `${providerName} · grounded in current evidence`,
       clarification: `${providerName} · clarification`,
@@ -561,6 +610,8 @@ async function generateAIPlan() {
 
     if (data.intent === "plan_update") {
       latestAIPlan = data;
+      suggestedDefaults = [...(data.suggested_defaults || [])];
+      appendMessage("assistant", defaultsLabel(), { meta: "Constraint provenance" });
       hasActivePlan = true;
       aiDraftEdited = false;
       populateConstraints(data);
@@ -569,11 +620,15 @@ async function generateAIPlan() {
       showView("empty");
       analysisStatus.textContent = "Conversation updated the plan. No market-data service was called.";
       setPlannerStatus("Plan updated. Continue the conversation or review the specialist plan.", "success");
+    } else if (data.intent === "market_information") {
+      pendingInfo = { symbols: [...data.symbols], topics: [...data.topics] };
+      infoQuery.textContent = `Fetch ${pendingInfo.topics.map(sentence).join(", ")} for ${pendingInfo.symbols.join(", ")}?`;
+      infoConfirmation.hidden = false;
+      setPlannerStatus("Confirm with the free fetch button or reply yes. Other messages replace this pending request.", "success");
     } else if (data.intent === "result_explanation") {
-      if (hadActivePlan) latestAIPlan = data;
       setPlannerStatus("Answer grounded in the latest displayed analysis evidence.", "success");
     } else {
-      if (hadActivePlan) latestAIPlan = data;
+
       setPlannerStatus("Reply received. You can clarify naturally or continue with manual controls.", "success");
     }
     objectiveInput.focus();
@@ -592,16 +647,23 @@ async function generateAIPlan() {
     appendMessage("assistant", fallback, { meta: "Conversation error" });
     setPlannerStatus(fallback, "error");
   } finally {
-    generatePlanButton.disabled = false;
+    busy = false;
+    syncControls();
+    objectiveInput.focus();
     plannerButtonLabel.textContent = "Send";
   }
 }
 
 function reviewPlan() {
+  if (busy || !hasActivePlan) return;
+  clearApprovals();
   const input = collectInput();
   if (!input) return;
 
   pendingInput = input;
+  document.querySelector("#review-constraints").replaceChildren(planSnapshot(input));
+  document.querySelector("#review-defaults").textContent = defaultsLabel();
+  syncControls();
   planObjective.textContent = `Objective: evaluate ${input.symbols.join(", ")} for market-neutral funding income under a ${input.risk_tolerance} risk policy, ${formatNumber(input.max_leverage)}× leverage cap, and ${formatCurrency(input.max_notional_usd)} notional limit.`;
   if (latestAIPlan) {
     const notes = [
@@ -626,8 +688,9 @@ function reviewPlan() {
 }
 
 async function executeAnalysis() {
-  if (!pendingInput) return;
-
+  if (busy || !pendingInput) return;
+  busy = true;
+  syncControls();
   showView("loading");
   reviewButton.disabled = true;
   approveButton.disabled = true;
@@ -657,6 +720,7 @@ async function executeAnalysis() {
       meta: "Live Hyperliquid evidence · no execution",
     });
     rememberTurn("assistant", resultMessage);
+    pendingInput = null;
   } catch (error) {
     if (!serviceResponded) {
       errorMessage.textContent = "We could not reach LiquidFlux. Check your connection and try again.";
@@ -669,9 +733,91 @@ async function executeAnalysis() {
     showView("error");
     analysisStatus.textContent = "Analysis failed. Review the error and try again.";
   } finally {
-    reviewButton.disabled = false;
-    approveButton.disabled = false;
+    busy = false;
+    syncControls();
     buttonLabel.textContent = "Review specialist plan";
+  }
+}
+
+function renderOverview(data) {
+  const evidence = data.evidence || {};
+  overviewState.replaceChildren(sectionHeading("Market information", "Read-only snapshot · no strategy or execution"));
+  overviewState.append(definitionList([
+    ["Source", evidence.source || "Unavailable"],
+    ["Fetched", formatDate(evidence.fetched_at)],
+    ["Age at response", formatAge(evidence.age_ms)],
+    ["Data status", sentence(evidence.data_status)],
+    ["Cache", sentence(evidence.cache_status)],
+  ]));
+  overviewState.append(element("p", { text: "Snapshot values can change after retrieval. Annualized funding is a simple extrapolation, not a forecast or guaranteed return. Mark/oracle deviation is not a spot hedge basis. Missing facts are shown as —; market leverage limits are not recommendations." }));
+  for (const market of data.markets || []) {
+    const facts = market.facts || {};
+    const calculations = market.calculations || {};
+    const rows = [];
+    if (facts.funding || calculations.funding) rows.push(
+      ["Hourly funding rate (decimal)", Number.isFinite(facts.funding?.hourly_rate) ? String(facts.funding.hourly_rate) : "—"],
+      ["Simple annualized funding (calculated)", formatPercent(calculations.funding?.annualized_simple_percent)],
+    );
+    if (facts.basis || calculations.basis) rows.push(
+      ["Mark price", formatCurrency(facts.basis?.mark_price)],
+      ["Oracle price", formatCurrency(facts.basis?.oracle_price)],
+      ["Mark/oracle deviation (calculated)", formatPercent(calculations.basis?.mark_oracle_deviation_percent)],
+    );
+    if (facts.liquidity || calculations.liquidity) rows.push(
+      ["Liquidity mark price", formatCurrency(facts.liquidity?.mark_price)],
+      ["Open interest (base units)", formatNumber(facts.liquidity?.open_interest_base)],
+      ["24-hour volume", formatCurrency(facts.liquidity?.volume_24h_usd)],
+      ["Impact bid / ask", `${formatCurrency(facts.liquidity?.impact_bid_price)} / ${formatCurrency(facts.liquidity?.impact_ask_price)}`],
+      ["Open interest notional (calculated)", formatCurrency(calculations.liquidity?.open_interest_notional_usd)],
+      ["Impact spread (calculated, bps)", formatNumber(calculations.liquidity?.impact_spread_bps)],
+    );
+    if (facts.risk) rows.push(
+      ["Market maximum leverage", formatNumber(facts.risk.max_leverage)],
+      ["Delisted", typeof facts.risk.is_delisted === "boolean" ? (facts.risk.is_delisted ? "Yes" : "No") : "—"],
+    );
+    overviewState.append(sectionHeading(market.symbol, `Status: ${sentence(market.status)}`), definitionList(rows));
+    for (const notice of market.notices || []) overviewState.append(element("p", { text: sentence(notice) }));
+  }
+  for (const notice of data.notices || []) overviewState.append(element("p", { text: sentence(notice) }));
+  overviewState.append(element("details", { className: "raw-evidence" }, [
+    element("summary", { text: "Inspect source evidence and calculations" }),
+    element("pre", { text: JSON.stringify(data, null, 2) }),
+  ]));
+  showView("overview");
+}
+
+async function fetchOverview() {
+  if (busy || !pendingInfo) return;
+  const query = { symbols: [...pendingInfo.symbols], topics: [...pendingInfo.topics] };
+  clearApprovals();
+  busy = true;
+  syncControls();
+  setPlannerStatus(`Fetching read-only information for ${query.symbols.join(", ")}…`);
+  const progress = appendMessage("assistant", "Fetching the confirmed market information…", { pending: true });
+  try {
+    const response = await fetch("/api/v1/market-overview", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(query),
+    });
+    const data = await response.json();
+    if (!response.ok) throw new Error(data?.message || `Market information returned HTTP ${response.status}.`);
+    renderOverview(data);
+    latestAnalysis = data;
+    const reply = `Market information fetched for ${query.symbols.join(", ")}: ${query.topics.join(", ")}. Source: ${data.evidence?.source || "unavailable"}; fetched ${formatDate(data.evidence?.fetched_at)}. No strategy or execution was included.`;
+    appendMessage("assistant", reply);
+    rememberTurn("assistant", reply);
+    setPlannerStatus("Information ready. Ask a follow-up about the displayed evidence.", "success");
+  } catch (error) {
+    // Retry only the still-visible exact query; any new message invalidates it.
+    pendingInfo = query;
+    infoConfirmation.hidden = false;
+    appendMessage("assistant", `Market information could not be fetched: ${error.message}. You can retry the confirmed query.`, { meta: "Information error" });
+    setPlannerStatus("Fetch failed. Retry for free or send a different request.", "error");
+  } finally {
+    progress.remove();
+    busy = false;
+    syncControls();
   }
 }
 
@@ -703,10 +849,11 @@ objectiveInput.addEventListener("input", () => {
     setPlannerStatus("Gemini is tried first; Groq is the fallback when configured.");
   }
 });
-form.addEventListener("input", () => {
-  pendingInput = null;
-  latestAnalysis = null;
-  hasActivePlan = true;
+form.addEventListener("input", (event) => {
+  if (busy) return;
+  clearApprovals();
+  suggestedDefaults = suggestedDefaults.filter((field) => field !== event.target.name);
+  syncControls();
   if (!planState.hidden || !resultState.hidden) {
     showView("empty");
     analysisStatus.textContent = "Constraints changed. Review the updated specialist plan before running analysis.";
@@ -726,11 +873,25 @@ form.addEventListener("submit", (event) => {
 reviewButton.addEventListener("click", reviewPlan);
 approveButton.addEventListener("click", executeAnalysis);
 reviseButton.addEventListener("click", () => {
+  if (busy) return;
+  clearApprovals();
   showView("empty");
   analysisStatus.textContent = "Specialist plan closed. Continue the conversation or edit the constraints.";
   objectiveInput.focus();
 });
 retryButton.addEventListener("click", executeAnalysis);
 
+fetchOverviewButton.addEventListener("click", () => fetchOverview());
+manualPlanButton.addEventListener("click", () => {
+  if (busy || !collectInput()) return;
+  clearApprovals();
+  hasActivePlan = true;
+  latestAIPlan = null;
+  appendMessage("assistant", `Manual strategy activated for review. ${defaultsLabel()}`);
+  syncControls();
+  reviewPlan();
+});
+
 showView("empty");
+syncControls();
 checkHealth();

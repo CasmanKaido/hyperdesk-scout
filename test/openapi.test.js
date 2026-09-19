@@ -11,6 +11,7 @@ test("publishes an OpenAPI 3.1 contract for every route", () => {
   assert.ok(spec.paths["/health"].get);
   assert.ok(spec.paths["/openapi.json"].get);
   assert.ok(spec.paths["/api/v1/plan"].post);
+    assert.ok(spec.paths["/api/v1/market-overview"].post);
   assert.ok(spec.paths["/api/v1/orchestrate"].post);
   assert.ok(spec.paths["/api/v1/funding-scan"].post);
   assert.ok(spec.components.schemas.FundingScanResponse.required.includes("market_data"));
@@ -47,6 +48,7 @@ test("the documented required response fields match an actual response", async (
       max_leverage: 2,
       max_notional_usd: 1000,
       min_funding_apr: 5,
+      suggested_defaults: ["max_leverage", "max_notional_usd", "min_funding_apr"],
       assumptions: [],
       missing_information: [],
       provider: "gemini",
@@ -74,7 +76,7 @@ test("the documented required response fields match an actual response", async (
     pathname: "/api/v1/plan",
     bodyText: JSON.stringify({ message: "Find a conservative BTC opportunity" }),
   });
-  for (const field of spec.components.schemas.PlannerResponse.required) {
+  for (const field of spec.components.schemas.PlannerPlanUpdateResponse.required) {
     assert.ok(Object.hasOwn(plan.body, field), `missing planner field: ${field}`);
   }
 

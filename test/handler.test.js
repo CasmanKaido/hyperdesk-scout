@@ -35,10 +35,11 @@ test("serves a discoverable index and health without market data", async () => {
   assert.equal(index.body.service, "LiquidFlux");
   assert.equal(index.body.endpoints.ai_planner.path, "/api/v1/plan");
   assert.equal(index.body.endpoints.funding_specialist.method, "POST");
+  assert.deepEqual(index.body.endpoints.market_overview, { method: "POST", path: "/api/v1/market-overview" });
 
   const result = await handle({ method: "GET", pathname: "/health" });
   assert.equal(result.status, 200);
-  assert.deepEqual(result.body, { status: "ok", service: "hyperdesk-scout", version: "0.4.2" });
+  assert.deepEqual(result.body, { status: "ok", service: "hyperdesk-scout", version: "0.5.0" });
 });
 
 test("serves the OpenAPI contract when configured", async () => {
@@ -100,7 +101,7 @@ test("returns safe planner errors for invalid prompts and unavailable providers"
   const invalid = await handle({
     method: "POST",
     pathname: "/api/v1/plan",
-    bodyText: JSON.stringify({ message: "short" }),
+    bodyText: JSON.stringify({ message: " " }),
   });
   assert.equal(invalid.status, 400);
   assert.equal(invalid.body.error, "invalid_request");
@@ -246,6 +247,61 @@ test("rate limits AI planning requests", async () => {
   const limited = await handle(request);
   assert.equal(limited.status, 429);
   assert.equal(limited.body.error, "rate_limited");
+});
+
+test("market overview reuses provider evidence and returns all requested symbols", async () => {
+  let calls = 0;
+  const handle = handlerWith(async () => {
+    calls++;
+    return { markets: [{ ...market, funding: "-0.0001" }], fetchedAt: "2026-09-17T00:00:00Z", ageMs: 1000, cacheStatus: "stale_fallback" };
+  });
+  const result = await handle({ method: "POST", pathname: "/api/v1/market-overview",
+    bodyText: JSON.stringify({ symbols: ["ETH", "UNKNOWN"], topics: ["funding"] }) });
+  assert.equal(result.status, 200);
+  assert.equal(calls, 1);
+  assert.equal(result.body.request_id, "req_test");
+  assert.equal(result.body.generated_at, "2026-09-17T00:00:01.000Z");
+  assert.equal(result.body.evidence.data_status, "stale");
+  assert.equal(result.body.evidence.age_ms, 1000);
+  assert.equal(result.body.markets[0].facts.funding.hourly_rate, -0.0001);
+  assert.equal(result.body.markets[1].status, "unavailable");
+  assert.equal(result.body.execution_included, false);
+  assert.equal(result.headers["cache-control"], "no-store");
+});
+
+test("market overview validates before fetching and preserves upstream errors", async () => {
+  let calls = 0;
+  const handle = handlerWith(async () => { calls++; throw new UpstreamError("timed out", 504); });
+  for (const bodyText of ["{", "{}", "null", JSON.stringify({ symbols: ["ETH"], risk_tolerance: "moderate" })]) {
+    const invalid = await handle({ method: "POST", pathname: "/api/v1/market-overview", bodyText });
+    assert.equal(invalid.status, 400);
+    assert.equal(invalid.body.error, "invalid_request");
+  }
+  assert.equal(calls, 0);
+  const unavailable = await handle({ method: "POST", pathname: "/api/v1/market-overview", bodyText: '{"symbols":["ETH"]}' });
+  assert.equal(unavailable.status, 504);
+  assert.equal(unavailable.body.error, "upstream_unavailable");
+});
+
+test("market overview shares existing rate limits and supports CORS", async () => {
+  let calls = 0;
+  const handle = handlerWith(async () => { calls++; return { markets: [market] }; }, {
+    rateLimiter: createRateLimiter({ limit: 1 }),
+  });
+  const request = { method: "POST", pathname: "/api/v1/market-overview", clientIp: "overview-test", bodyText: '{"symbols":["ETH"]}' };
+  const preflight = await handle({ ...request, method: "OPTIONS" });
+  assert.equal(preflight.status, 204);
+  assert.equal(preflight.headers["access-control-allow-origin"], "*");
+  const success = await handle(request);
+  assert.equal(success.status, 200);
+  assert.equal(success.headers["x-ratelimit-limit"], "1");
+  assert.equal(success.headers["x-ratelimit-remaining"], "0");
+  const limited = await handle(request);
+  assert.equal(limited.status, 429);
+  assert.equal(limited.body.error, "rate_limited");
+  assert.ok(Number(limited.headers["retry-after"]) >= 1);
+  assert.equal(calls, 1);
+  assert.equal((await handle({ ...request, pathname: "/api/v1/funding-scan" })).status, 429);
 });
 
 test("returns a documented not-found error", async () => {

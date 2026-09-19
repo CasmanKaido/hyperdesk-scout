@@ -1,6 +1,6 @@
 {
   "name": "hyperdesk-scout",
-  "version": "0.4.2",
+  "version": "0.5.0",
   "private": true,
   "type": "module",
   "description": "Hyperliquid funding intelligence service for OKX AI A2MCP",
@@ -8,7 +8,7 @@
     "dev": "node --watch src/server.js",
     "start": "node src/server.js",
     "test": "NODE_ENV=test node --test",
-    "check": "node --check src/*.js public/app.js && node -e \"const fs=require('node:fs'); JSON.parse(fs.readFileSync('openapi.json','utf8')); JSON.parse(fs.readFileSync('.impeccable/design.json','utf8'))\""
+    "check": "node scripts/check.js"
   },
   "engines": {
     "node": ">=20"

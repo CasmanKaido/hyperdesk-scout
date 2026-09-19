@@ -1,12 +1,14 @@
 # LiquidFlux
 
-LiquidFlux is an AI-assisted, read-only Hyperliquid specialist-orchestration service for OKX.AI. Gemini interprets a natural-language objective into validated constraints, Groq can recover as the fallback provider, and deterministic Funding, Liquidity, Risk, and Synthesis modules produce the actual market evidence only after explicit user approval.
+LiquidFlux is a read-only Hyperliquid information and strategy-analysis service distributed through OKX.AI. Its product goal is conversational market information without an implicit strategy, plus separately reviewed market-neutral strategy analysis. Deterministic first-party Funding, Liquidity, Risk, and Synthesis modules process market evidence; configured AI providers interpret requests and explain supplied context.
+
+**Status (2026-09-19):** `market_information`, `POST /api/v1/market-overview`, and short-reply support are implemented locally. All 62 automated tests and syntax/JSON checks pass; a direct live Hyperliquid BTC overview also passed. This is not live AI or browser visual verification. Strategy approval is a browser workflow, not API authorization. No external paid specialist, payment, or trade execution is implemented. See [`AUDIT.md`](AUDIT.md) for code-grounded gaps and validation requirements. The URLs and marketplace records below are historical project references, not freshly verified by this audit.
 
 - **Live dashboard:** https://hyperdesk-scout.onrender.com
 - **Live API origin:** https://hyperdesk-scout.onrender.com
 - **Health:** https://hyperdesk-scout.onrender.com/health
 - **OpenAPI:** https://hyperdesk-scout.onrender.com/openapi.json
-- **Conversational planner:** `POST https://hyperdesk-scout.onrender.com/api/v1/plan` — production-verified for plan creation, revision, and evidence-grounded explanation with Groq fallback
+- **Conversational planner:** `POST https://hyperdesk-scout.onrender.com/api/v1/plan` — provider-backed intent/planning endpoint; current deployment behavior was not reverified in this audit
 - **Orchestrator:** `POST https://hyperdesk-scout.onrender.com/api/v1/orchestrate`
 - **OKX.AI ASP:** LiquidFlux, Agent ID `13784` — Funding Specialist and Market-Neutral Orchestrator published as free A2MCP services
 
@@ -14,7 +16,7 @@ LiquidFlux is an AI-assisted, read-only Hyperliquid specialist-orchestration ser
 
 Existing marketplace products already expose individual Hyperliquid analytics, risk, and execution capabilities. LiquidFlux is therefore evolving from a standalone scanner into the orchestration layer that selects specialist stages, combines their evidence, reports conflicts, and stops at an explicit execution-approval boundary.
 
-The deployed funding scanner remains useful as the first A2MCP specialist and is registered under the LiquidFlux ASP identity. A live buyer-side invocation through OKX.AI returned fresh Hyperliquid mainnet evidence synchronously with no manual setup. The complete Market-Neutral Orchestrator is now also published as a free A2MCP service using the deployed `/api/v1/orchestrate` endpoint. The root URL serves the analyst workspace: users set constraints, run the deployed orchestration workflow, and inspect the resulting evidence and rejection reasons. See [`STRATEGY.md`](STRATEGY.md) for the validated positioning, narrow router MVP, safety boundary, and external-agent integration plan, and [`OKX_AI.md`](OKX_AI.md) for marketplace evidence.
+[`OKX_AI.md`](OKX_AI.md) records free Funding Specialist and Market-Neutral Orchestrator A2MCP publication and buyer-side invocations on 2026-09-18. These records support distribution of LiquidFlux's own services, not third-party specialist hiring or a new production verification. In code, the orchestrator calls local modules directly; it does not invoke them through OKX.AI. [`STRATEGY.md`](STRATEGY.md) contains the broader direction, including future A2A/payment ideas; [`AUDIT.md`](AUDIT.md) distinguishes these from implemented behavior.
 
 ![LiquidFlux analysis workspace](assets/screenshots/dashboard-result.png)
 
@@ -22,7 +24,7 @@ The deployed funding scanner remains useful as the first A2MCP specialist and is
 
 The dependency-free dashboard is served by the existing Node service. Its conversational workspace calls `POST /api/v1/plan` to create, refine, or explain the active plan, but it calls `POST /api/v1/orchestrate` only after explicit plan approval. It includes:
 
-- A persistent natural-language conversation with Gemini primary and Groq fallback
+- An in-session, bounded natural-language conversation with Gemini preferred when configured and Groq fallback; real Gemini adapter compatibility remains unverified by this audit
 - Follow-up plan revisions that preserve validated current constraints
 - Evidence-grounded questions after analysis using a reduced, bounded result context
 - Compact plan summaries in the conversation plus editable deterministic controls and a manual fallback
@@ -35,7 +37,7 @@ The dependency-free dashboard is served by the existing Node service. Its conver
 - Visible provenance, freshness, workflow trace, and execution-approval boundary
 - Responsive desktop and mobile layouts, keyboard focus, and reduced-motion support
 
-No wallet connection, paid service, or trade execution is included. AI planning reads no market data and cannot start the workflow. Reviewing the specialist plan performs no service call; approving it runs only the free first-party workflow. Gemini/Groq API usage is infrastructure supplied by the operator and is separate from OKX.AI marketplace invocation or future x402 spend.
+No wallet connection, paid specialist call, or trade execution is included. The planner itself does not fetch market data, but can receive client-supplied result context. The browser review action does not run market analysis; approving it calls the free first-party orchestration endpoint. Direct API callers can call that endpoint without an approval receipt. Gemini/Groq usage can incur operator costs and sends submitted context to configured providers, including fallback; it is separate from marketplace fees or future x402 spend.
 
 ## Run
 
@@ -81,13 +83,19 @@ The machine-readable OpenAPI 3.1 contract is available in [`openapi.json`](opena
 
 ### `POST /api/v1/plan`
 
-Uses Gemini first and Groq as a configured fallback for a bounded natural-language conversation. A request contains the current `message` and may include up to 12 chronological `conversation` turns, the complete validated `current_plan`, and a reduced `analysis_context`. The model uses history to resolve follow-up references without repeatedly asking for information the user already supplied. It classifies the message as a plan update, result explanation, clarification, or unsupported request; it always returns a complete validated plan, a concise reply, provider/model identity, assumptions, and the mandatory approval boundary. It always returns `execution_included: false` and does not fetch Hyperliquid market data.
+Uses configured providers in preference order (Gemini, then Groq by default). Requests contain `message` and optionally up to 12 user/assistant `conversation` turns, a complete validated `current_plan`, and bounded `analysis_context`. The planner does not fetch Hyperliquid data and returns `execution_included: false`.
+
+**Intent-specific contract:** `market_information` returns symbols/topics without a financial strategy; only `plan_update` returns complete strategy constraints and `suggested_defaults`. Other intents include result explanation, clarification, and unsupported requests. Short replies must resolve against context without turning information into a strategy. Provider/model identity and concise replies accompany results. Only plan updates carry a specialist plan. The compatibility flag `approval_required` remains metadata; the browser separately confirms free information fetches and reviews strategy runs. Default disclosure is model-reported, not independently established field provenance.
 
 If neither key is configured, the endpoint returns `503 ai_unavailable`; the dashboard remains usable through its manual controls. If all configured providers fail, it returns the opaque `502 ai_provider_unavailable` error without exposing provider responses or keys.
 
+### `POST /api/v1/market-overview`
+
+The local implementation accepts required `symbols` (1–50) and optional `topics` drawn from `funding`, `basis`, `liquidity`, and `risk`. It returns a read-only snapshot with `query`, `evidence`, per-market `facts`, `calculations`, and `notices`, plus `execution_included: false`. Missing values are null, not synthetic zeroes. It does not accept investment constraints or rank strategy candidates. Browser integration, OpenAPI alignment, tests, and deployment must be validated together before treating this as a released capability.
+
 ### `POST /api/v1/orchestrate`
 
-Coordinates the Funding and Liquidity specialists in parallel, then applies the dependent Risk Policy specialist and deterministic synthesis.
+This free read-only endpoint does not require a server-issued approval token. The dashboard supplies the separate review step. Coordinates the Funding and Liquidity specialists in parallel, then applies the dependent Risk Policy specialist and deterministic synthesis.
 
 Input fields:
 
@@ -114,7 +122,7 @@ Responses include `market_data.fetched_at`, `age_ms`, `cache_status`, and `fetch
 
 ## Runtime configuration
 
-Copy `.env.example` values into your deployment environment. Do not commit a real `.env` file.
+Set the following values in the process or deployment environment. `npm start` does not load a `.env` file automatically. Never commit provider secrets.
 
 | Variable | Default | Purpose |
 | --- | --- | --- |
@@ -137,7 +145,7 @@ Copy `.env.example` values into your deployment environment. Do not commit a rea
 
 The initial deployment target is Render's **Free web-service plan**. The repository includes `render.yaml` with `plan: free` and a detailed authorization and verification checklist in [`DEPLOYMENT.md`](DEPLOYMENT.md).
 
-The service is deployed at https://hyperdesk-scout.onrender.com. Free instances sleep after 15 minutes idle and can take about one minute to wake, so warm `/health` before a demo.
+The recorded deployment URL is https://hyperdesk-scout.onrender.com; its current revision and behavior were not checked in this audit. Render Free instances may sleep when idle, so check `/health` before a demo. Health alone does not verify provider, market-data, or marketplace functionality.
 
 ## Container
 
@@ -148,7 +156,18 @@ docker run --rm -p 3000:3000 hyperdesk-scout
 
 The image includes a health check against `/health` and runs as the unprivileged `node` user.
 
+## Evidence and security limitations
+
+- Funding annualization is a snapshot, not a forecast. Basis is mark/oracle deviation, not an executable hedged spread; liquidity/risk scores are heuristics, not fill guarantees or loss probabilities.
+- All internal specialists share one snapshot. Local fetch timestamps do not establish exchange event time. Fees, borrow/hedge availability, funding persistence, and net strategy return are not established.
+- Existing strategy scoring can coerce invalid numeric inputs to zero; the new overview's null handling does not fix that path. Strategy missing-evidence handling remains a priority.
+- Conversation and evidence context are supplied by the client and bounded, but not authenticated. Prompt instructions and output schemas do not prove factual grounding or injection resistance.
+- Browser history is in-memory and truncated, not durable storage. Public routes have rate limiting but no user authentication; CORS is not authorization.
+- Gemini tests mock the expected response shape; real endpoint/model compatibility and fallback causes require separate provider verification.
+
 ## Validation
+
+Local integration validation: 62/62 tests passed, syntax/JSON checks passed, and a direct live BTC overview returned Hyperliquid evidence on 2026-09-19. Frontend flow tests use a simulated DOM and mocked planner responses; real provider understanding, visual layout, and deployment need separate verification:
 
 ```bash
 npm test
@@ -159,7 +178,7 @@ npm run check
 
 The ordered build plan, acceptance criteria, prerequisites, and current next task are maintained in [`ROADMAP.md`](ROADMAP.md).
 
-Current work spans **M3 — OKX.AI integration** and **M6 — Demo interface**. The first router workflow is deployed, the ASP listing is approved, and both the Funding Specialist and complete Market-Neutral Orchestrator have completed end-to-end invocations through OKX.AI. The analyst dashboard supports provider-neutral AI objective planning before its approval-gated deterministic workflow. A paid external specialist remains intentionally deferred until a relevant provider works through the official OKX.AI invocation path.
+Current work prioritizes validating conversational information versus separately reviewed strategy, preserving default provenance, and documenting evidence/security boundaries before further demo claims. Historical OKX.AI records describe free first-party distribution. A paid external specialist remains intentionally deferred until a relevant independent provider works through the official invocation path with explicit budget approval and distinct evidence.
 
 ## Sources
 
