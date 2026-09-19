@@ -508,6 +508,7 @@ async function generateAIPlan() {
   }
 
   const payload = { message };
+  const hadActivePlan = hasActivePlan;
   if (hasActivePlan) {
     const currentInput = collectInput();
     if (!currentInput) return;
@@ -537,25 +538,33 @@ async function generateAIPlan() {
     }
 
     pendingMessage.remove();
-    latestAIPlan = data;
-    hasActivePlan = true;
-    aiDraftEdited = false;
-    populateConstraints(data);
     const providerName = data.provider === "groq" ? "Groq" : "Gemini";
+    const messageMeta = {
+      plan_update: `${providerName} · plan updated`,
+      result_explanation: `${providerName} · grounded in current evidence`,
+      clarification: `${providerName} · clarification`,
+      unsupported: `${providerName} · outside current scope`,
+    };
     appendMessage("assistant", data.reply, {
-      meta: `${providerName} · ${data.intent.replaceAll("_", " ")}`,
+      meta: messageMeta[data.intent],
       plan: data.intent === "plan_update" ? data : null,
     });
 
     if (data.intent === "plan_update") {
+      latestAIPlan = data;
+      hasActivePlan = true;
+      aiDraftEdited = false;
+      populateConstraints(data);
       pendingInput = null;
       latestAnalysis = null;
       showView("empty");
       analysisStatus.textContent = "Conversation updated the plan. No market-data service was called.";
       setPlannerStatus("Plan updated. Continue the conversation or review the specialist plan.", "success");
     } else if (data.intent === "result_explanation") {
+      if (hadActivePlan) latestAIPlan = data;
       setPlannerStatus("Answer grounded in the latest displayed analysis evidence.", "success");
     } else {
+      if (hadActivePlan) latestAIPlan = data;
       setPlannerStatus("Reply received. You can clarify naturally or continue with manual controls.", "success");
     }
     objectiveInput.focus();

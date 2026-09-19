@@ -39,7 +39,7 @@ curl -i https://YOUR-SERVICE.example/health
 Expected: `HTTP 200` and:
 
 ```json
-{"status":"ok","service":"hyperdesk-scout","version":"0.4.0"}
+{"status":"ok","service":"hyperdesk-scout","version":"0.4.1"}
 ```
 
 ### OpenAPI contract
@@ -105,7 +105,7 @@ After deployment, update `ROADMAP.md` and `README.md` with:
 - **Orchestrator version:** `0.2.0`, verified 2026-09-17 17:19 UTC
 - **AI planner version:** `0.4.0`
 - **AI planner verification:** `HTTP 200` on 2026-09-18 through the configured Groq fallback (`openai/gpt-oss-20b`)
-- **Conversational planner version:** `0.4.0`, production-verified with a three-turn create → revise → evidence-explanation sequence
+- **Conversational planner version:** `0.4.1`, with vague asset questions kept as clarification turns instead of silently creating default plans
 - **Follow-up verification:** “remove ETH and reduce maximum leverage to 1.5x” preserved the current plan, removed ETH, and changed only the requested leverage constraint
 - **Evidence Q&A verification:** after deterministic analysis, LiquidFlux explained BTC's policy pass using only the reduced current result context
 - **AI safety boundary:** validated constraints, `approval_required: true`, `execution_included: false`, and no market-data fetch during planning

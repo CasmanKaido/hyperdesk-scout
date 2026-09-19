@@ -181,6 +181,8 @@ test("uses Gemini and appends deterministic planner metadata", async () => {
   assert.match(requestBody.input, /Do not propose pair trades/);
   assert.match(requestBody.input, /Never present unknown market or operational conditions as assumptions/);
   assert.match(requestBody.input, /USER_MESSAGE_JSON/);
+  assert.match(requestBody.input, /I want to know about BTC/);
+  assert.match(requestBody.input, /Never turn a vague asset mention into a default plan/);
   assert.doesNotMatch(requestBody.input, /CURRENT_PLAN_JSON_UNTRUSTED|ANALYSIS_CONTEXT_JSON_UNTRUSTED/);
 
   assert.equal(result.intent, "plan_update");
