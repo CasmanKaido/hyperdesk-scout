@@ -106,6 +106,7 @@ After deployment, update `ROADMAP.md` and `README.md` with:
 - **AI planner version:** `0.4.0`
 - **AI planner verification:** `HTTP 200` on 2026-09-18 through the configured Groq fallback (`openai/gpt-oss-20b`)
 - **Conversational planner version:** `0.4.2`, with bounded chronological conversation memory for resolving follow-ups without repeating answered questions
+- **Conversation-memory verification:** production sequence “I want to know about BTC” → “yes tell me that” → “funding rates and other info” preserved BTC, stopped repeating the symbol question, and produced BTC-only plan updates
 - **Follow-up verification:** “remove ETH and reduce maximum leverage to 1.5x” preserved the current plan, removed ETH, and changed only the requested leverage constraint
 - **Evidence Q&A verification:** after deterministic analysis, LiquidFlux explained BTC's policy pass using only the reduced current result context
 - **AI safety boundary:** validated constraints, `approval_required: true`, `execution_included: false`, and no market-data fetch during planning

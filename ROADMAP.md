@@ -233,6 +233,7 @@ Selected target: **Render Free web service using the repository Dockerfile**. Th
 - [x] Replace the one-shot objective form with a persistent conversational planning workspace
 - [x] Support natural-language plan revisions using the validated current plan
 - [x] Preserve bounded chronological conversation memory across clarification turns
+- [x] Verify clarification memory against a real production BTC conversation
 - [x] Support evidence-grounded result questions using bounded analysis context
 - [x] Verify create → revise → analyze → explain conversation against production
 - [x] Configure production provider keys and verify a successful Groq fallback plan
