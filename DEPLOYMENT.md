@@ -105,6 +105,9 @@ After deployment, update `ROADMAP.md` and `README.md` with:
 - **Orchestrator version:** `0.2.0`, verified 2026-09-17 17:19 UTC
 - **AI planner version:** `0.4.0`
 - **AI planner verification:** `HTTP 200` on 2026-09-18 through the configured Groq fallback (`openai/gpt-oss-20b`)
+- **Conversational planner version:** `0.4.0`, production-verified with a three-turn create → revise → evidence-explanation sequence
+- **Follow-up verification:** “remove ETH and reduce maximum leverage to 1.5x” preserved the current plan, removed ETH, and changed only the requested leverage constraint
+- **Evidence Q&A verification:** after deterministic analysis, LiquidFlux explained BTC's policy pass using only the reduced current result context
 - **AI safety boundary:** validated constraints, `approval_required: true`, `execution_included: false`, and no market-data fetch during planning
 - **Gemini status:** the primary attempt currently falls back to Groq; inspect Render's safe `ai_provider_failed` log reason to distinguish key access, quota, or provider HTTP rejection
 - **Orchestration endpoint:** `POST /api/v1/orchestrate` returned `HTTP 200`

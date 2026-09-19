@@ -15,7 +15,7 @@ This is the project's source of truth for build order. Work on one milestone at 
 
 **In progress:** M3 — Hyperliquid orchestration MVP and free OKX.AI integration; M6 — Demo interface
 
-**Next:** Capture reproducible demo evidence for the production AI planner and verified OKX.AI orchestrator invocation, then diagnose why Gemini currently hands off to the working Groq fallback. A paid external specialist is deferred until a relevant provider succeeds through the official OKX.AI invocation path; LiquidFlux will not force an unsafe or incompatible integration merely to claim multi-agent orchestration.
+**Next:** Record the 2–4 minute demo showing the production conversation, approval gate, live evidence, and verified OKX.AI orchestrator invocation; then diagnose why Gemini currently hands off to the working Groq fallback. A paid external specialist is deferred until a relevant provider succeeds through the official OKX.AI invocation path; LiquidFlux will not force an unsafe or incompatible integration merely to claim multi-agent orchestration.
 
 ---
 
@@ -233,6 +233,7 @@ Selected target: **Render Free web service using the repository Dockerfile**. Th
 - [x] Replace the one-shot objective form with a persistent conversational planning workspace
 - [x] Support natural-language plan revisions using the validated current plan
 - [x] Support evidence-grounded result questions using bounded analysis context
+- [x] Verify create → revise → analyze → explain conversation against production
 - [x] Configure production provider keys and verify a successful Groq fallback plan
 - [x] Validate AI-generated constraints before displaying or using them
 - [x] Preserve explicit human approval and manual fallback when AI is unavailable
