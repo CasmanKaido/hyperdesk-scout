@@ -23,14 +23,30 @@ const SCHEMA = {
   },
 };
 const PROMPT = `You are LiquidFlux's evidence analyst. Answer the user's market research question from the supplied server-built evidence ledger only.
-Lead with the conclusion, then explain the strongest supporting evidence, contradictions, what could invalidate the conclusion, and what remains unknown. Compare markets when more than one is supplied. Distinguish a current snapshot from 72-hour history. Historical APR is retrospective simple annualization, never a forecast. Visible order-book notional is one bounded snapshot, not an executable quote, fill guarantee, durable liquidity measure, recommendation, or basis for saying what is decisive for traders. Describe asymmetry without calling either market superior. Mark/oracle deviation is not spot/perp basis. Venue leverage limits are not recommendations. Rate field names in the ledger include their units; never rename decimal fractions as ppm. Describe historical funding as observed persistence, not stable future carry.
+Lead with a qualitative conclusion, then explain the strongest supporting evidence, contradictions, what could invalidate the conclusion, and what remains unknown. Do not put numeric values or perform unit conversions in the answer; LiquidFlux renders numeric findings deterministically. Compare markets when more than one is supplied. Distinguish a current snapshot from 72-hour history. Historical APR is retrospective simple annualization, never a forecast. Visible order-book notional is one bounded snapshot, not an executable quote, fill guarantee, durable liquidity measure, recommendation, or basis for saying what is decisive for traders. Describe asymmetry without calling either market superior. Mark/oracle deviation is not spot/perp basis. Venue leverage limits are not recommendations. Rate field names in the ledger include their units; never rename decimal fractions as ppm. Describe historical funding as observed persistence, not stable future carry.
 Every finding must cite one or more exact evidence IDs. Use exact numbers only when present in those records. Never use the words trader, trade, position, best, superior, decisive, recommendation, execution cost, or say visible notional supports an order size. Do not invent correlations, costs, borrow availability, hedge availability, probabilities, confidence scores, forecasts, trades, execution advice, or unsupported units. Suggested next questions must be answerable using LiquidFlux's available snapshot, funding-history, order-book, or comparison evidence; do not suggest unavailable full-depth or future data. If evidence is missing, limited, stale, conflicting, or unavailable, say so prominently. Do not merely restate every metric; explain why the available evidence matters. Return JSON only matching the schema.`;
 
 function cleanText(value, field, max = 2500) {
   if (typeof value !== "string" || !value.trim() || value.trim().length > max) throw new Error(`invalid_${field}`);
   return value.trim();
 }
-function validate(output, ids) {
+function canonicalFindings(evidence) {
+  const findings = [];
+  const number = (value, digits = 2) => Number.isFinite(value) ? String(Number(value.toFixed(digits))) : "unavailable";
+  const money = (value) => Number.isFinite(value) ? Math.round(value).toLocaleString("en-US") : "unavailable";
+  for (const item of evidence) {
+    const data = item.data || {};
+    if (item.kind === "funding_history" && ["available", "limited"].includes(data.status)) {
+      findings.push({ text: `${item.symbol}: ${data.observed_samples ?? "unknown"}/${data.expected_samples ?? "unknown"} hourly funding settlements observed; ${number(Number.isFinite(data.positive_share_fraction) ? data.positive_share_fraction * 100 : null, 1)}% positive; ${data.sign_reversals ?? "unknown"} adjacent sign reversals; ${number(data.retrospective_simple_apr_percent)}% retrospective simple APR.`, evidence_ids: [item.id] });
+    }
+    if (item.kind === "order_book" && ["available", "limited"].includes(data.status)) {
+      findings.push({ text: `${item.symbol}: ${number(data.spread_bps, 3)} bps visible spread; ${money(data.bid_visible_notional_within_10bps)} bid and ${money(data.ask_visible_notional_within_10bps)} ask quote-currency notional visible within 10 bps of midpoint in this bounded snapshot.`, evidence_ids: [item.id] });
+    }
+  }
+  return findings.slice(0, 8);
+}
+
+function validate(output, ids, evidence) {
   if (!output || typeof output !== "object" || Array.isArray(output)) throw new Error("invalid_output");
   const allowed = new Set(["answer", "findings", "caveats", "next_questions"]);
   if (Object.keys(output).some((key) => !allowed.has(key))) throw new Error("unknown_output_field");
@@ -47,8 +63,10 @@ function validate(output, ids) {
   const rawAnswer = cleanText(output.answer, "answer");
   const caveats = strings(output.caveats, "caveats", 8);
   const prohibited = /\b(?:traders?|trades?|positions?|best|superior|decisive|recommend(?:ation|ed)?|costs?|supports? (?:a |an )?(?:larger|bigger) order)\b/i;
-  const answer = rawAnswer.split(/(?<=[.!?])\s+/).filter((sentence) => !prohibited.test(sentence)).join(" ").trim();
-  const safeFindings = findings.filter((item) => !prohibited.test(item.text));
+  const answer = rawAnswer.split(/(?<=[.!?])\s+/).filter((sentence) =>
+    !prohibited.test(sentence) && !/(?:^|\s)(?!72(?:\s|-|‑|–|—)?(?:hours?|h)\b)\d+(?:[.,]\d+)?/i.test(sentence)).join(" ").trim();
+  const deterministicFindings = canonicalFindings(evidence);
+  const safeFindings = deterministicFindings.length ? deterministicFindings : findings.filter((item) => !prohibited.test(item.text) && !/\d/.test(item.text));
   if (!answer || safeFindings.length < 1) throw new Error("invalid_claim_scope");
   strings(output.next_questions, "next_questions", 4);
   // Follow-up prompts must come from an actual tool-capability registry, not model imagination.
@@ -96,7 +114,7 @@ export function createAIAnalyst({ env = process.env, fetchImpl = globalThis.fetc
         const body = await response.json();
         const text = config.provider === "gemini" ? body?.candidates?.[0]?.content?.parts?.filter((p) => !p.thought && typeof p.text === "string").map((p) => p.text).join("") : body?.choices?.[0]?.message?.content;
         if (typeof text !== "string") throw new Error("invalid_response");
-        return { status: "completed", ...validate(JSON.parse(text), ids), provider: config.provider, model: config.model, grounding: "references_validated_not_fact_verified" };
+        return { status: "completed", ...validate(JSON.parse(text), ids, evidence), provider: config.provider, model: config.model, grounding: "references_validated_not_fact_verified" };
       } catch (error) {
         logger?.warn?.(JSON.stringify({ event: "ai_analyst_failed", provider: config.provider, model: config.model, reason: reason(error) }));
       } finally { clearTimeout(timer); }

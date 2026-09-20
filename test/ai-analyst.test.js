@@ -16,6 +16,21 @@ test("returns a citation-validated Groq analysis", async () => {
   assert.match(body.messages[0].content, /what could invalidate/);
 });
 
+test("renders numeric funding and book findings deterministically", async () => {
+  const ledger = [
+    { id: "BTC:funding_history_72h", kind: "funding_history", symbol: "BTC", data: { status: "available", observed_samples: 72, expected_samples: 72, positive_share_fraction: 1, sign_reversals: 0, retrospective_simple_apr_percent: 10.124954 } },
+    { id: "BTC:order_book", kind: "order_book", symbol: "BTC", data: { status: "available", spread_bps: 0.123077, bid_visible_notional_within_10bps: 8019856.7, ask_visible_notional_within_10bps: 2462143.2 } },
+  ];
+  const model = { ...output, answer: "Funding persisted across the 72-hour window, while visible liquidity remains only a snapshot.", findings: [{ text: "Model arithmetic 1.219 bps should not be displayed.", evidence_ids: ["BTC:funding_history_72h"] }] };
+  const analyst = createAIAnalyst({ env: { GROQ_API_KEY: "secret" }, fetchImpl: async () => response({ choices: [{ message: { content: JSON.stringify(model) } }] }) });
+  const result = await analyst({ question: "What matters?", evidence: ledger });
+  assert.equal(result.status, "completed");
+  assert.match(result.findings[0].text, /72\/72/);
+  assert.match(result.findings[0].text, /10.12% retrospective/);
+  assert.match(result.findings[1].text, /0.123 bps/);
+  assert.doesNotMatch(JSON.stringify(result.findings), /1\.219/);
+});
+
 test("uses the official Gemini generateContent JSON contract", async () => {
   let call;
   const analyst = createAIAnalyst({ env: { GEMINI_API_KEY: "secret" }, fetchImpl: async (url, options) => { call = { url, body: JSON.parse(options.body) }; return response({ candidates: [{ content: { parts: [{ thought: true, text: "hidden" }, { text: JSON.stringify(output) }] } }] }); } });

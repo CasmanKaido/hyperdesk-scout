@@ -65,7 +65,7 @@ export function buildFundingScan(markets, input, metadata = {}) {
   const available = new Set(markets.map((market) => market.symbol.toUpperCase()));
   return {
     service: "LiquidFlux Funding Specialist",
-    version: "0.7.4",
+    version: "0.7.5",
     generated_at: generatedAt.toISOString(),
     data_source: "Hyperliquid mainnet",
     data_status: metadata.cacheStatus === "stale_fallback" ? "stale" : "fresh",
