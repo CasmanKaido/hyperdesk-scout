@@ -48,7 +48,7 @@ test("removes unsafe inference sentences and unavailable follow-up suggestions",
   assert.equal(result.status, "completed");
   assert.equal(result.answer, "Funding persisted in the supplied history.");
   assert.equal(result.findings.length, 1);
-  assert.deepEqual(result.next_questions, ["Compare funding with ETH?"]);
+  assert.deepEqual(result.next_questions, []);
 });
 
 test("returns safe unavailable states for absent keys and failed providers", async () => {

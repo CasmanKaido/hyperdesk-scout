@@ -50,9 +50,9 @@ function validate(output, ids) {
   const answer = rawAnswer.split(/(?<=[.!?])\s+/).filter((sentence) => !prohibited.test(sentence)).join(" ").trim();
   const safeFindings = findings.filter((item) => !prohibited.test(item.text));
   if (!answer || safeFindings.length < 1) throw new Error("invalid_claim_scope");
-  const nextQuestions = strings(output.next_questions, "next_questions", 4).filter((text) =>
-    !/\b(?:full depth|beyond (?:the )?(?:top )?20|past \d+ days?|longer than 72|other venues?|binance|coinbase|future|open interest growth)\b/i.test(text));
-  return { answer, findings: safeFindings, caveats, next_questions: nextQuestions };
+  strings(output.next_questions, "next_questions", 4);
+  // Follow-up prompts must come from an actual tool-capability registry, not model imagination.
+  return { answer, findings: safeFindings, caveats, next_questions: [] };
 }
 function providers(env) {
   return (env.AI_PROVIDER_ORDER || "gemini,groq").split(",").map((x) => x.trim()).flatMap((provider) => {
