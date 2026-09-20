@@ -15,7 +15,7 @@ This is the project's source of truth for build order. Work on one milestone at 
 
 **In progress:** M3 — Hyperliquid orchestration MVP and free OKX.AI integration; M6 — Demo interface
 
-**Next:** Verify the integrated information/strategy split with real providers and deployed browser journeys before recording a new demo. `market_information`, `POST /api/v1/market-overview`, and short replies pass local automated coverage (62/62 tests); a direct live Hyperliquid BTC overview also passed. Diagnose Gemini against the real provider contract; its adapter compatibility and failure cause are unknown from mocked tests. Paid external specialists remain deferred. Existing modules run locally; OKX.AI distributes first-party services.
+**Next:** Verify the integrated information/strategy split with real providers and deployed browser journeys before recording a new demo. `market_information`, enriched `POST /api/v1/market-overview`, and short replies pass local automated coverage (106/106 tests); direct live BTC funding-history and L2-book calls also passed. Live-verify Gemini after correcting the adapter to the official `generateContent` contract; the prior failure cause remains unknown. Paid external specialists remain deferred. Existing modules run locally; OKX.AI distributes first-party services.
 
 ## Audit-driven priorities (2026-09-19)
 
@@ -25,7 +25,9 @@ This is the project's source of truth for build order. Work on one milestone at 
 - [ ] **P1 — Default provenance:** Preserve explicit/inherited/interpreted/defaulted field origins and display suggestions before strategy approval. The local `suggested_defaults` field is model-reported, not deterministic proof.
 - [ ] **P1 — Approval semantics:** Keep current browser review distinct from an unauthenticated free analysis API. Before any future paid/execution feature, implement server-side identity, plan/provider/fee binding, expiry, replay protection, and spend limits.
 - [ ] **P1 — Provider validation:** Verify Gemini endpoint/schema/response/model separately from Groq fallback; capture sanitized provider-specific evidence. Do not infer a root cause from fallback success.
-- [ ] **P1 — Evidence integrity:** Address invalid-to-zero strategy scoring, required missing evidence, configurable source labels, and fetch-versus-exchange timestamps. Preserve the new overview's null/fact/calculation/notice semantics through the shared adapter.
+- [x] **P1 — Evidence integrity:** v0.7 preserves missing strategy evidence as unknown and fails closed. Scanner, specialist, and orchestration regressions cover invalid funding, prices, leverage, volume, OI, and impact evidence.
+- [x] **P1 — Research depth:** v0.7 adds 72-hour realized funding persistence and visible L2-book summaries, with bounded caching, partial-failure handling, and explicit non-executability limits.
+- [ ] **P1 — Grounded analyst evaluation:** Citation IDs are structurally validated, but build an adversarial factual-consistency evaluation set before claiming model prose is fact-verified.
 - [ ] **P1 — Context/security:** Bind explanations to trusted, current result evidence; test forged history, injected context, stale/cross-result facts, and unsupported claims. Document provider data sharing and assess public AI cost/concurrency controls.
 - [ ] **P2 — History/state:** Define reset/truncation/reload behavior and resolved information scope. Test retries and concurrent planner/analysis/manual edits; discard obsolete responses using request/plan versions.
 - [ ] **P2 — Distribution evidence:** Reconcile static listing copy with dated records and preserve clean-session official invocation evidence. No external-agent hiring claim without a genuine independent call; payments require their own evidence.

@@ -22,7 +22,7 @@ The chatbot is the product’s primary workspace: one centered conversation, a p
 
 LiquidFlux has two distinct product journeys:
 
-1. **Market information:** “Tell me about BTC” requests Hyperliquid facts and clearly labeled calculations, not a strategy. Follow-ups such as “yes” or “funding” retain the resolved information scope. No risk tolerance, leverage, or investment budget is required.
+1. **Market information:** “Tell me about BTC” requests Hyperliquid snapshot facts, 72-hour realized funding behavior, visible order-book evidence, and a grounded interpretation—not a strategy. Follow-ups such as “yes” or “funding” retain the resolved information scope. No risk tolerance, leverage, or investment budget is required.
 2. **Strategy review:** An explicit market-neutral strategy request creates or revises editable constraints. User values must remain distinct from suggested defaults. The user separately reviews the first-party specialist plan before running Funding, Liquidity, Risk, and deterministic Synthesis. Policy-pass, caution, and rejected candidates are review outcomes, not execution authorization.
 
 Implementation status (2026-09-19): the information intent, `POST /api/v1/market-overview`, and short replies are integrated locally with automated flow coverage. Live AI understanding and deployed behavior require separate verification. The existing strategy approval step is enforced by the browser flow, not by an approval credential on the public API. No payment or trade execution is implemented. See [`AUDIT.md`](AUDIT.md) for code evidence and priorities.
@@ -47,7 +47,7 @@ LiquidFlux should not resemble a retail trading terminal built around flashing p
 2. **Make safety visible.** The no-execution boundary, approval requirement, and market-data limitations should be clear without dominating the workflow.
 3. **Prioritize the analyst's decision.** Inputs, candidate comparison, rejection reasons, and next actions matter more than decorative metrics.
 4. **Separate evidence from interpretation.** Funding, liquidity, risk, and synthesis should remain distinguishable so users can challenge the result.
-5. **Keep AI in its lane.** Configured providers may interpret intent, revise a validated plan, and explain supplied evidence. Deterministic code validates constraints and calculates evidence; the current browser manages strategy review. Model output validation is not factual verification, and client-supplied context is not authenticated evidence.
+5. **Keep AI in its lane.** Configured providers may interpret intent, revise a validated plan, and explain a server-built evidence ledger with validated record citations. Deterministic code validates constraints and calculates evidence; the current browser manages strategy review. Model output validation is not factual verification, and client-supplied context is not authenticated evidence.
 6. **Demonstrate the real product.** Show actual data, timestamps, limitations, and provider identity. Distinguish inspected code, passing local tests, historical deployment records, and fresh production verification; never substitute one for another.
 
 ## Accessibility & Inclusion

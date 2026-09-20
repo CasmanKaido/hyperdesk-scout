@@ -3,6 +3,7 @@ import { UpstreamError } from "./hyperliquid.js";
 import { buildFundingScan, validateScanInput, ValidationError } from "./service.js";
 import { orchestrateMarketNeutral, validateOrchestrationInput } from "./orchestrator.js";
 import { PlannerError } from "./ai-planner.js";
+import { buildEvidenceLedger } from "./ai-analyst.js";
 import { buildMarketOverview, validateMarketOverviewInput } from "./market-overview.js";
 
 const JSON_HEADERS = {
@@ -37,6 +38,8 @@ export function createRequestHandler({
   corsAllowOrigin = process.env.CORS_ALLOW_ORIGIN || "*",
   openApiSpec = null,
   planObjective = null,
+  enrichMarketEvidence = null,
+  analyzeEvidence = null,
 } = {}) {
   if (typeof getMarketData !== "function") throw new TypeError("getMarketData is required");
 
@@ -57,7 +60,7 @@ export function createRequestHandler({
         result = json(200, {
           service: "LiquidFlux",
           product: "LiquidFlux Orchestrator",
-          version: "0.6.0",
+          version: "0.7.0",
           status: "operational",
           description: "AI-assisted planning with approval-gated, deterministic Hyperliquid funding, liquidity, and risk evidence.",
           endpoints: {
@@ -71,7 +74,7 @@ export function createRequestHandler({
           execution_included: false,
         }, id, corsHeaders);
       } else if (method === "GET" && pathname === "/health") {
-        result = json(200, { status: "ok", service: "hyperdesk-scout", version: "0.6.0" }, id, corsHeaders);
+        result = json(200, { status: "ok", service: "hyperdesk-scout", version: "0.7.0" }, id, corsHeaders);
       } else if (method === "GET" && pathname === "/openapi.json" && openApiSpec) {
         result = json(200, openApiSpec, id, corsHeaders);
       } else if (method === "POST" && pathname === "/api/v1/plan") {
@@ -157,14 +160,25 @@ export function createRequestHandler({
         } else {
           const input = validateMarketOverviewInput(parseJsonBody(bodyText));
           const marketData = await getMarketData();
+          const overview = buildMarketOverview(marketData.markets, input, {
+            generatedAt: now(),
+            fetchedAt: marketData.fetchedAt,
+            ageMs: marketData.ageMs,
+            cacheStatus: marketData.cacheStatus,
+          });
+          if (typeof enrichMarketEvidence === "function") {
+            const research = await enrichMarketEvidence(input);
+            const bySymbol = new Map(research.markets.map((item) => [item.symbol, item]));
+            for (const market of overview.markets) market.research = bySymbol.get(market.symbol) || null;
+            overview.research = { window_hours: research.window_hours, limitations: research.limitations };
+          }
+          overview.evidence_ledger = buildEvidenceLedger(overview);
+          overview.analysis = input.question && typeof analyzeEvidence === "function"
+            ? await analyzeEvidence({ question: input.question, evidence: overview.evidence_ledger })
+            : { status: "unavailable", reason: input.question ? "not_configured" : "question_not_supplied" };
           result = json(200, {
             request_id: id,
-            ...buildMarketOverview(marketData.markets, input, {
-              generatedAt: now(),
-              fetchedAt: marketData.fetchedAt,
-              ageMs: marketData.ageMs,
-              cacheStatus: marketData.cacheStatus,
-            }),
+            ...overview,
           }, id, {
             ...corsHeaders,
             ...(rate ? {

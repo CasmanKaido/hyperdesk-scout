@@ -272,21 +272,19 @@ test("uses Gemini and appends deterministic planner metadata", async () => {
     env: { GEMINI_API_KEY: "gemini-secret" },
     fetchImpl: async (url, options) => {
       captured = { url, options };
-      return jsonResponse({ output_text: JSON.stringify(providerOutput) });
+      return jsonResponse({ candidates: [{ content: { parts: [{ text: JSON.stringify(providerOutput) }] } }] });
     },
   });
 
   const result = await planner({ message: "Create a cautious BTC funding plan" });
 
-  assert.equal(captured.url, "https://generativelanguage.googleapis.com/v1beta/interactions");
+  assert.equal(captured.url, "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent");
   assert.equal(captured.options.headers["x-goog-api-key"], "gemini-secret");
   const requestBody = JSON.parse(captured.options.body);
-  assert.equal(requestBody.model, "gemini-3.8-flash");
-  assert.equal(requestBody.response_format.type, "text");
-  assert.equal(requestBody.response_format.mime_type, "application/json");
-  assert.equal(requestBody.response_format.schema.additionalProperties, false);
-  assert.deepEqual(requestBody.response_format.schema.properties.objective.enum, ["market_neutral_income", null]);
-  assert.deepEqual(requestBody.response_format.schema.properties.intent.enum, [
+  assert.equal(requestBody.generationConfig.responseMimeType, "application/json");
+  assert.equal(requestBody.generationConfig.responseJsonSchema.additionalProperties, false);
+  assert.deepEqual(requestBody.generationConfig.responseJsonSchema.properties.objective.enum, ["market_neutral_income", null]);
+  assert.deepEqual(requestBody.generationConfig.responseJsonSchema.properties.intent.enum, [
     "plan_update",
     "market_information",
     "result_explanation",
@@ -294,18 +292,21 @@ test("uses Gemini and appends deterministic planner metadata", async () => {
     "unsupported",
   ]);
   assert.doesNotMatch(
-    JSON.stringify(requestBody.response_format.schema),
+    JSON.stringify(requestBody.generationConfig.responseJsonSchema),
     /"const"|"pattern"|"uniqueItems"|"exclusiveMinimum"|"minLength"/,
   );
-  assert.match(requestBody.input, /JSON only/);
-  assert.match(requestBody.input, /BTC, ETH, SOL/);
-  assert.match(requestBody.input, /Do not calculate or invent market data/);
-  assert.match(requestBody.input, /Do not propose pair trades/);
-  assert.match(requestBody.input, /Never present unknown market or operational conditions as assumptions/);
-  assert.match(requestBody.input, /CURRENT_USER_MESSAGE_JSON/);
-  assert.match(requestBody.input, /I want to know about BTC/);
-  assert.match(requestBody.input, /Do not apply those defaults merely because the user mentioned an asset/);
-  assert.doesNotMatch(requestBody.input, /CONVERSATION_HISTORY_JSON_UNTRUSTED|CURRENT_PLAN_JSON_UNTRUSTED|ANALYSIS_CONTEXT_JSON_UNTRUSTED/);
+  const systemPrompt = requestBody.systemInstruction.parts[0].text;
+  const userPrompt = requestBody.contents[0].parts[0].text;
+  assert.match(systemPrompt, /JSON only/);
+  assert.match(systemPrompt, /BTC, ETH, SOL/);
+  assert.match(systemPrompt, /Do not calculate or invent market data/);
+  assert.match(systemPrompt, /future tense/);
+  assert.match(systemPrompt, /Do not propose pair trades/);
+  assert.match(systemPrompt, /Never present unknown market or operational conditions as assumptions/);
+  assert.match(userPrompt, /CURRENT_USER_MESSAGE_JSON/);
+  assert.match(systemPrompt, /I want to know about BTC/);
+  assert.match(systemPrompt, /Do not apply those defaults merely because the user mentioned an asset/);
+  assert.doesNotMatch(userPrompt, /CONVERSATION_HISTORY_JSON_UNTRUSTED|CURRENT_PLAN_JSON_UNTRUSTED|ANALYSIS_CONTEXT_JSON_UNTRUSTED/);
 
   assert.equal(result.intent, "plan_update");
   assert.equal(result.reply, "I updated the funding-income review plan.");
@@ -377,8 +378,9 @@ test("frames natural follow-up revisions against the current plan", async () => 
   const planner = createAIPlanner({
     env: { GEMINI_API_KEY: "gemini-secret" },
     fetchImpl: async (_url, options) => {
-      prompt = JSON.parse(options.body).input;
-      return jsonResponse({ output_text: JSON.stringify(updatedOutput) });
+      const body = JSON.parse(options.body);
+      prompt = `${body.systemInstruction.parts[0].text}\n${body.contents[0].parts[0].text}`;
+      return jsonResponse({ candidates: [{ content: { parts: [{ text: JSON.stringify(updatedOutput) }] } }] });
     },
   });
 
@@ -447,7 +449,7 @@ test("returns one opaque 502 only after all configured providers fail", async ()
     env: { GEMINI_API_KEY: "do-not-leak", GROQ_API_KEY: "also-secret" },
     fetchImpl: async () => {
       calls += 1;
-      if (calls === 1) return jsonResponse({ output_text: "not json: do-not-leak" });
+      if (calls === 1) return jsonResponse({ candidates: [{ content: { parts: [{ text: "not json: do-not-leak" }] } }] });
       throw new Error("network included also-secret and raw response");
     },
     logger: { warn(message) { warnings.push(message); } },

@@ -39,7 +39,7 @@ test("serves a discoverable index and health without market data", async () => {
 
   const result = await handle({ method: "GET", pathname: "/health" });
   assert.equal(result.status, 200);
-  assert.deepEqual(result.body, { status: "ok", service: "hyperdesk-scout", version: "0.6.0" });
+  assert.deepEqual(result.body, { status: "ok", service: "hyperdesk-scout", version: "0.7.0" });
 });
 
 test("serves the OpenAPI contract when configured", async () => {
@@ -266,7 +266,23 @@ test("market overview reuses provider evidence and returns all requested symbols
   assert.equal(result.body.markets[0].facts.funding.hourly_rate, -0.0001);
   assert.equal(result.body.markets[1].status, "unavailable");
   assert.equal(result.body.execution_included, false);
+  assert.equal(result.body.evidence_ledger[1].id, "ETH:snapshot");
+  assert.deepEqual(result.body.analysis, { status: "unavailable", reason: "question_not_supplied" });
   assert.equal(result.headers["cache-control"], "no-store");
+});
+
+test("market overview enriches evidence before requesting cited AI analysis", async () => {
+  let analystInput;
+  const handle = handlerWith(async () => ({ markets: [market], fetchedAt: "2026-09-17T00:00:00Z", ageMs: 1000, cacheStatus: "miss" }), {
+    enrichMarketEvidence: async () => ({ window_hours: 72, limitations: [], markets: [{ symbol: "ETH", funding_history: { status: "available", coverage: 1 }, order_book: { status: "not_requested" } }] }),
+    analyzeEvidence: async (input) => { analystInput = input; return { status: "completed", answer: "Funding persisted.", findings: [{ text: "History is complete.", evidence_ids: ["ETH:funding_history_72h"] }], caveats: [], next_questions: [], provider: "test", model: "fixture", grounding: "references_validated_not_fact_verified" }; },
+  });
+  const result = await handle({ method: "POST", pathname: "/api/v1/market-overview", bodyText: JSON.stringify({ symbols: ["ETH"], topics: ["funding"], question: "Has ETH funding persisted?" }) });
+  assert.equal(result.status, 200);
+  assert.equal(result.body.markets[0].research.funding_history.coverage, 1);
+  assert.equal(result.body.analysis.answer, "Funding persisted.");
+  assert.equal(analystInput.question, "Has ETH funding persisted?");
+  assert.ok(analystInput.evidence.some((item) => item.id === "ETH:funding_history_72h"));
 });
 
 test("market overview validates before fetching and preserves upstream errors", async () => {

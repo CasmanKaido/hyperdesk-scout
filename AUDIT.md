@@ -14,7 +14,7 @@ LiquidFlux should answer conversational Hyperliquid information requests without
 - At initial inspection, planner/handler code and tests were modified and market-overview code/tests were untracked. Other contributors own these changes. Findings refer to the inspected snapshot; symbol names are more durable references than line numbers.
 - Integration follow-up: `market_information`, `POST /api/v1/market-overview`, suggested-default disclosure, short replies, explicit information confirmation, and shared busy guards are wired in the browser. Automated VM tests cover pending-query confirmation, stale action invalidation, defaults, and overlapping requests; these do not establish visual quality or live-model understanding.
 - `OKX_AI.md` records historical free A2MCP invocations: funding request `3dc87444-ee1a-475d-a9ac-c450ebbe798b` and orchestrator request `b1eb7e58-9107-4b5d-bd14-83325c7fff9e`, dated 2026-09-18. These are repository records, not independently replayed evidence from this audit.
-- Integration validation: 62/62 automated tests passed; recursive JavaScript syntax and JSON checks passed. A direct live Hyperliquid BTC overview returned source/fetch metadata and calculated facts on 2026-09-19. Frontend tests use a simulated DOM and mocked responses. No production, marketplace, real AI-provider, payment, or visual-browser validation is implied; no visual/accessibility/performance scores are assigned.
+- Current local validation: 106/106 automated tests passed; recursive JavaScript syntax and JSON checks passed. Direct live BTC `fundingHistory` and `l2Book` calls returned complete source metadata and bounded summaries. Desktop/mobile Chrome journeys passed with fixture AI responses. No v0.7 production, marketplace, real AI-provider, or payment verification is implied; no formal accessibility/performance score is assigned.
 
 ## Production API verification — 2026-09-19
 
@@ -53,9 +53,9 @@ All three planner calls selected Groq `openai/gpt-oss-20b`. Gemini remains unver
 
 **Acceptance:** Describe today's boundary as browser review plus a read-only API. If analysis authorization becomes a requirement, bind approval server-side to the exact plan/provider/fee/version and invalidate on edits. Before any future spend or execution, require authenticated, expiring, replay-safe authorization and server-side limits; never reuse the current flag as permission.
 
-### P1 — Gemini adapter compatibility and failure cause are unknown
+### P1 — Gemini live availability and prior failure cause remain unknown
 
-**Evidence:** `providerRequest` posts to Gemini `/v1beta/interactions` with `input` and `response_format`; `callProvider` expects `body.output_text`. Default model is `gemini-3.8-flash`. Planner tests inject a response shaped to that expectation. Groq has a separate chat-completions adapter and ordered fallback; logs contain sanitized failure categories.
+**Updated evidence:** v0.7 replaces the incorrect `/v1beta/interactions` adapter with the documented `models/{model}:generateContent` contract, structured `generationConfig`, and candidate-part parsing. Unit tests cover that request/response shape for both planning and grounded analysis. Default model remains `gemini-3.8-flash`. Groq has a separate chat-completions adapter and ordered fallback; logs contain sanitized failure categories.
 
 **Impact:** Mocks cannot establish the real model's availability or the endpoint's request/response contract. Successful fallback would not prove Gemini works, nor identify whether failures arise from schema, model, authentication, quota, or transport.
 
@@ -63,11 +63,11 @@ All three planner calls selected Groq `openai/gpt-oss-20b`. Gemini remains unver
 
 ### P1 — Evidence is useful but narrower than executable strategy intelligence
 
-**Evidence:** `fetchPerpMarkets` uses `metaAndAssetCtxs`; `createMarketDataProvider` timestamps completion of the local fetch and caches the result. Specialists share that snapshot. `calculateMetrics` annualizes hourly funding, computes mark/oracle deviation, and applies heuristic scores. It coerces non-finite numeric inputs to zero and uses zero basis when oracle price is not positive. Risk rejects stale data but has no comprehensive missing-field validation. Orchestrator provenance hardcodes “Hyperliquid mainnet” although `HYPERLIQUID_API_URL` is configurable.
+**Evidence:** `fetchPerpMarkets` uses `metaAndAssetCtxs`; `createMarketDataProvider` timestamps completion of the local fetch and caches the result. Specialists share that snapshot. `calculateMetrics` annualizes hourly funding, computes mark/oracle deviation, and applies heuristic scores. Before v0.7 it coerced non-finite numeric inputs to zero and used zero basis when oracle price was not positive. v0.7 preserves unknowns as null and specialists fail closed on required missing evidence. Risk rejects stale data but has no comprehensive missing-field validation. Orchestrator provenance hardcodes “Hyperliquid mainnet” although `HYPERLIQUID_API_URL` is configurable.
 
 **Impact:** Fetch freshness is not an exchange event timestamp. Mark/oracle deviation is not executable cross-venue basis. Volume/open interest/impact prices are not order-book depth or a size-specific fill quote. Scores are policies, not calibrated loss probabilities. Zero substitution can make missing evidence look benign. No hedge availability, borrow cost, funding history, fees, net return, liquidation simulation, or executable slippage evidence is established by these paths.
 
-**Local improvement:** `buildMarketOverview` separates facts/calculations/notices and uses null for missing inputs. It does not repair existing scanner/orchestrator scoring. The shared adapter also filters delisted/missing-mark markets and normalizes `isDelisted`; downstream null handling cannot recover discarded source distinctions.
+**Local improvement:** `buildMarketOverview` separates facts/calculations/notices and uses null for missing inputs. v0.7 also adds 72-hour funding and visible L2-book evidence, hardens scanner/orchestrator scoring, and propagates missing-evidence qualifications. The shared adapter also filters delisted/missing-mark markets and normalizes `isDelisted`; downstream null handling cannot recover discarded source distinctions.
 
 **Acceptance:** Fail closed or return explicit unknowns for required strategy evidence; test missing/invalid oracle, funding, leverage, and impact prices. Derive source/network labels from verified configuration. Show fetch time, age, cache/stale status, units, formula, limitations, and unavailable symbols beside claims. Label `approve` as “policy pass,” never execution permission or a guarantee of safety.
 

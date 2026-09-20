@@ -56,6 +56,8 @@ export function buildFundingScan(markets, input, metadata = {}) {
   const opportunities = markets
     .filter((market) => requested.has(market.symbol.toUpperCase()))
     .map((market) => ({ symbol: market.symbol, maxLeverage: market.maxLeverage, ...calculateMetrics(market) }))
+    .filter((market) => [market.fundingAprPercent, market.riskScore, market.opportunityScore].every(Number.isFinite))
+    .filter((market) => market.missing_evidence.length === 0)
     .filter((market) => Math.abs(market.fundingAprPercent) >= input.minFundingApr)
     .filter((market) => market.riskScore <= riskCaps[input.riskTolerance])
     .sort((a, b) => b.opportunityScore - a.opportunityScore);
@@ -63,7 +65,7 @@ export function buildFundingScan(markets, input, metadata = {}) {
   const available = new Set(markets.map((market) => market.symbol.toUpperCase()));
   return {
     service: "LiquidFlux Funding Specialist",
-    version: "0.4.2",
+    version: "0.7.0",
     generated_at: generatedAt.toISOString(),
     data_source: "Hyperliquid mainnet",
     data_status: metadata.cacheStatus === "stale_fallback" ? "stale" : "fresh",

@@ -7,7 +7,7 @@ export function validateMarketOverviewInput(input = {}) {
     throw new ValidationError("Request body must be a JSON object");
   }
   for (const field of Object.keys(input)) {
-    if (!["symbols", "topics"].includes(field)) throw new ValidationError(`Unknown request field: ${field}`);
+    if (!["symbols", "topics", "question"].includes(field)) throw new ValidationError(`Unknown request field: ${field}`);
   }
   if (!Array.isArray(input.symbols) || input.symbols.length < 1 || input.symbols.length > 50) {
     throw new ValidationError("symbols must contain between 1 and 50 items");
@@ -22,7 +22,11 @@ export function validateMarketOverviewInput(input = {}) {
   if (!Array.isArray(topics) || topics.length < 1 || topics.length > 4 || topics.some((topic) => !TOPICS.includes(topic))) {
     throw new ValidationError("topics must contain between 1 and 4 items from funding, basis, liquidity, risk");
   }
-  return { symbols: [...new Set(symbols)], topics: [...new Set(topics)] };
+  const question = input.question === undefined ? null : input.question;
+    if (question !== null && (typeof question !== "string" || question.trim().length < 1 || question.trim().length > 1000)) {
+      throw new ValidationError("question must be between 1 and 1000 characters");
+    }
+    return { symbols: [...new Set(symbols)], topics: [...new Set(topics)], ...(question === null ? {} : { question: question.trim() }) };
 }
 
 function numeric(value, valid = () => true) {

@@ -64,6 +64,26 @@ test("coordinates specialists and rejects unsafe candidates", async () => {
   assert.ok(result.conflicts.some((conflict) => conflict.symbol === "RISKY"));
 });
 
+for (const [field, evidence] of [
+  ["funding", "fundingRate"], ["oraclePx", "oraclePrice"], ["markPx", "markPrice"],
+  ["maxLeverage", "maxLeverage"], ["dayNtlVlm", "volume24hUsd"],
+  ["impactPxs", "impactSpreadBps"], ["openInterest", "openInterest"],
+]) {
+  test(`fails closed on missing or invalid ${field}`, async () => {
+    for (const value of [undefined, null, "", "invalid"]) {
+      const result = await orchestrateMarketNeutral({
+        markets: [{ ...liquidMarket, [field]: value }],
+        input: validateOrchestrationInput({ symbols: ["ETH"], min_funding_apr: 0 }),
+        marketData,
+      });
+      assert.equal(result.synthesis.outcome, "no_approved_opportunity");
+      assert.deepEqual(result.synthesis.opportunities, []);
+      assert.ok(result.synthesis.rejected[0].blockers.includes("missing_required_evidence"));
+      assert.ok(result.specialist_outputs.risk.decisions[0].missing_evidence.includes(evidence));
+    }
+  });
+}
+
 test("fails closed on stale market evidence", async () => {
   const result = await orchestrateMarketNeutral({
     markets: [liquidMarket],

@@ -2,19 +2,19 @@
 
 ## Chat-first workspace
 
-The conversation is the main interface. Ask a market question or request a strategy; LiquidFlux presents the relevant confirmation inline. Market answers lead with readable facts and source freshness, while calculations, limitations, candidate comparisons, and specialist traces remain expandable. Earlier results stay in the thread as collapsed snapshots. Manual strategy controls and resource links are under **Tools & service details**.
+The conversation is the main interface. Ask a market question or request a strategy; LiquidFlux presents the relevant confirmation inline. Market answers combine the current snapshot, 72-hour realized funding behavior, and visible order-book evidence. AI findings cite server-issued evidence IDs; deterministic facts and limitations remain available if AI analysis fails. Earlier results stay in the thread as collapsed snapshots. Manual strategy controls and resource links are under **Tools & service details**.
 
 Local UI verification: `node scripts/browser-smoke.js` runs bounded desktop (1440×1000) and mobile (390×844) Chrome checks using fixture planner replies and market data. It checks both flows, archived evidence, duplicate IDs, runtime errors, and horizontal overflow. Requires Google Chrome at the standard macOS application path; screenshots go to ignored `.tmp/`. This checks UI behavior, not live-model accuracy.
 
-LiquidFlux is a read-only Hyperliquid information and strategy-analysis service distributed through OKX.AI. Its product goal is conversational market information without an implicit strategy, plus separately reviewed market-neutral strategy analysis. Deterministic first-party Funding, Liquidity, Risk, and Synthesis modules process market evidence; configured AI providers interpret requests and explain supplied context.
+LiquidFlux is a read-only Hyperliquid information and strategy-analysis service distributed through OKX.AI. Its product goal is conversational market information without an implicit strategy, plus separately reviewed market-neutral strategy analysis. Deterministic first-party Funding, Liquidity, Risk, and Synthesis modules process market evidence; configured AI providers interpret requests and explain a server-built evidence ledger. Citation validation proves referenced records exist; it does not independently fact-check model prose.
 
-**Status (2026-09-19):** `market_information`, `POST /api/v1/market-overview`, and short-reply support are implemented locally. All 62 automated tests and syntax/JSON checks pass; a direct live Hyperliquid BTC overview also passed. This is not live AI or browser visual verification. Strategy approval is a browser workflow, not API authorization. No external paid specialist, payment, or trade execution is implemented. See [`AUDIT.md`](AUDIT.md) for code-grounded gaps and validation requirements. The URLs and marketplace records below are historical project references, not freshly verified by this audit.
+**Status (2026-09-19):** `market_information`, `POST /api/v1/market-overview`, and short-reply support are implemented locally. All 106 automated tests and syntax/JSON checks pass. Direct live Hyperliquid BTC funding-history and L2-book calls passed, plus fixture-backed desktop/mobile Chrome journeys. Live AI/deployment verification is recorded separately when performed. Strategy approval is a browser workflow, not API authorization. No external paid specialist, payment, or trade execution is implemented. See [`AUDIT.md`](AUDIT.md) for code-grounded gaps and validation requirements. The URLs and marketplace records below are historical project references, not freshly verified by this audit.
 
 - **Live dashboard:** https://hyperdesk-scout.onrender.com
 - **Live API origin:** https://hyperdesk-scout.onrender.com
 - **Health:** https://hyperdesk-scout.onrender.com/health
 - **OpenAPI:** https://hyperdesk-scout.onrender.com/openapi.json
-- **Conversational planner:** `POST https://hyperdesk-scout.onrender.com/api/v1/plan` — provider-backed intent/planning endpoint; current deployment behavior was not reverified in this audit
+- **Conversational planner:** `POST https://hyperdesk-scout.onrender.com/api/v1/plan` — provider-backed intent/planning endpoint; intent/planning endpoint
 - **Orchestrator:** `POST https://hyperdesk-scout.onrender.com/api/v1/orchestrate`
 - **OKX.AI ASP:** LiquidFlux, Agent ID `13784` — Funding Specialist and Market-Neutral Orchestrator published as free A2MCP services
 
@@ -26,13 +26,13 @@ Existing marketplace products already expose individual Hyperliquid analytics, r
 
 ![LiquidFlux analysis workspace](assets/screenshots/dashboard-result.png)
 
-## Dashboard
+## Research workspace
 
 The dependency-free dashboard is served by the existing Node service. Its conversational workspace calls `POST /api/v1/plan` to create, refine, or explain the active plan, but it calls `POST /api/v1/orchestrate` only after explicit plan approval. It includes:
 
-- An in-session, bounded natural-language conversation with Gemini preferred when configured and Groq fallback; real Gemini adapter compatibility remains unverified by this audit
+- An in-session, bounded natural-language conversation with Gemini preferred and Groq fallback. Both adapters use documented structured-output contracts; provider availability still requires live verification
 - Follow-up plan revisions that preserve validated current constraints
-- Evidence-grounded questions after analysis using a reduced, bounded result context
+- Initial evidence-grounded analysis after a confirmed fetch: snapshot data, 72-hour funding persistence, visible L2-book notional, and validated finding citations
 - Compact plan summaries in the conversation plus editable deterministic controls and a manual fallback
 - A real objective-and-constraints workflow for market-neutral Hyperliquid income analysis
 - Pre-run specialist planning with provider identity, OKX.AI listing status, service cost, and explicit approval
@@ -43,7 +43,7 @@ The dependency-free dashboard is served by the existing Node service. Its conver
 - Visible provenance, freshness, workflow trace, and execution-approval boundary
 - Responsive desktop and mobile layouts, keyboard focus, and reduced-motion support
 
-No wallet connection, paid specialist call, or trade execution is included. The planner itself does not fetch market data, but can receive client-supplied result context. The browser review action does not run market analysis; approving it calls the free first-party orchestration endpoint. Direct API callers can call that endpoint without an approval receipt. Gemini/Groq usage can incur operator costs and sends submitted context to configured providers, including fallback; it is separate from marketplace fees or future x402 spend.
+No wallet connection, paid specialist call, or trade execution is included. A confirmed information request can make up to two additional Hyperliquid `/info` calls per enriched symbol (maximum five symbols, cached for 60 seconds) and one configured AI analysis call. The original question and bounded server-built evidence ledger are sent to the selected AI provider; provider usage can incur operator cost. The planner itself does not fetch market data, but can receive client-supplied result context. The browser review action does not run market analysis; approving it calls the free first-party orchestration endpoint. Direct API callers can call that endpoint without an approval receipt. Gemini/Groq usage can incur operator costs and sends submitted context to configured providers, including fallback; it is separate from marketplace fees or future x402 spend.
 
 ## Run
 
@@ -173,7 +173,7 @@ The image includes a health check against `/health` and runs as the unprivileged
 
 ## Validation
 
-Local integration validation: 62/62 tests passed, syntax/JSON checks passed, and a direct live BTC overview returned Hyperliquid evidence on 2026-09-19. Frontend flow tests use a simulated DOM and mocked planner responses; real provider understanding, visual layout, and deployment need separate verification:
+Local integration validation: 106/106 tests passed, syntax/JSON checks passed, direct live BTC funding-history and L2-book calls passed, and desktop/mobile Chrome journeys passed with fixture AI responses. Real provider understanding and v0.7 deployment need separate verification:
 
 ```bash
 npm test

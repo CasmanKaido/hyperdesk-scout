@@ -486,7 +486,28 @@ function planFields(plan) {
 
 function analysisContext(data) {
   if (!data) return null;
-  if (data.markets && data.evidence) return data;
+  if (data.markets && data.evidence) return {
+    query: data.query,
+    evidence: data.evidence,
+    analysis: data.analysis,
+    markets: data.markets.map((market) => ({
+      symbol: market.symbol, status: market.status, facts: market.facts, calculations: market.calculations,
+      funding_history: market.research?.funding_history ? {
+        status: market.research.funding_history.status,
+        coverage: market.research.funding_history.coverage,
+        retrospective_simple_apr_pct: market.research.funding_history.retrospective_simple_apr_pct,
+        positive_share: market.research.funding_history.positive_share,
+        sign_reversals: market.research.funding_history.sign_reversals,
+        stale: market.research.funding_history.stale,
+      } : null,
+      order_book: market.research?.order_book ? {
+        status: market.research.order_book.status, spread_bps: market.research.order_book.spread_bps,
+        bid_visible_notional_within_10bps: market.research.order_book.bid_visible_notional_within_10bps,
+        ask_visible_notional_within_10bps: market.research.order_book.ask_visible_notional_within_10bps,
+        stale: market.research.order_book.stale,
+      } : null,
+    })),
+  };
   return {
     generated_at: data.generated_at,
     provenance: {
@@ -642,7 +663,7 @@ async function generateAIPlan() {
       analysisStatus.textContent = "Conversation updated the plan. No market-data service was called.";
       setPlannerStatus("Plan updated. Continue the conversation or review the specialist plan.", "success");
     } else if (data.intent === "market_information") {
-      pendingInfo = { symbols: [...data.symbols], topics: [...data.topics] };
+      pendingInfo = { symbols: [...data.symbols], topics: [...data.topics], question: message };
       infoQuery.textContent = `Fetch ${pendingInfo.topics.map(sentence).join(", ")} for ${pendingInfo.symbols.join(", ")}?`;
       infoConfirmation.hidden = false;
       conversationLog.append(infoConfirmation);
@@ -771,6 +792,10 @@ function overviewSummary(data) {
     if (facts.basis) parts.push(`mark/oracle deviation is ${formatPercent(calculations.basis?.mark_oracle_deviation_percent)}, not executable spot/perp basis`);
     if (facts.liquidity) parts.push(`24-hour volume is ${formatCurrency(facts.liquidity.volume_24h_usd, true)} and impact spread is ${formatNumber(calculations.liquidity?.impact_spread_bps)} bps`);
     if (facts.risk) parts.push(`the venue leverage limit is ${formatNumber(facts.risk.max_leverage)}×, not a recommendation`);
+    const history = market.research?.funding_history;
+    if (history?.status === "available" || history?.status === "limited") parts.push(`over 72 hours, ${formatPercent((history.positive_share ?? NaN) * 100)} of observed funding settlements were positive, with ${history.sign_reversals ?? "unknown"} sign reversals and ${formatPercent(history.retrospective_simple_apr_pct)} retrospective simple APR`);
+    const book = market.research?.order_book;
+    if (book?.status === "available" || book?.status === "limited") parts.push(`the visible book spread is ${formatNumber(book.spread_bps)} bps, with ${formatCurrency(book.bid_visible_notional_within_10bps, true)} bid and ${formatCurrency(book.ask_visible_notional_within_10bps, true)} ask notional within 10 bps`);
     return `${market.symbol}: ${parts.join("; ")}.`;
   }).join("\n\n");
 }
@@ -811,6 +836,21 @@ function renderOverview(data) {
       ["Market maximum leverage", formatNumber(facts.risk.max_leverage)],
       ["Delisted", typeof facts.risk.is_delisted === "boolean" ? (facts.risk.is_delisted ? "Yes" : "No") : "—"],
     );
+    const history = market.research?.funding_history;
+    if (history && history.status !== "not_requested") rows.push(
+      ["72h funding coverage", Number.isFinite(history.coverage) ? formatPercent(history.coverage * 100) : "—"],
+      ["Observed hourly settlements", history.observed_samples ?? "—"],
+      ["Retrospective simple APR", formatPercent(history.retrospective_simple_apr_pct)],
+      ["Positive settlement share", Number.isFinite(history.positive_share) ? formatPercent(history.positive_share * 100) : "—"],
+      ["Funding sign reversals", history.sign_reversals ?? "—"],
+    );
+    const book = market.research?.order_book;
+    if (book && book.status !== "not_requested") rows.push(
+      ["Visible book spread", `${formatNumber(book.spread_bps)} bps`],
+      ["Bid notional within 10 bps", formatCurrency(book.bid_visible_notional_within_10bps, true)],
+      ["Ask notional within 10 bps", formatCurrency(book.ask_visible_notional_within_10bps, true)],
+      ["Order-book age", formatAge(book.age_ms)],
+    );
     overviewState.append(sectionHeading(market.symbol, `Status: ${sentence(market.status)}`), definitionList(rows));
     for (const notice of market.notices || []) overviewState.append(element("p", { text: sentence(notice) }));
   }
@@ -823,18 +863,27 @@ function renderOverview(data) {
     element("summary", { text: "Inspect market facts, calculations, and limitations" }),
     ...overviewState.children,
   ]);
-  overviewState.replaceChildren(
-    element("span", { className: "message-author", text: "LiquidFlux · market evidence" }),
-    element("p", { className: "overview-answer", text: overviewSummary(data) }),
+  const analysis = data.analysis?.status === "completed" ? data.analysis : null;
+  const findings = analysis ? element("ul", { className: "analysis-findings" }, analysis.findings.map((finding) =>
+    element("li", {}, [element("span", { text: finding.text }), element("small", { text: finding.evidence_ids.join(" · ") })]))) : null;
+  overviewState.replaceChildren(...[
+    element("span", { className: "message-author", text: analysis ? `LiquidFlux · ${analysis.provider} analysis` : "LiquidFlux · deterministic market evidence" }),
+    element("p", { className: "overview-answer", text: analysis?.answer || overviewSummary(data) }),
+    findings,
+    analysis?.caveats?.length ? element("p", { className: "analysis-caveats", text: `Limits: ${analysis.caveats.join(" · ")}` }) : null,
     element("p", { className: "message-meta", text: `${evidence.source || "Unknown source"} · fetched ${formatDate(evidence.fetched_at)} · ${sentence(evidence.data_status)} at retrieval` }),
     details,
-  );
+  ].filter(Boolean));
   showView("overview");
+  requestAnimationFrame(() => overviewState.scrollIntoView({
+    block: "start",
+    behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth",
+  }));
 }
 
 async function fetchOverview() {
   if (busy || !pendingInfo) return;
-  const query = { symbols: [...pendingInfo.symbols], topics: [...pendingInfo.topics] };
+  const query = { symbols: [...pendingInfo.symbols], topics: [...pendingInfo.topics], question: pendingInfo.question };
   clearApprovals();
   busy = true;
   syncControls();

@@ -1,0 +1,109 @@
+const GEMINI_BASE_URL = "https://generativelanguage.googleapis.com/v1beta/models";
+const GROQ_URL = "https://api.groq.com/openai/v1/chat/completions";
+const MAX_EVIDENCE_BYTES = 24_000;
+
+const SCHEMA = {
+  type: "object", additionalProperties: false,
+  required: ["answer", "findings", "caveats", "next_questions"],
+  properties: {
+    answer: { type: "string" },
+    findings: {
+      type: "array", maxItems: 8,
+      items: {
+        type: "object", additionalProperties: false,
+        required: ["text", "evidence_ids"],
+        properties: {
+          text: { type: "string" },
+          evidence_ids: { type: "array", minItems: 1, maxItems: 8, items: { type: "string" } },
+        },
+      },
+    },
+    caveats: { type: "array", maxItems: 8, items: { type: "string" } },
+    next_questions: { type: "array", maxItems: 4, items: { type: "string" } },
+  },
+};
+const PROMPT = `You are LiquidFlux's evidence analyst. Answer the user's market research question from the supplied server-built evidence ledger only.
+Lead with the conclusion, then explain the strongest supporting evidence, contradictions, what could invalidate the conclusion, and what remains unknown. Compare markets when more than one is supplied. Distinguish a current snapshot from 72-hour history. Historical APR is retrospective simple annualization, never a forecast. Visible order-book notional is not an executable quote or fill guarantee. Mark/oracle deviation is not spot/perp basis. Venue leverage limits are not recommendations.
+Every finding must cite one or more exact evidence IDs. Use exact numbers only when present in those records. Do not invent correlations, costs, borrow availability, hedge availability, probabilities, confidence scores, forecasts, trades, or execution advice. If evidence is missing, limited, stale, conflicting, or unavailable, say so prominently. Do not merely restate every metric; explain why the available evidence matters. Return JSON only matching the schema.`;
+
+function cleanText(value, field, max = 2500) {
+  if (typeof value !== "string" || !value.trim() || value.trim().length > max) throw new Error(`invalid_${field}`);
+  return value.trim();
+}
+function validate(output, ids) {
+  if (!output || typeof output !== "object" || Array.isArray(output)) throw new Error("invalid_output");
+  const allowed = new Set(["answer", "findings", "caveats", "next_questions"]);
+  if (Object.keys(output).some((key) => !allowed.has(key))) throw new Error("unknown_output_field");
+  if (!Array.isArray(output.findings) || output.findings.length < 1 || output.findings.length > 8) throw new Error("invalid_findings");
+  const findings = output.findings.map((item) => {
+    if (!item || typeof item !== "object" || Array.isArray(item) || Object.keys(item).some((key) => !["text", "evidence_ids"].includes(key))) throw new Error("invalid_finding");
+    if (!Array.isArray(item.evidence_ids) || item.evidence_ids.length < 1 || item.evidence_ids.length > 8 || item.evidence_ids.some((id) => !ids.has(id))) throw new Error("invalid_citation");
+    return { text: cleanText(item.text, "finding", 700), evidence_ids: [...new Set(item.evidence_ids)] };
+  });
+  const strings = (value, field, max) => {
+    if (!Array.isArray(value) || value.length > max) throw new Error(`invalid_${field}`);
+    return value.map((item) => cleanText(item, field, 500));
+  };
+  return { answer: cleanText(output.answer, "answer"), findings, caveats: strings(output.caveats, "caveats", 8), next_questions: strings(output.next_questions, "next_questions", 4) };
+}
+function providers(env) {
+  return (env.AI_PROVIDER_ORDER || "gemini,groq").split(",").map((x) => x.trim()).flatMap((provider) => {
+    const key = provider === "gemini" ? env.GEMINI_API_KEY : provider === "groq" ? env.GROQ_API_KEY : null;
+    if (!key) return [];
+    return [{ provider, key, model: provider === "gemini" ? (env.GEMINI_MODEL || "gemini-3.8-flash") : (env.GROQ_MODEL || "openai/gpt-oss-20b") }];
+  });
+}
+function request(config, input, signal) {
+  const user = `QUESTION_JSON:\n${JSON.stringify(input.question)}\n\nSERVER_EVIDENCE_LEDGER_JSON:\n${JSON.stringify(input.evidence)}`;
+  if (config.provider === "gemini") return { url: `${GEMINI_BASE_URL}/${encodeURIComponent(config.model)}:generateContent`, options: { method: "POST", signal, headers: { "content-type": "application/json", "x-goog-api-key": config.key }, body: JSON.stringify({ systemInstruction: { parts: [{ text: PROMPT }] }, contents: [{ role: "user", parts: [{ text: user }] }], generationConfig: { responseMimeType: "application/json", responseJsonSchema: SCHEMA, temperature: 0.2 } }) } };
+  return { url: GROQ_URL, options: { method: "POST", signal, headers: { "content-type": "application/json", authorization: `Bearer ${config.key}` }, body: JSON.stringify({ model: config.model, messages: [{ role: "system", content: PROMPT }, { role: "user", content: user }], temperature: 0.2, response_format: { type: "json_schema", json_schema: { name: "liquidflux_analysis", strict: true, schema: SCHEMA } } }) } };
+}
+function reason(error) {
+  if (error?.name === "AbortError") return "timeout";
+  if (/^http_\d+$/.test(error?.message)) return error.message;
+  if (error instanceof SyntaxError) return "invalid_json";
+  return /^invalid_|^unknown_/.test(error?.message) ? error.message : "request_failed";
+}
+export function createAIAnalyst({ env = process.env, fetchImpl = globalThis.fetch, timeoutMs = Number(env.AI_ANALYST_TIMEOUT_MS || 15_000), logger = console } = {}) {
+  return async function analyze({ question, evidence }) {
+    if (typeof question !== "string" || !question.trim() || question.trim().length > 1000) return { status: "unavailable", reason: "invalid_question" };
+    if (!Array.isArray(evidence) || evidence.length < 1 || evidence.length > 100) return { status: "unavailable", reason: "invalid_evidence" };
+    let serialized;
+    try { serialized = JSON.stringify(evidence); } catch { return { status: "unavailable", reason: "invalid_evidence" }; }
+    if (Buffer.byteLength(serialized) > MAX_EVIDENCE_BYTES) return { status: "unavailable", reason: "evidence_too_large" };
+    const ids = new Set();
+    for (const item of evidence) {
+      if (!item || typeof item !== "object" || typeof item.id !== "string" || !/^[a-z0-9:_-]{1,100}$/i.test(item.id) || ids.has(item.id)) return { status: "unavailable", reason: "invalid_evidence" };
+      ids.add(item.id);
+    }
+    const configured = providers(env);
+    if (!configured.length) return { status: "unavailable", reason: "not_configured" };
+    for (const config of configured) {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), timeoutMs);
+      try {
+        const call = request(config, { question: question.trim(), evidence }, controller.signal);
+        const response = await fetchImpl(call.url, call.options);
+        if (!response?.ok) throw new Error(`http_${response?.status || 0}`);
+        const body = await response.json();
+        const text = config.provider === "gemini" ? body?.candidates?.[0]?.content?.parts?.filter((p) => !p.thought && typeof p.text === "string").map((p) => p.text).join("") : body?.choices?.[0]?.message?.content;
+        if (typeof text !== "string") throw new Error("invalid_response");
+        return { status: "completed", ...validate(JSON.parse(text), ids), provider: config.provider, model: config.model, grounding: "references_validated_not_fact_verified" };
+      } catch (error) {
+        logger?.warn?.(JSON.stringify({ event: "ai_analyst_failed", provider: config.provider, model: config.model, reason: reason(error) }));
+      } finally { clearTimeout(timer); }
+    }
+    return { status: "unavailable", reason: "providers_failed" };
+  };
+}
+
+export function buildEvidenceLedger(overview) {
+  const ledger = [{ id: "source:overview", kind: "provenance", data: overview.evidence }];
+  for (const market of overview.markets || []) {
+    const symbol = market.symbol;
+    ledger.push({ id: `${symbol}:snapshot`, kind: "market_snapshot", symbol, data: { status: market.status, facts: market.facts, calculations: market.calculations, notices: market.notices } });
+    if (market.research?.funding_history) ledger.push({ id: `${symbol}:funding_history_72h`, kind: "funding_history", symbol, data: market.research.funding_history });
+    if (market.research?.order_book) ledger.push({ id: `${symbol}:order_book`, kind: "order_book", symbol, data: market.research.order_book });
+  }
+  return ledger;
+}

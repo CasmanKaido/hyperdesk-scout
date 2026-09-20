@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "LiquidFlux API",
-    "version": "0.6.0",
+    "version": "0.7.0",
     "description": "AI-assisted objective planning with approval-gated, deterministic Hyperliquid funding, liquidity, and risk intelligence. AI interprets constraints but does not calculate market evidence, spend funds, or execute trades."
   },
   "servers": [
@@ -75,8 +75,8 @@
     "/api/v1/market-overview": {
       "post": {
         "operationId": "getMarketOverview",
-        "summary": "Read unranked Hyperliquid market facts and deterministic calculations",
-        "description": "Returns requested topics from the shared snapshot. Annualized funding is not a forecast; mark/oracle deviation is not executable basis; liquidity metrics are not fill guarantees. Never executes trades.",
+        "summary": "Research Hyperliquid markets with snapshot, funding-history, order-book, and grounded AI evidence",
+        "description": "Returns unranked snapshot facts plus topic-gated 72-hour funding and visible L2-book summaries for up to five symbols. With question, AI findings cite server-issued evidence IDs. Citation validation is not independent fact verification. Never executes trades.",
         "requestBody": {
           "required": true,
           "content": {
@@ -432,7 +432,8 @@
             "maxItems": 4,
             "items": {"type": "string", "enum": ["funding", "basis", "liquidity", "risk"]},
             "default": ["funding", "basis", "liquidity", "risk"]
-          }
+          },
+          "question": {"type": "string", "minLength": 1, "maxLength": 1000, "description": "Original user question for evidence-grounded analysis"}
         }
       },
       "MarketOverviewMarket": {
@@ -520,7 +521,8 @@
           "notices": {
             "type": "array",
             "items": {"type": "string"}
-          }
+          },
+          "research": {"type": ["object", "null"], "additionalProperties": true, "description": "Topic-gated 72-hour funding and visible order-book summaries"}
         },
         "description": "One entry per normalized requested symbol, including unavailable markets. Only requested topics appear; risk has no calculations. Missing or invalid inputs and non-finite calculations produce null and notices. No ranking or financial filtering."
       },
@@ -542,7 +544,7 @@
       "MarketOverviewResponse": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["request_id", "generated_at", "query", "evidence", "markets", "notices", "execution_included"],
+        "required": ["request_id", "generated_at", "query", "evidence", "markets", "notices", "evidence_ledger", "analysis", "execution_included"],
         "properties": {
           "request_id": {"type": "string"},
           "generated_at": {"type": "string", "format": "date-time"},
@@ -578,6 +580,9 @@
             "type": "array",
             "items": {"type": "string"}
           },
+          "research": {"type": "object", "additionalProperties": true},
+          "evidence_ledger": {"type": "array", "items": {"type": "object"}, "description": "Server-built records referenced by grounded AI finding IDs"},
+          "analysis": {"type": "object", "required": ["status"], "properties": {"status": {"enum": ["completed", "unavailable"]}, "answer": {"type": "string"}, "findings": {"type": "array", "items": {"type": "object"}}, "caveats": {"type": "array", "items": {"type": "string"}}, "next_questions": {"type": "array", "items": {"type": "string"}}, "provider": {"type": "string"}, "model": {"type": "string"}, "grounding": {"type": "string"}, "reason": {"type": "string"}}, "description": "Optional interpretation; citation IDs are validated but prose is not independently fact-verified"},
           "execution_included": {"const": false}
         }
       },

@@ -12,6 +12,8 @@ const profile = await mkdtemp(resolve(".tmp/chrome-"));
 const server = createApp({
   logger: { info() {}, error() {} },
   getMarketData: async () => ({ markets: [{ symbol: "BTC", funding: "0.00001", markPx: "80000", oraclePx: "79990", openInterest: "1000", dayNtlVlm: "500000000", impactPxs: ["79999", "80001"], maxLeverage: 40, isDelisted: false }], fetchedAt: new Date().toISOString(), ageMs: 0, cacheStatus: "miss" }),
+  enrichMarketEvidence: async () => ({ window_hours: 72, limitations: [], markets: [{ symbol: "BTC", funding_history: { status: "available", coverage: 1, observed_samples: 72, retrospective_simple_apr_pct: 9.4, positive_share: 0.86, sign_reversals: 2, stale: false, notices: [] }, order_book: { status: "not_requested", notices: ["topic_not_requested"] } }] }),
+  analyzeEvidence: async () => ({ status: "completed", answer: "BTC funding is positive now and was positive in most observed hours, but two sign reversals show the carry was not perfectly stable.", findings: [{ text: "The current positive rate is supported by broad, but not uninterrupted, 72-hour persistence.", evidence_ids: ["BTC:snapshot", "BTC:funding_history_72h"] }], caveats: ["Retrospective annualization is not a forecast, and hedge costs are not included."], next_questions: ["Compare BTC with ETH?"], provider: "groq", model: "fixture", grounding: "references_validated_not_fact_verified" }),
   planObjective: async ({ message }) => message.toLowerCase().includes("strategy")
     ? { intent: "plan_update", reply: "I can review BTC with these suggested limits. Review them before I run the specialists.", summary: "BTC strategy review", objective: "market_neutral_income", symbols: ["BTC"], risk_tolerance: "moderate", max_leverage: 2, max_notional_usd: 1000, min_funding_apr: 5, suggested_defaults: ["risk_tolerance", "max_leverage", "max_notional_usd", "min_funding_apr"], assumptions: [], missing_information: [], provider: "groq", model: "fixture" }
     : { intent: "market_information", reply: "I can check BTC funding for you.", symbols: ["BTC"], topics: ["funding"], provider: "groq", model: "fixture" },
@@ -78,6 +80,8 @@ try {
     await evaluate('document.querySelector("#objective-message").value = "yes"; document.querySelector("#chat-form").requestSubmit()');
     await wait('!document.querySelector("#overview-state").hidden');
     assert.equal(await evaluate('document.querySelector("#overview-state > details").open'), false);
+    assert.equal(await evaluate('document.querySelector("#overview-state").textContent.includes("two sign reversals")'), true);
+    assert.equal(await evaluate('document.querySelector("#overview-state").textContent.includes("BTC:funding_history_72h")'), true);
     assert.equal(await evaluate('document.querySelector("#conversation-log").contains(document.querySelector(".analysis-panel"))'), true);
     assert.equal(await evaluate('document.documentElement.scrollWidth <= innerWidth'), true, `${name} information overflow`);
     await screenshot(`${name}-information`);

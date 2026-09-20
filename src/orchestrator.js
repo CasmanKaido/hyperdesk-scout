@@ -141,15 +141,19 @@ export async function orchestrateMarketNeutral({
       max_notional_usd: constraints.maxNotionalUsd,
       max_leverage: constraints.maxLeverage,
       cautions: item.cautions,
+      missing_evidence: item.missing_evidence,
+      basis_description: item.basis_description,
+      assessment_scope: item.assessment_scope,
+      hedge_requirement: fundingBySymbol.get(item.symbol)?.hedge_requirement,
     }));
   const rejected = risk.decisions
     .filter((item) => item.decision === "reject")
-    .map(({ symbol, blockers }) => ({ symbol, blockers }));
+    .map(({ symbol, blockers, missing_evidence, basis_description, assessment_scope }) => ({ symbol, blockers, missing_evidence, basis_description, assessment_scope }));
   const availableSymbols = new Set(metrics.map((item) => item.symbol.toUpperCase()));
 
   return {
     service: "LiquidFlux Orchestrator",
-    version: "0.4.2",
+    version: "0.7.0",
     workflow_id: workflowId,
     generated_at: generatedAt.toISOString(),
     objective: input.objective,

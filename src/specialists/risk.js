@@ -15,7 +15,16 @@ export const riskSpecialist = {
     const decisions = metrics.map((market) => {
       const fundingResult = fundingBySymbol.get(market.symbol);
       const liquidityResult = liquidityBySymbol.get(market.symbol);
-      const blockers = [];
+      const missingEvidence = [...new Set([
+        ...(market.missing_evidence ?? []),
+        ...["maxLeverage", "riskScore", "basisPercent", "fundingAprPercent"]
+          .filter((key) => !Number.isFinite(market[key])
+            || (key === "maxLeverage" && market[key] < 1)
+            || (key === "riskScore" && (market[key] < 0 || market[key] > 1))),
+        ...(fundingResult?.missing_evidence ?? []),
+        ...(liquidityResult?.missing_evidence ?? []),
+      ])];
+      const blockers = missingEvidence.length > 0 ? ["missing_required_evidence"] : [];
       const cautions = [];
 
       if (dataStatus !== "fresh") blockers.push("market_data_not_fresh");
@@ -33,10 +42,13 @@ export const riskSpecialist = {
         decision,
         blockers,
         cautions,
-        risk_score: market.riskScore,
-        basis_percent: market.basisPercent,
+        missing_evidence: missingEvidence,
+        risk_score: missingEvidence.includes("riskScore") ? null : market.riskScore,
+        basis_percent: missingEvidence.includes("basisPercent") ? null : market.basisPercent,
+        basis_description: "Mark-to-oracle divergence, not executable perp-to-spot basis",
+        assessment_scope: "Market-data policy only; hedge executability and net returns are unverified",
         service_leverage_cap: constraints.maxLeverage,
-        market_max_leverage: market.maxLeverage,
+        market_max_leverage: missingEvidence.includes("maxLeverage") ? null : market.maxLeverage,
       };
     });
 

@@ -73,7 +73,7 @@ test('information confirms the exact query without AI and preserves evidence for
   assert.equal(app.run('pendingInput'), null);
   await app.send('yes', overview);
   assert.deepEqual(app.calls.map(c => c.url), ['/api/v1/plan', '/api/v1/market-overview']);
-  assert.deepEqual(app.calls[1].body, { symbols: ['BTC'], topics: ['funding'] });
+  assert.deepEqual(app.calls[1].body, { symbols: ['BTC'], topics: ['funding'], question: 'BTC' });
   assert.equal(app.get('#overview-state').hidden, false);
   assert.ok(app.get('#conversation-log').children.includes(app.get('.analysis-panel')));
   assert.match(text(app.get('#overview-state')), /Inspect market facts/);
@@ -82,7 +82,10 @@ test('information confirms the exact query without AI and preserves evidence for
   assert.match(text(app.get('#overview-state')), /not a forecast/);
   assert.match(text(app.get('#overview-state')), /Hyperliquid/);
   await app.send('why', { intent: 'result_explanation', reply: 'Snapshot explanation.' });
-  assert.deepEqual(app.calls[2].body.analysis_context, overview);
+  assert.deepEqual(app.calls[2].body.analysis_context.query, overview.query);
+    assert.equal(app.calls[2].body.analysis_context.markets[0].symbol, 'BTC');
+    assert.equal(app.calls[2].body.analysis_context.markets[0].funding_history, null);
+    assert.equal('execution_included' in app.calls[2].body.analysis_context, false);
   assert.equal('current_plan' in app.calls[2].body, false);
   assert.equal(app.run('latestAIPlan'), null);
 });
