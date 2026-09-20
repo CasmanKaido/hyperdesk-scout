@@ -12,6 +12,7 @@ test("returns a citation-validated Groq analysis", async () => {
   const result = await analyst({ question: "What matters?", evidence });
   assert.equal(result.status, "completed");
   assert.equal(result.grounding, "references_validated_not_fact_verified");
+    assert.equal(result.answer_source, "ai_filtered");
   assert.deepEqual(result.findings[0].evidence_ids, ["BTC:snapshot"]);
   assert.match(body.messages[0].content, /what could invalidate/);
 });
@@ -50,10 +51,13 @@ test("rejects invented citation IDs and falls back", async () => {
   assert.equal(result.provider, "groq");
 });
 
-test("rejects prescriptive claims derived from visible-book snapshots", async () => {
+test("replaces fully rejected prose with an explicit deterministic fallback", async () => {
   const unsafe = { ...output, answer: "This is best for traders because it lowers execution cost." };
   const analyst = createAIAnalyst({ env: { GROQ_API_KEY: "secret" }, logger: { warn() {} }, fetchImpl: async () => response({ choices: [{ message: { content: JSON.stringify(unsafe) } }] }) });
-  assert.deepEqual(await analyst({ question: "What matters?", evidence }), { status: "unavailable", reason: "providers_failed" });
+  const result = await analyst({ question: "What matters?", evidence });
+  assert.equal(result.status, "completed");
+  assert.equal(result.answer_source, "deterministic_fallback");
+  assert.doesNotMatch(result.answer, /trader|cost/i);
 });
 
 test("removes unsafe inference sentences and unavailable follow-up suggestions", async () => {
@@ -62,6 +66,7 @@ test("removes unsafe inference sentences and unavailable follow-up suggestions",
   const result = await analyst({ question: "What matters?", evidence });
   assert.equal(result.status, "completed");
   assert.equal(result.answer, "Funding persisted in the supplied history.");
+    assert.equal(result.answer_source, "ai_filtered");
   assert.equal(result.findings.length, 1);
   assert.deepEqual(result.next_questions, []);
 });

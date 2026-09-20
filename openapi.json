@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "LiquidFlux API",
-    "version": "0.7.5",
+    "version": "0.7.6",
     "description": "AI-assisted objective planning with approval-gated, deterministic Hyperliquid funding, liquidity, and risk intelligence. AI interprets constraints but does not calculate market evidence, spend funds, or execute trades."
   },
   "servers": [
@@ -582,7 +582,7 @@
           },
           "research": {"type": "object", "additionalProperties": true},
           "evidence_ledger": {"type": "array", "items": {"type": "object"}, "description": "Server-built records referenced by grounded AI finding IDs"},
-          "analysis": {"type": "object", "required": ["status"], "properties": {"status": {"enum": ["completed", "unavailable"]}, "answer": {"type": "string"}, "findings": {"type": "array", "items": {"type": "object"}}, "caveats": {"type": "array", "items": {"type": "string"}}, "next_questions": {"type": "array", "items": {"type": "string"}}, "provider": {"type": "string"}, "model": {"type": "string"}, "grounding": {"type": "string"}, "reason": {"type": "string"}}, "description": "Optional interpretation; citation IDs are validated but prose is not independently fact-verified"},
+          "analysis": {"type": "object", "required": ["status"], "properties": {"status": {"enum": ["completed", "unavailable"]}, "answer": {"type": "string"}, "answer_source": {"enum": ["ai_filtered", "deterministic_fallback"]}, "findings": {"type": "array", "items": {"type": "object"}}, "caveats": {"type": "array", "items": {"type": "string"}}, "next_questions": {"type": "array", "items": {"type": "string"}}, "provider": {"type": "string"}, "model": {"type": "string"}, "grounding": {"type": "string"}, "reason": {"type": "string"}}, "description": "Optional interpretation; citation IDs are validated but prose is not independently fact-verified"},
           "execution_included": {"const": false}
         }
       },

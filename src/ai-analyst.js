@@ -46,6 +46,19 @@ function canonicalFindings(evidence) {
   return findings.slice(0, 8);
 }
 
+function canonicalAnswer(evidence) {
+  const histories = evidence.filter((item) => item.kind === "funding_history" && ["available", "limited"].includes(item.data?.status));
+  const books = evidence.filter((item) => item.kind === "order_book" && ["available", "limited"].includes(item.data?.status));
+  const parts = [];
+  if (histories.length) {
+    const positive = histories.every((item) => Number.isFinite(item.data.positive_share_fraction) && item.data.positive_share_fraction > 0.5);
+    const negative = histories.every((item) => Number.isFinite(item.data.positive_share_fraction) && item.data.positive_share_fraction < 0.5);
+    parts.push(`The supplied 72-hour records show ${histories.map((item) => item.symbol).join(" and ")} funding was ${positive ? "predominantly positive" : negative ? "predominantly negative" : "mixed"} during the observed window. This establishes historical persistence, not future carry.`);
+  }
+  if (books.length) parts.push("The order-book records establish current displayed spread and near-mid visible notional only; they do not establish durable or executable liquidity.");
+  return parts.join(" ") || "LiquidFlux retrieved evidence, but it is not sufficient for a stronger conclusion.";
+}
+
 function validate(output, ids, evidence) {
   if (!output || typeof output !== "object" || Array.isArray(output)) throw new Error("invalid_output");
   const allowed = new Set(["answer", "findings", "caveats", "next_questions"]);
@@ -63,14 +76,16 @@ function validate(output, ids, evidence) {
   const rawAnswer = cleanText(output.answer, "answer");
   const caveats = strings(output.caveats, "caveats", 8);
   const prohibited = /\b(?:traders?|trades?|positions?|best|superior|decisive|recommend(?:ation|ed)?|costs?|supports? (?:a |an )?(?:larger|bigger) order)\b/i;
-  const answer = rawAnswer.split(/(?<=[.!?])\s+/).filter((sentence) =>
+  const filteredAnswer = rawAnswer.split(/(?<=[.!?])\s+/).filter((sentence) =>
     !prohibited.test(sentence) && !/(?:^|\s)(?!72(?:\s|-|‑|–|—)?(?:hours?|h)\b)\d+(?:[.,]\d+)?/i.test(sentence)).join(" ").trim();
+  const answer = filteredAnswer || canonicalAnswer(evidence);
+  const answer_source = filteredAnswer ? "ai_filtered" : "deterministic_fallback";
   const deterministicFindings = canonicalFindings(evidence);
   const safeFindings = deterministicFindings.length ? deterministicFindings : findings.filter((item) => !prohibited.test(item.text) && !/\d/.test(item.text));
-  if (!answer || safeFindings.length < 1) throw new Error("invalid_claim_scope");
+  if (safeFindings.length < 1) throw new Error("invalid_claim_scope");
   strings(output.next_questions, "next_questions", 4);
   // Follow-up prompts must come from an actual tool-capability registry, not model imagination.
-  return { answer, findings: safeFindings, caveats, next_questions: [] };
+  return { answer, answer_source, findings: safeFindings, caveats, next_questions: [] };
 }
 function providers(env) {
   return (env.AI_PROVIDER_ORDER || "gemini,groq").split(",").map((x) => x.trim()).flatMap((provider) => {

@@ -867,7 +867,7 @@ function renderOverview(data) {
   const findings = analysis ? element("ul", { className: "analysis-findings" }, analysis.findings.map((finding) =>
     element("li", {}, [element("span", { text: finding.text }), element("small", { text: finding.evidence_ids.join(" · ") })]))) : null;
   overviewState.replaceChildren(...[
-    element("span", { className: "message-author", text: analysis ? `LiquidFlux · ${analysis.provider} analysis` : "LiquidFlux · deterministic market evidence" }),
+    element("span", { className: "message-author", text: analysis ? `LiquidFlux · ${analysis.answer_source === "deterministic_fallback" ? "deterministic fallback" : `${analysis.provider} analysis`}` : "LiquidFlux · deterministic market evidence" }),
     element("p", { className: "overview-answer", text: analysis?.answer || overviewSummary(data) }),
     findings,
     analysis?.caveats?.length ? element("p", { className: "analysis-caveats", text: `Limits: ${analysis.caveats.join(" · ")}` }) : null,
