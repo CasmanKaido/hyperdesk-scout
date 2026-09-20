@@ -44,13 +44,15 @@ function validate(output, ids) {
     if (!Array.isArray(value) || value.length > max) throw new Error(`invalid_${field}`);
     return value.map((item) => cleanText(item, field, 500));
   };
-  const answer = cleanText(output.answer, "answer");
+  const rawAnswer = cleanText(output.answer, "answer");
   const caveats = strings(output.caveats, "caveats", 8);
-  const prohibited = /\b(?:traders?|trades?|positions?|best|superior|decisive|recommend(?:ation|ed)?|execution costs?|supports? (?:a |an )?(?:larger|bigger) order)\b/i;
-  if ([answer, ...findings.map((item) => item.text)].some((text) => prohibited.test(text))) throw new Error("invalid_claim_scope");
+  const prohibited = /\b(?:traders?|trades?|positions?|best|superior|decisive|recommend(?:ation|ed)?|costs?|supports? (?:a |an )?(?:larger|bigger) order)\b/i;
+  const answer = rawAnswer.split(/(?<=[.!?])\s+/).filter((sentence) => !prohibited.test(sentence)).join(" ").trim();
+  const safeFindings = findings.filter((item) => !prohibited.test(item.text));
+  if (!answer || safeFindings.length < 1) throw new Error("invalid_claim_scope");
   const nextQuestions = strings(output.next_questions, "next_questions", 4).filter((text) =>
-    !/\b(?:beyond (?:the )?(?:top )?20|longer than 72|other venues?|binance|coinbase|future)\b/i.test(text));
-  return { answer, findings, caveats, next_questions: nextQuestions };
+    !/\b(?:full depth|beyond (?:the )?(?:top )?20|past \d+ days?|longer than 72|other venues?|binance|coinbase|future|open interest growth)\b/i.test(text));
+  return { answer, findings: safeFindings, caveats, next_questions: nextQuestions };
 }
 function providers(env) {
   return (env.AI_PROVIDER_ORDER || "gemini,groq").split(",").map((x) => x.trim()).flatMap((provider) => {

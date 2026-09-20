@@ -39,7 +39,7 @@ test("serves a discoverable index and health without market data", async () => {
 
   const result = await handle({ method: "GET", pathname: "/health" });
   assert.equal(result.status, 200);
-  assert.deepEqual(result.body, { status: "ok", service: "hyperdesk-scout", version: "0.7.2" });
+  assert.deepEqual(result.body, { status: "ok", service: "hyperdesk-scout", version: "0.7.3" });
 });
 
 test("serves the OpenAPI contract when configured", async () => {

@@ -41,6 +41,16 @@ test("rejects prescriptive claims derived from visible-book snapshots", async ()
   assert.deepEqual(await analyst({ question: "What matters?", evidence }), { status: "unavailable", reason: "providers_failed" });
 });
 
+test("removes unsafe inference sentences and unavailable follow-up suggestions", async () => {
+  const mixed = { ...output, answer: "Funding persisted in the supplied history. The spread lowers cost for traders.", findings: [...output.findings, { text: "This is best for traders.", evidence_ids: ["BTC:snapshot"] }], next_questions: ["What is the full depth?", "Compare funding with ETH?"] };
+  const analyst = createAIAnalyst({ env: { GROQ_API_KEY: "secret" }, fetchImpl: async () => response({ choices: [{ message: { content: JSON.stringify(mixed) } }] }) });
+  const result = await analyst({ question: "What matters?", evidence });
+  assert.equal(result.status, "completed");
+  assert.equal(result.answer, "Funding persisted in the supplied history.");
+  assert.equal(result.findings.length, 1);
+  assert.deepEqual(result.next_questions, ["Compare funding with ETH?"]);
+});
+
 test("returns safe unavailable states for absent keys and failed providers", async () => {
   assert.deepEqual(await createAIAnalyst({ env: {} })({ question: "What?", evidence }), { status: "unavailable", reason: "not_configured" });
   const logs = [];
