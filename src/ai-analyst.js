@@ -23,8 +23,8 @@ const SCHEMA = {
   },
 };
 const PROMPT = `You are LiquidFlux's evidence analyst. Answer the user's market research question from the supplied server-built evidence ledger only.
-Lead with the conclusion, then explain the strongest supporting evidence, contradictions, what could invalidate the conclusion, and what remains unknown. Compare markets when more than one is supplied. Distinguish a current snapshot from 72-hour history. Historical APR is retrospective simple annualization, never a forecast. Visible order-book notional is not an executable quote or fill guarantee. Mark/oracle deviation is not spot/perp basis. Venue leverage limits are not recommendations.
-Every finding must cite one or more exact evidence IDs. Use exact numbers only when present in those records. Do not invent correlations, costs, borrow availability, hedge availability, probabilities, confidence scores, forecasts, trades, or execution advice. If evidence is missing, limited, stale, conflicting, or unavailable, say so prominently. Do not merely restate every metric; explain why the available evidence matters. Return JSON only matching the schema.`;
+Lead with the conclusion, then explain the strongest supporting evidence, contradictions, what could invalidate the conclusion, and what remains unknown. Compare markets when more than one is supplied. Distinguish a current snapshot from 72-hour history. Historical APR is retrospective simple annualization, never a forecast. Visible order-book notional is one bounded snapshot, not an executable quote, fill guarantee, durable liquidity measure, recommendation, or basis for saying what is decisive for traders. Describe asymmetry without calling either market superior. Mark/oracle deviation is not spot/perp basis. Venue leverage limits are not recommendations. Rate field names in the ledger include their units; never rename decimal fractions as ppm. Describe historical funding as observed persistence, not stable future carry.
+Every finding must cite one or more exact evidence IDs. Use exact numbers only when present in those records. Do not invent correlations, costs, borrow availability, hedge availability, probabilities, confidence scores, forecasts, trades, execution advice, or unsupported units. Suggested next questions must be answerable using LiquidFlux's available snapshot, funding-history, order-book, or comparison evidence; do not suggest unavailable full-depth or future data. If evidence is missing, limited, stale, conflicting, or unavailable, say so prominently. Do not merely restate every metric; explain why the available evidence matters. Return JSON only matching the schema.`;
 
 function cleanText(value, field, max = 2500) {
   if (typeof value !== "string" || !value.trim() || value.trim().length > max) throw new Error(`invalid_${field}`);
@@ -102,8 +102,26 @@ export function buildEvidenceLedger(overview) {
   for (const market of overview.markets || []) {
     const symbol = market.symbol;
     ledger.push({ id: `${symbol}:snapshot`, kind: "market_snapshot", symbol, data: { status: market.status, facts: market.facts, calculations: market.calculations, notices: market.notices } });
-    if (market.research?.funding_history) ledger.push({ id: `${symbol}:funding_history_72h`, kind: "funding_history", symbol, data: market.research.funding_history });
-    if (market.research?.order_book) ledger.push({ id: `${symbol}:order_book`, kind: "order_book", symbol, data: market.research.order_book });
+    if (market.research?.funding_history) {
+      const history = market.research.funding_history;
+      ledger.push({ id: `${symbol}:funding_history_72h`, kind: "funding_history", symbol, data: {
+        status: history.status, observed_samples: history.observed_samples, expected_samples: history.expected_samples,
+        coverage_fraction: history.coverage, missing_samples: history.missing_samples, gap_hours: history.gap_hours,
+        stale: history.stale, sum_realized_rates_percent: history.sum_realized_rates_pct,
+        hourly_mean_rate_percent: Number.isFinite(history.hourly_mean_rate) ? history.hourly_mean_rate * 100 : null,
+        retrospective_simple_apr_percent: history.retrospective_simple_apr_pct,
+        positive_share_fraction: history.positive_share, sign_reversals: history.sign_reversals,
+        latest_rate_percent: Number.isFinite(history.latest_rate) ? history.latest_rate * 100 : null,
+        latest_time: history.latest_time, notices: history.notices, source: history.source,
+      } });
+    }
+    if (market.research?.order_book) {
+      const book = market.research.order_book;
+      ledger.push({ id: `${symbol}:order_book`, kind: "order_book", symbol, data: {
+        ...book,
+        measurement_scope: "single visible snapshot; at most 20 levels per side; not durable liquidity or executable size",
+      } });
+    }
   }
   return ledger;
 }

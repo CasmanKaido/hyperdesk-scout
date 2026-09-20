@@ -44,6 +44,10 @@ test("returns safe unavailable states for absent keys and failed providers", asy
 });
 
 test("builds stable server evidence IDs", () => {
-  const ledger = buildEvidenceLedger({ evidence: { source: "Hyperliquid" }, markets: [{ symbol: "BTC", status: "available", facts: {}, calculations: {}, notices: [], research: { funding_history: { status: "available" }, order_book: { status: "available" } } }] });
+  const ledger = buildEvidenceLedger({ evidence: { source: "Hyperliquid" }, markets: [{ symbol: "BTC", status: "available", facts: {}, calculations: {}, notices: [], research: { funding_history: { status: "available", hourly_mean_rate: 0.00001, latest_rate: 0.00002 }, order_book: { status: "available" } } }] });
   assert.deepEqual(ledger.map((item) => item.id), ["source:overview", "BTC:snapshot", "BTC:funding_history_72h", "BTC:order_book"]);
+    assert.equal(ledger[2].data.hourly_mean_rate_percent, 0.001);
+    assert.equal(ledger[2].data.latest_rate_percent, 0.002);
+    assert.equal("hourly_mean_rate" in ledger[2].data, false);
+    assert.match(ledger[3].data.measurement_scope, /single visible snapshot/);
 });
