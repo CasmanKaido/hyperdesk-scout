@@ -35,6 +35,12 @@ test("rejects invented citation IDs and falls back", async () => {
   assert.equal(result.provider, "groq");
 });
 
+test("rejects prescriptive claims derived from visible-book snapshots", async () => {
+  const unsafe = { ...output, answer: "This is best for traders because it lowers execution cost." };
+  const analyst = createAIAnalyst({ env: { GROQ_API_KEY: "secret" }, logger: { warn() {} }, fetchImpl: async () => response({ choices: [{ message: { content: JSON.stringify(unsafe) } }] }) });
+  assert.deepEqual(await analyst({ question: "What matters?", evidence }), { status: "unavailable", reason: "providers_failed" });
+});
+
 test("returns safe unavailable states for absent keys and failed providers", async () => {
   assert.deepEqual(await createAIAnalyst({ env: {} })({ question: "What?", evidence }), { status: "unavailable", reason: "not_configured" });
   const logs = [];
@@ -44,9 +50,11 @@ test("returns safe unavailable states for absent keys and failed providers", asy
 });
 
 test("builds stable server evidence IDs", () => {
-  const ledger = buildEvidenceLedger({ evidence: { source: "Hyperliquid" }, markets: [{ symbol: "BTC", status: "available", facts: {}, calculations: {}, notices: [], research: { funding_history: { status: "available", hourly_mean_rate: 0.00001, latest_rate: 0.00002 }, order_book: { status: "available" } } }] });
+  const ledger = buildEvidenceLedger({ evidence: { source: "Hyperliquid" }, markets: [{ symbol: "BTC", status: "available", facts: { funding: { hourly_rate: 0.00002 } }, calculations: { funding: { annualized_simple_percent: 17.52 } }, notices: [], research: { funding_history: { status: "available", hourly_mean_rate: 0.00001, latest_rate: 0.00002 }, order_book: { status: "available" } } }] });
   assert.deepEqual(ledger.map((item) => item.id), ["source:overview", "BTC:snapshot", "BTC:funding_history_72h", "BTC:order_book"]);
-    assert.equal(ledger[2].data.hourly_mean_rate_percent, 0.001);
+    assert.equal(ledger[1].data.funding.hourly_rate_decimal, 0.00002);
+      assert.equal("hourly_rate" in ledger[1].data.funding, false);
+      assert.equal(ledger[2].data.hourly_mean_rate_percent, 0.001);
     assert.equal(ledger[2].data.latest_rate_percent, 0.002);
     assert.equal("hourly_mean_rate" in ledger[2].data, false);
     assert.match(ledger[3].data.measurement_scope, /single visible snapshot/);

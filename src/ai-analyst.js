@@ -24,7 +24,7 @@ const SCHEMA = {
 };
 const PROMPT = `You are LiquidFlux's evidence analyst. Answer the user's market research question from the supplied server-built evidence ledger only.
 Lead with the conclusion, then explain the strongest supporting evidence, contradictions, what could invalidate the conclusion, and what remains unknown. Compare markets when more than one is supplied. Distinguish a current snapshot from 72-hour history. Historical APR is retrospective simple annualization, never a forecast. Visible order-book notional is one bounded snapshot, not an executable quote, fill guarantee, durable liquidity measure, recommendation, or basis for saying what is decisive for traders. Describe asymmetry without calling either market superior. Mark/oracle deviation is not spot/perp basis. Venue leverage limits are not recommendations. Rate field names in the ledger include their units; never rename decimal fractions as ppm. Describe historical funding as observed persistence, not stable future carry.
-Every finding must cite one or more exact evidence IDs. Use exact numbers only when present in those records. Do not invent correlations, costs, borrow availability, hedge availability, probabilities, confidence scores, forecasts, trades, execution advice, or unsupported units. Suggested next questions must be answerable using LiquidFlux's available snapshot, funding-history, order-book, or comparison evidence; do not suggest unavailable full-depth or future data. If evidence is missing, limited, stale, conflicting, or unavailable, say so prominently. Do not merely restate every metric; explain why the available evidence matters. Return JSON only matching the schema.`;
+Every finding must cite one or more exact evidence IDs. Use exact numbers only when present in those records. Never use the words trader, trade, position, best, superior, decisive, recommendation, execution cost, or say visible notional supports an order size. Do not invent correlations, costs, borrow availability, hedge availability, probabilities, confidence scores, forecasts, trades, execution advice, or unsupported units. Suggested next questions must be answerable using LiquidFlux's available snapshot, funding-history, order-book, or comparison evidence; do not suggest unavailable full-depth or future data. If evidence is missing, limited, stale, conflicting, or unavailable, say so prominently. Do not merely restate every metric; explain why the available evidence matters. Return JSON only matching the schema.`;
 
 function cleanText(value, field, max = 2500) {
   if (typeof value !== "string" || !value.trim() || value.trim().length > max) throw new Error(`invalid_${field}`);
@@ -44,7 +44,13 @@ function validate(output, ids) {
     if (!Array.isArray(value) || value.length > max) throw new Error(`invalid_${field}`);
     return value.map((item) => cleanText(item, field, 500));
   };
-  return { answer: cleanText(output.answer, "answer"), findings, caveats: strings(output.caveats, "caveats", 8), next_questions: strings(output.next_questions, "next_questions", 4) };
+  const answer = cleanText(output.answer, "answer");
+  const caveats = strings(output.caveats, "caveats", 8);
+  const prohibited = /\b(?:traders?|trades?|positions?|best|superior|decisive|recommend(?:ation|ed)?|execution costs?|supports? (?:a |an )?(?:larger|bigger) order)\b/i;
+  if ([answer, ...findings.map((item) => item.text)].some((text) => prohibited.test(text))) throw new Error("invalid_claim_scope");
+  const nextQuestions = strings(output.next_questions, "next_questions", 4).filter((text) =>
+    !/\b(?:beyond (?:the )?(?:top )?20|longer than 72|other venues?|binance|coinbase|future)\b/i.test(text));
+  return { answer, findings, caveats, next_questions: nextQuestions };
 }
 function providers(env) {
   return (env.AI_PROVIDER_ORDER || "gemini,groq").split(",").map((x) => x.trim()).flatMap((provider) => {
@@ -101,7 +107,14 @@ export function buildEvidenceLedger(overview) {
   const ledger = [{ id: "source:overview", kind: "provenance", data: overview.evidence }];
   for (const market of overview.markets || []) {
     const symbol = market.symbol;
-    ledger.push({ id: `${symbol}:snapshot`, kind: "market_snapshot", symbol, data: { status: market.status, facts: market.facts, calculations: market.calculations, notices: market.notices } });
+    const facts = market.facts || {};
+    ledger.push({ id: `${symbol}:snapshot`, kind: "market_snapshot", symbol, data: {
+      status: market.status,
+      funding: facts.funding ? { hourly_rate_decimal: facts.funding.hourly_rate, annualized_simple_percent: market.calculations?.funding?.annualized_simple_percent } : null,
+      basis: facts.basis ? { ...facts.basis, mark_oracle_deviation_percent: market.calculations?.basis?.mark_oracle_deviation_percent, interpretation: "not executable spot/perp basis" } : null,
+      liquidity: facts.liquidity ? { ...facts.liquidity, ...market.calculations?.liquidity, interpretation: "snapshot metrics; not an executable quote or fill guarantee" } : null,
+      risk: facts.risk || null, notices: market.notices,
+    } });
     if (market.research?.funding_history) {
       const history = market.research.funding_history;
       ledger.push({ id: `${symbol}:funding_history_72h`, kind: "funding_history", symbol, data: {
