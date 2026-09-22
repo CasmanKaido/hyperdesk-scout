@@ -138,7 +138,7 @@ function providers(env) {
   return (env.AI_PROVIDER_ORDER || "gemini,groq").split(",").map((x) => x.trim()).flatMap((provider) => {
     const key = provider === "gemini" ? env.GEMINI_API_KEY : provider === "groq" ? env.GROQ_API_KEY : null;
     if (!key) return [];
-    return [{ provider, key, model: provider === "gemini" ? (env.GEMINI_MODEL || "gemini-3.8-flash") : (env.GROQ_MODEL || "openai/gpt-oss-20b") }];
+    return [{ provider, key, model: provider === "gemini" ? (env.GEMINI_MODEL || "gemini-3.6-flash") : (env.GROQ_MODEL || "openai/gpt-oss-20b") }];
   });
 }
 function request(config, input, signal) {

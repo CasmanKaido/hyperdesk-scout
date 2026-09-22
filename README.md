@@ -8,7 +8,7 @@ Local UI verification: `node scripts/browser-smoke.js` runs bounded desktop (144
 
 LiquidFlux is a read-only Hyperliquid information and strategy-analysis service distributed through OKX.AI. Its product goal is conversational market information without an implicit strategy, plus separately reviewed market-neutral strategy analysis. Deterministic first-party Funding, Liquidity, Risk, and Synthesis modules process market evidence; configured AI providers interpret requests and explain a server-built evidence ledger. Displayed numeric findings are generated deterministically from the ledger, not by the model. AI prose (answer and caveats) may quote ledger numbers, but every numeric token is verified against trusted code-extracted values: exact-precision match required, % signs allowed only on `_percent`/`_fraction`-derived fields, and numbers scoped to the symbol mentioned in the sentence. Model unit conversions, invented figures, and prescriptive wording are rejected sentence by sentence; a deterministic grounded conclusion is shown if all model prose is rejected. Transient provider rate-limit/server errors are retried once before analysis is reported unavailable. Citation validation proves referenced records exist; it does not independently fact-check model prose.
 
-**Status (2026-09-22):** `market_information`, `POST /api/v1/market-overview`, and short-reply support are implemented and deployed. All 117 automated tests and syntax/JSON checks pass. Version `0.7.8` is verified live on Render: a detailed evidence question returned a five-sentence grounded answer quoting exact ledger figures (snapshot and 72-hour rates, retrospective APR, visible-level limits) that all passed the number-grounding gate, via Groq. Direct live Hyperliquid BTC funding-history and L2-book calls passed, plus fixture-backed desktop/mobile Chrome journeys. Gemini live success remains unverified (see Evidence and security limitations). Strategy approval is a browser workflow, not API authorization. No external paid specialist, payment, or trade execution is implemented. See [`AUDIT.md`](AUDIT.md) for code-grounded gaps and validation requirements. The URLs and marketplace records below are historical project references, not freshly verified by this audit.
+**Status (2026-09-22):** `market_information`, `POST /api/v1/market-overview`, and short-reply support are implemented and deployed. All 117 automated tests and syntax/JSON checks pass. Version `0.7.8` is verified live on Render: a detailed evidence question returned a five-sentence grounded answer quoting exact ledger figures (snapshot and 72-hour rates, retrospective APR, visible-level limits) that all passed the number-grounding gate, via Groq. Direct live Hyperliquid BTC funding-history and L2-book calls passed, plus fixture-backed desktop/mobile Chrome journeys. Gemini (`gemini-3.6-flash`) is verified live with a real key; its free-tier quota is small, so Groq fallback remains load-bearing (see Evidence and security limitations). Strategy approval is a browser workflow, not API authorization. No external paid specialist, payment, or trade execution is implemented. See [`AUDIT.md`](AUDIT.md) for code-grounded gaps and validation requirements. The URLs and marketplace records below are historical project references, not freshly verified by this audit.
 
 - **Live dashboard:** https://hyperdesk-scout.onrender.com
 - **Live API origin:** https://hyperdesk-scout.onrender.com
@@ -61,7 +61,7 @@ Trust boundaries: deterministic code fetches data, computes evidence, and verifi
 
 The dependency-free dashboard is served by the existing Node service. Its conversational workspace calls `POST /api/v1/plan` to create, refine, or explain the active plan, but it calls `POST /api/v1/orchestrate` only after explicit plan approval. It includes:
 
-- An in-session, bounded natural-language conversation with Gemini preferred and Groq fallback. Both adapters use documented structured-output contracts. Groq (`openai/gpt-oss-20b`) is verified live in production; the Gemini adapter was corrected to the official `generateContent` contract but its live success is still unverified
+- An in-session, bounded natural-language conversation with Gemini preferred and Groq fallback. Both adapters use documented structured-output contracts and both are verified live: Gemini (`gemini-3.6-flash`) completed a full grounded analysis with a real key; Groq (`openai/gpt-oss-20b`) is verified in production
 - Follow-up plan revisions that preserve validated current constraints
 - Initial evidence-grounded analysis after a confirmed fetch: snapshot data, 72-hour funding persistence, visible L2-book notional, and validated finding citations
 - Compact plan summaries in the conversation plus editable deterministic controls and a manual fallback
@@ -175,7 +175,7 @@ Set the following values in the process or deployment environment. `npm start` d
 | `GROQ_API_KEY` | unset | Server-side Groq fallback key; never expose it to browser code or commit it |
 | `AI_PROVIDER_ORDER` | `gemini,groq` | Ordered provider preference; unconfigured providers are skipped |
 | `AI_PLANNER_TIMEOUT_MS` | `15000` | Timeout applied separately to each configured AI provider |
-| `GEMINI_MODEL` | `gemini-3.8-flash` | Gemini planner model override |
+| `GEMINI_MODEL` | `gemini-3.6-flash` | Gemini planner model override |
 | `GROQ_MODEL` | `openai/gpt-oss-20b` | Groq planner model override |
 
 ## Deployment
@@ -200,7 +200,7 @@ The image includes a health check against `/health` and runs as the unprivileged
 - Strategy scoring fails closed: invalid or non-finite inputs become `null`, are listed in `missing_evidence`, and block dependent scores rather than being coerced to zero.
 - Conversation and evidence context are supplied by the client and bounded, but not authenticated. Prompt instructions and output schemas do not prove factual grounding or injection resistance.
 - Browser history is in-memory and truncated, not durable storage. Public routes have rate limiting but no user authentication; CORS is not authorization.
-- Gemini tests mock the expected response shape; real endpoint/model compatibility and fallback causes require separate provider verification.
+- Gemini is verified live for the grounded-analysis path on `gemini-3.6-flash`; its free-tier quota is per-model and small (20 requests on `gemini-3.8-flash` during testing), so provider fallback and demo-sparing usage remain necessary. The planner path shares the same corrected adapter but was not separately smoke-tested.
 
 ## Validation
 

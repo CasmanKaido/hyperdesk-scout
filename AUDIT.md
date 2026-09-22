@@ -66,13 +66,9 @@ Follow-up the same day (v0.7.7–v0.7.8, commits `1fc3793`–`7e135d0`): the bla
 
 **Acceptance:** Describe today's boundary as browser review plus a read-only API. If analysis authorization becomes a requirement, bind approval server-side to the exact plan/provider/fee/version and invalidate on edits. Before any future spend or execution, require authenticated, expiring, replay-safe authorization and server-side limits; never reuse the current flag as permission.
 
-### P1 — Gemini live availability and prior failure cause remain unknown
+### P1 — Gemini live availability and prior failure cause — RESOLVED 2026-09-22
 
-**Updated evidence:** v0.7 replaces the incorrect `/v1beta/interactions` adapter with the documented `models/{model}:generateContent` contract, structured `generationConfig`, and candidate-part parsing. Unit tests cover that request/response shape for both planning and grounded analysis. Default model remains `gemini-3.8-flash`. Groq has a separate chat-completions adapter and ordered fallback; logs contain sanitized failure categories.
-
-**Impact:** Mocks cannot establish the real model's availability or the endpoint's request/response contract. Successful fallback would not prove Gemini works, nor identify whether failures arise from schema, model, authentication, quota, or transport.
-
-**Acceptance:** Check official provider contracts and configured model availability, then run isolated provider smoke tests with redacted response-shape evidence. Record selected provider/model, date, failure category, and deployment revision. Until then say “Gemini preferred when configured; Groq fallback,” not “Gemini verified” or “Gemini is broken because …”.
+**Resolved evidence:** The v0.7 adapter correction (`models/{model}:generateContent`, structured `generationConfig`, candidate-part parsing) was verified live with a real key. A direct `gemini-3.8-flash` call returned HTTP 200 with the expected `candidates[0].content.parts[].text` shape, but the key's free-tier quota for that model (20 requests) was exhausted, returning documented `RESOURCE_EXHAUSTED` 429s; `gemini-2.5-flash`/`gemini-2.0-flash` are deprecated (404, Google recommends `gemini-3.6-flash`). A full structured analyst call against `gemini-3.6-flash` completed with `answer_source: "ai_filtered"` — a five-sentence grounded answer whose quoted figures all passed the number gate. The default model is now `gemini-3.6-flash` in planner and analyst. The prior failure cause was the incorrect `/v1beta/interactions` adapter; no further contract issues were observed. Gemini free-tier quota is per-model and small, so Groq fallback remains load-bearing for demos.
 
 ### P1 — Evidence is useful but narrower than executable strategy intelligence
 

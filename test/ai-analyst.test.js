@@ -37,7 +37,7 @@ test("uses the official Gemini generateContent JSON contract", async () => {
   const analyst = createAIAnalyst({ env: { GEMINI_API_KEY: "secret" }, fetchImpl: async (url, options) => { call = { url, body: JSON.parse(options.body) }; return response({ candidates: [{ content: { parts: [{ thought: true, text: "hidden" }, { text: JSON.stringify(output) }] } }] }); } });
   const result = await analyst({ question: "What matters?", evidence });
   assert.equal(result.status, "completed");
-  assert.match(call.url, /models\/gemini-3\.8-flash:generateContent$/);
+  assert.match(call.url, /models\/gemini-3\.6-flash:generateContent$/);
   assert.equal(call.body.generationConfig.responseMimeType, "application/json");
   assert.equal(call.body.contents[0].role, "user");
 });

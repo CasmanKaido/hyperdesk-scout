@@ -324,7 +324,7 @@ function configuredProviders(env) {
       provider,
       apiKey: apiKey.trim(),
       model: provider === "gemini"
-        ? (env.GEMINI_MODEL || "gemini-3.8-flash")
+        ? (env.GEMINI_MODEL || "gemini-3.6-flash")
         : (env.GROQ_MODEL || "openai/gpt-oss-20b"),
     }];
   });

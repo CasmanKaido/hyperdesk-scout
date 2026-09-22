@@ -278,7 +278,7 @@ test("uses Gemini and appends deterministic planner metadata", async () => {
 
   const result = await planner({ message: "Create a cautious BTC funding plan" });
 
-  assert.equal(captured.url, "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent");
+  assert.equal(captured.url, "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent");
   assert.equal(captured.options.headers["x-goog-api-key"], "gemini-secret");
   const requestBody = JSON.parse(captured.options.body);
   assert.equal(requestBody.generationConfig.responseMimeType, "application/json");
@@ -311,7 +311,7 @@ test("uses Gemini and appends deterministic planner metadata", async () => {
   assert.equal(result.intent, "plan_update");
   assert.equal(result.reply, "I updated the funding-income review plan.");
   assert.equal(result.provider, "gemini");
-  assert.equal(result.model, "gemini-3.8-flash");
+  assert.equal(result.model, "gemini-3.6-flash");
   assert.deepEqual(result.symbols, ["BTC", "ETH"]);
   assert.equal(result.approval_required, true);
   assert.equal(result.execution_included, false);
