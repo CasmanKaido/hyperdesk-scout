@@ -121,8 +121,8 @@ function validate(output, ids, evidence) {
     return value.map((item) => cleanText(item, field, 500));
   };
   const rawAnswer = cleanText(output.answer, "answer");
-  const caveats = strings(output.caveats, "caveats", 8);
   const prohibited = /\b(?:traders?|trades?|positions?|best|superior|decisive|recommend(?:ation|ed)?|costs?|supports? (?:a |an )?(?:larger|bigger) order)\b/i;
+  const caveats = strings(output.caveats, "caveats", 8).filter((item) => !prohibited.test(item) && numbersGrounded(item, evidence));
   const filteredAnswer = rawAnswer.split(/(?<=[.!?])\s+/).filter((sentence) =>
     !prohibited.test(sentence) && numbersGrounded(sentence, evidence)).join(" ").trim();
   const answer = filteredAnswer || canonicalAnswer(evidence);
@@ -167,19 +167,29 @@ export function createAIAnalyst({ env = process.env, fetchImpl = globalThis.fetc
     const configured = providers(env);
     if (!configured.length) return { status: "unavailable", reason: "not_configured" };
     for (const config of configured) {
-      const controller = new AbortController();
-      const timer = setTimeout(() => controller.abort(), timeoutMs);
-      try {
-        const call = request(config, { question: question.trim(), evidence }, controller.signal);
-        const response = await fetchImpl(call.url, call.options);
-        if (!response?.ok) throw new Error(`http_${response?.status || 0}`);
-        const body = await response.json();
-        const text = config.provider === "gemini" ? body?.candidates?.[0]?.content?.parts?.filter((p) => !p.thought && typeof p.text === "string").map((p) => p.text).join("") : body?.choices?.[0]?.message?.content;
-        if (typeof text !== "string") throw new Error("invalid_response");
-        return { status: "completed", ...validate(JSON.parse(text), ids, evidence), provider: config.provider, model: config.model, grounding: "references_validated_not_fact_verified" };
-      } catch (error) {
-        logger?.warn?.(JSON.stringify({ event: "ai_analyst_failed", provider: config.provider, model: config.model, reason: reason(error) }));
-      } finally { clearTimeout(timer); }
+      // One retry on rate-limit/server errors: transient provider failures should not
+      // surface as unavailable analysis when a immediate second attempt would succeed.
+      for (let attempt = 0; attempt < 2; attempt++) {
+        const controller = new AbortController();
+        const timer = setTimeout(() => controller.abort(), timeoutMs);
+        try {
+          const call = request(config, { question: question.trim(), evidence }, controller.signal);
+          const response = await fetchImpl(call.url, call.options);
+          if (!response?.ok) throw new Error(`http_${response?.status || 0}`);
+          const body = await response.json();
+          const text = config.provider === "gemini" ? body?.candidates?.[0]?.content?.parts?.filter((p) => !p.thought && typeof p.text === "string").map((p) => p.text).join("") : body?.choices?.[0]?.message?.content;
+          if (typeof text !== "string") throw new Error("invalid_response");
+          return { status: "completed", ...validate(JSON.parse(text), ids, evidence), provider: config.provider, model: config.model, grounding: "references_validated_not_fact_verified" };
+        } catch (error) {
+          const cause = reason(error);
+          logger?.warn?.(JSON.stringify({ event: "ai_analyst_failed", provider: config.provider, model: config.model, reason: cause, attempt: attempt + 1 }));
+          if (attempt === 0 && /^http_(429|5\d\d)$/.test(cause)) {
+            await new Promise((resolve) => setTimeout(resolve, 1500));
+            continue;
+          }
+          break;
+        } finally { clearTimeout(timer); }
+      }
     }
     return { status: "unavailable", reason: "providers_failed" };
   };

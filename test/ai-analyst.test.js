@@ -129,6 +129,33 @@ test("uses grounded model findings when no deterministic findings exist", async 
   assert.match(result.findings[0].text, /17\.52%/);
 });
 
+test("filters caveats with invented numbers or prescriptive wording", async () => {
+  const ledger = [
+    { id: "BTC:funding_history_72h", kind: "funding_history", symbol: "BTC", data: { status: "available", observed_samples: 72, expected_samples: 72, positive_share_fraction: 1, sign_reversals: 0, retrospective_simple_apr_percent: 10.124954 } },
+  ];
+  const model = { ...output, findings: [{ text: "Funding persisted.", evidence_ids: ["BTC:funding_history_72h"] }], caveats: ["Only 72 hourly settlements were observed.", "The spread implies a 4.2% execution advantage.", "This is best for traders."] };
+  const analyst = createAIAnalyst({ env: { GROQ_API_KEY: "secret" }, fetchImpl: async () => response({ choices: [{ message: { content: JSON.stringify(model) } }] }) });
+  const result = await analyst({ question: "What matters?", evidence: ledger });
+  assert.deepEqual(result.caveats, ["Only 72 hourly settlements were observed."]);
+});
+
+test("retries once on rate limits before succeeding", async () => {
+  let calls = 0;
+  const analyst = createAIAnalyst({ env: { GROQ_API_KEY: "secret" }, logger: { warn() {} }, fetchImpl: async () => { calls++; return calls === 1 ? response({}, false, 429) : response({ choices: [{ message: { content: JSON.stringify(output) } }] }); } });
+  const result = await analyst({ question: "What matters?", evidence });
+  assert.equal(calls, 2);
+  assert.equal(result.status, "completed");
+});
+
+test("does not retry validation failures", async () => {
+  let calls = 0;
+  const bad = { ...output, findings: [{ text: "Invented", evidence_ids: ["ETH:missing"] }] };
+  const analyst = createAIAnalyst({ env: { GROQ_API_KEY: "secret" }, logger: { warn() {} }, fetchImpl: async () => { calls++; return response({ choices: [{ message: { content: JSON.stringify(bad) } }] }); } });
+  const result = await analyst({ question: "What matters?", evidence });
+  assert.equal(calls, 1);
+  assert.deepEqual(result, { status: "unavailable", reason: "providers_failed" });
+});
+
 test("returns safe unavailable states for absent keys and failed providers", async () => {
   assert.deepEqual(await createAIAnalyst({ env: {} })({ question: "What?", evidence }), { status: "unavailable", reason: "not_configured" });
   const logs = [];
