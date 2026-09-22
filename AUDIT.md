@@ -27,6 +27,17 @@ Render reported version `0.5.0` after implementation commit `94384f6` was pushed
 
 All three planner calls selected Groq `openai/gpt-oss-20b`. Gemini remains unverified. These samples do not guarantee general model accuracy. Information replies used premature “here’s an overview” wording despite returning only an information proposal; the browser correctly presents the free fetch confirmation. Improve that wording without treating model text as fetch authorization. Visual desktop/mobile validation remains outstanding; exact-query “yes” confirmation is covered by automated frontend tests.
 
+## Production API verification — 2026-09-22 (v0.7.6)
+
+Render reported version `0.7.6` after commit `c1b109e`. A live `/api/v1/market-overview` check (not a browser or marketplace invocation) asked whether BTC funding had been persistently positive over 72 hours and how visible book liquidity looked, across BTC and ETH with funding/liquidity topics:
+
+- `analysis.status: "completed"`, `answer_source: "ai_filtered"`, provider Groq `openai/gpt-oss-20b`.
+- All displayed numeric findings were canonical deterministic strings from the server-built ledger (settlement coverage, positive share, sign reversals, retrospective simple APR, visible spread bps, visible notional within 10 bps), each citing stable evidence IDs.
+- Caveats stated the retrospective/snapshot limits without forecasting; `next_questions` was empty as designed.
+- The one-sentence AI answer was grounded but thin; substantive detail lives in the deterministic findings. Deepening prose quality without reintroducing invented claims remains open work.
+
+This verification exercised the grounded-analysis mitigations added after earlier live failures: deterministic numeric rendering (a model had mislabeled `0.001219%` as `1.219 bps`, a 10× error), a semantic gate rejecting prescriptive/unsupported prose (a model had called a bounded book snapshot "decisive for traders"), removal of model-invented follow-up questions, and a deterministic fallback conclusion when all model prose is rejected. These mitigate displayed-output risk; they do not prove general model accuracy, and Gemini live behavior remains unverified.
+
 ## Findings and priorities
 
 ### P0 — Complete and validate the information/strategy split

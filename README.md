@@ -6,9 +6,9 @@ The conversation is the main interface. Ask a market question or request a strat
 
 Local UI verification: `node scripts/browser-smoke.js` runs bounded desktop (1440×1000) and mobile (390×844) Chrome checks using fixture planner replies and market data. It checks both flows, archived evidence, duplicate IDs, runtime errors, and horizontal overflow. Requires Google Chrome at the standard macOS application path; screenshots go to ignored `.tmp/`. This checks UI behavior, not live-model accuracy.
 
-LiquidFlux is a read-only Hyperliquid information and strategy-analysis service distributed through OKX.AI. Its product goal is conversational market information without an implicit strategy, plus separately reviewed market-neutral strategy analysis. Deterministic first-party Funding, Liquidity, Risk, and Synthesis modules process market evidence; configured AI providers interpret requests and explain a server-built evidence ledger. Citation validation proves referenced records exist; it does not independently fact-check model prose.
+LiquidFlux is a read-only Hyperliquid information and strategy-analysis service distributed through OKX.AI. Its product goal is conversational market information without an implicit strategy, plus separately reviewed market-neutral strategy analysis. Deterministic first-party Funding, Liquidity, Risk, and Synthesis modules process market evidence; configured AI providers interpret requests and explain a server-built evidence ledger. Displayed numeric findings are generated deterministically from the ledger, not by the model; AI prose passes a semantic gate that rejects prescriptive or unsupported claims, and a deterministic grounded conclusion is shown if all model prose is rejected. Citation validation proves referenced records exist; it does not independently fact-check model prose.
 
-**Status (2026-09-19):** `market_information`, `POST /api/v1/market-overview`, and short-reply support are implemented locally. All 106 automated tests and syntax/JSON checks pass. Direct live Hyperliquid BTC funding-history and L2-book calls passed, plus fixture-backed desktop/mobile Chrome journeys. Live AI/deployment verification is recorded separately when performed. Strategy approval is a browser workflow, not API authorization. No external paid specialist, payment, or trade execution is implemented. See [`AUDIT.md`](AUDIT.md) for code-grounded gaps and validation requirements. The URLs and marketplace records below are historical project references, not freshly verified by this audit.
+**Status (2026-09-22):** `market_information`, `POST /api/v1/market-overview`, and short-reply support are implemented and deployed. All 109 automated tests and syntax/JSON checks pass. Version `0.7.6` is verified live on Render: a funding-persistence question returned `analysis.status: "completed"` via Groq with canonical deterministic findings, grounded caveats, and no unsupported follow-ups. Direct live Hyperliquid BTC funding-history and L2-book calls passed, plus fixture-backed desktop/mobile Chrome journeys. Gemini live success remains unverified (see Evidence and security limitations). Strategy approval is a browser workflow, not API authorization. No external paid specialist, payment, or trade execution is implemented. See [`AUDIT.md`](AUDIT.md) for code-grounded gaps and validation requirements. The URLs and marketplace records below are historical project references, not freshly verified by this audit.
 
 - **Live dashboard:** https://hyperdesk-scout.onrender.com
 - **Live API origin:** https://hyperdesk-scout.onrender.com
@@ -30,7 +30,7 @@ Existing marketplace products already expose individual Hyperliquid analytics, r
 
 The dependency-free dashboard is served by the existing Node service. Its conversational workspace calls `POST /api/v1/plan` to create, refine, or explain the active plan, but it calls `POST /api/v1/orchestrate` only after explicit plan approval. It includes:
 
-- An in-session, bounded natural-language conversation with Gemini preferred and Groq fallback. Both adapters use documented structured-output contracts; provider availability still requires live verification
+- An in-session, bounded natural-language conversation with Gemini preferred and Groq fallback. Both adapters use documented structured-output contracts. Groq (`openai/gpt-oss-20b`) is verified live in production; the Gemini adapter was corrected to the official `generateContent` contract but its live success is still unverified
 - Follow-up plan revisions that preserve validated current constraints
 - Initial evidence-grounded analysis after a confirmed fetch: snapshot data, 72-hour funding persistence, visible L2-book notional, and validated finding citations
 - Compact plan summaries in the conversation plus editable deterministic controls and a manual fallback
@@ -166,14 +166,14 @@ The image includes a health check against `/health` and runs as the unprivileged
 
 - Funding annualization is a snapshot, not a forecast. Basis is mark/oracle deviation, not an executable hedged spread; liquidity/risk scores are heuristics, not fill guarantees or loss probabilities.
 - All internal specialists share one snapshot. Local fetch timestamps do not establish exchange event time. Fees, borrow/hedge availability, funding persistence, and net strategy return are not established.
-- Existing strategy scoring can coerce invalid numeric inputs to zero; the new overview's null handling does not fix that path. Strategy missing-evidence handling remains a priority.
+- Strategy scoring fails closed: invalid or non-finite inputs become `null`, are listed in `missing_evidence`, and block dependent scores rather than being coerced to zero.
 - Conversation and evidence context are supplied by the client and bounded, but not authenticated. Prompt instructions and output schemas do not prove factual grounding or injection resistance.
 - Browser history is in-memory and truncated, not durable storage. Public routes have rate limiting but no user authentication; CORS is not authorization.
 - Gemini tests mock the expected response shape; real endpoint/model compatibility and fallback causes require separate provider verification.
 
 ## Validation
 
-Local integration validation: 106/106 tests passed, syntax/JSON checks passed, direct live BTC funding-history and L2-book calls passed, and desktop/mobile Chrome journeys passed with fixture AI responses. Real provider understanding and v0.7 deployment need separate verification:
+Local integration validation: 109/109 tests passed, syntax/JSON checks passed, direct live BTC funding-history and L2-book calls passed, and desktop/mobile Chrome journeys passed with fixture AI responses. Deployment verification (2026-09-22): `/health` reported `0.7.6` and a live `/api/v1/market-overview` funding-persistence request completed through Groq with `answer_source: "ai_filtered"`, deterministic canonical findings, and empty `next_questions`. Gemini live behavior still needs separate verification:
 
 ```bash
 npm test
