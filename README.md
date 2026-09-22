@@ -26,6 +26,37 @@ Existing marketplace products already expose individual Hyperliquid analytics, r
 
 ![LiquidFlux analysis workspace](assets/screenshots/dashboard-result.png)
 
+## Architecture
+
+```mermaid
+flowchart TD
+    U[User] --> UI[Chat-first browser workspace]
+    U -->|direct API| API
+    OKX[OKX.AI marketplace] -->|A2MCP service calls| API
+
+    subgraph S[Node service - no dependencies]
+        API[HTTP API handler]
+        PL[Conversational planner<br/>intent + plan revision]
+        AN[Evidence analyst<br/>grounded explanation]
+        LG[Evidence ledger builder<br/>stable IDs, unit-labeled fields]
+        SP[Deterministic specialists<br/>Funding / Liquidity / Risk / Synthesis]
+        GT[Grounding gates<br/>number verification, semantic filter,<br/>deterministic fallback]
+        API --> PL
+        API --> LG
+        LG --> AN --> GT
+        API --> SP
+    end
+
+    PL -->|structured output| AI{AI providers<br/>Gemini then Groq}
+    AN -->|question + ledger| AI
+    MD[Market data cache] --> HL[(Hyperliquid API<br/>snapshot / 72h funding / L2 book)]
+    API --> MD
+    LG --> MD
+    SP --> MD
+```
+
+Trust boundaries: deterministic code fetches data, computes evidence, and verifies every number the AI quotes; AI providers only interpret requests and explain the ledger. The browser review step gates strategy runs; no wallet, payment, or execution path exists in this version.
+
 ## Research workspace
 
 The dependency-free dashboard is served by the existing Node service. Its conversational workspace calls `POST /api/v1/plan` to create, refine, or explain the active plan, but it calls `POST /api/v1/orchestrate` only after explicit plan approval. It includes:
