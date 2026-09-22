@@ -156,6 +156,17 @@ test("does not retry validation failures", async () => {
   assert.deepEqual(result, { status: "unavailable", reason: "providers_failed" });
 });
 
+test("grounds prose referencing the visible band constant", async () => {
+  const ledger = [
+    { id: "BTC:order_book", kind: "order_book", symbol: "BTC", data: { status: "available", spread_bps: 0.123077, bid_visible_notional_within_10bps: 8019856.7, ask_visible_notional_within_10bps: 2462143.2, visible_band_bps: 10 } },
+  ];
+  const model = { ...output, findings: [{ text: "Book is bounded.", evidence_ids: ["BTC:order_book"] }], answer: "The visible notional is measured within 10 bps of midpoint and reflects only this bounded snapshot." };
+  const analyst = createAIAnalyst({ env: { GROQ_API_KEY: "secret" }, fetchImpl: async () => response({ choices: [{ message: { content: JSON.stringify(model) } }] }) });
+  const result = await analyst({ question: "What does the book show?", evidence: ledger });
+  assert.equal(result.answer_source, "ai_filtered");
+  assert.match(result.answer, /within 10 bps of midpoint/);
+});
+
 test("returns safe unavailable states for absent keys and failed providers", async () => {
   assert.deepEqual(await createAIAnalyst({ env: {} })({ question: "What?", evidence }), { status: "unavailable", reason: "not_configured" });
   const logs = [];

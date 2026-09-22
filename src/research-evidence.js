@@ -24,7 +24,7 @@ function bookEmpty(status, notices = []) {
     best_bid: null, best_ask: null, spread_bps: null,
     bid_visible_notional_within_10bps: null, ask_visible_notional_within_10bps: null,
     bid_level_count: null, ask_level_count: null, top_level_count: null,
-    band_reference: "snapshot_midpoint", notional_unit: "quote_currency",
+    visible_band_bps: 10, band_reference: "snapshot_midpoint", notional_unit: "quote_currency",
     notices };
 }
 
