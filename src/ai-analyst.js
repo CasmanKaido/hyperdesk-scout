@@ -24,7 +24,7 @@ const SCHEMA = {
 };
 const PROMPT = `You are LiquidFlux's evidence analyst. Answer the user's market research question from the supplied server-built evidence ledger only.
 Write three to six sentences: a direct qualitative answer to the question, the strongest supporting evidence, any contradictions or asymmetries, what could invalidate the conclusion, and what remains unknown. Compare markets when more than one is supplied. Distinguish a current snapshot from 72-hour history. Do not merely restate every metric; explain why the available evidence matters for the question.
-You may quote numeric values exactly as they appear in ledger fields, with the units given in field names: values in fields ending in _percent may be written with a % sign, and values in fields ending in _fraction may be written as their percentage equivalent. Never convert units, rescale, or compute new values; never rename decimal fractions as ppm; if a number is not in the ledger, do not state one. LiquidFlux separately renders key numeric findings deterministically, so interpret the evidence rather than listing every metric.
+You may quote numeric values exactly as they appear in ledger fields, with the units given in field names: values in fields ending in _percent may be written with a % sign, and values in fields ending in _fraction may be written as their percentage equivalent. Round large notional values to whole units when quoting them. Never convert units, rescale, or compute new values; never rename decimal fractions as ppm; if a number is not in the ledger, do not state one. LiquidFlux separately renders key numeric findings deterministically, so interpret the evidence rather than listing every metric.
 Historical APR is retrospective simple annualization, never a forecast. Visible order-book notional is one bounded snapshot, not an executable quote, fill guarantee, durable liquidity measure, recommendation, or basis for saying what is decisive for traders. Describe asymmetry without calling either market superior. Mark/oracle deviation is not spot/perp basis. Venue leverage limits are not recommendations. Describe historical funding as observed persistence, not stable future carry.
 Every finding must cite one or more exact evidence IDs. Use exact numbers only when present in those records. Never use the words trader, trade, position, best, superior, decisive, recommendation, execution cost, or say visible notional supports an order size. Do not invent correlations, costs, borrow availability, hedge availability, probabilities, confidence scores, forecasts, trades, execution advice, or unsupported units. Suggested next questions must be answerable using LiquidFlux's available snapshot, funding-history, order-book, or comparison evidence; do not suggest unavailable full-depth or future data. If evidence is missing, limited, stale, conflicting, or unavailable, say so prominently. Return JSON only matching the schema.`;
 
@@ -95,7 +95,7 @@ function numbersGrounded(text, evidence) {
   for (const match of text.matchAll(NUMBER_TOKEN)) {
     const token = match[0];
     const after = text.slice(match.index + token.length);
-    const percent = token.endsWith("%") || /^\s*percent\b/i.test(after);
+    const percent = token.endsWith("%") || /^\s*(?:%|percent\b)/i.test(after);
     const raw = token.replace(/%$/, "").replace(/,/g, "");
     const value = Number(raw);
     if (!Number.isFinite(value)) return false;

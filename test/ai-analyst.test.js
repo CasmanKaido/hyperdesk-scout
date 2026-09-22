@@ -108,6 +108,17 @@ test("scopes quoted numbers to the symbol mentioned in the sentence", async () =
   assert.equal(result.answer, "BTC and ETH both observed 72 settlements. ETH shows a 5.5% retrospective simple APR.");
 });
 
+test("accepts a space before the percent sign", async () => {
+  const ledger = [
+    { id: "BTC:funding_history_72h", kind: "funding_history", symbol: "BTC", data: { status: "available", observed_samples: 72, expected_samples: 72, positive_share_fraction: 1, sign_reversals: 0, retrospective_simple_apr_percent: 13.75 } },
+  ];
+  const spaced = { ...output, findings: [{ text: "Funding persisted.", evidence_ids: ["BTC:funding_history_72h"] }], answer: "BTC funding was positive in every observed hour, a 100 % positive share with no sign reversals." };
+  const analyst = createAIAnalyst({ env: { GROQ_API_KEY: "secret" }, fetchImpl: async () => response({ choices: [{ message: { content: JSON.stringify(spaced) } }] }) });
+  const result = await analyst({ question: "Has funding persisted?", evidence: ledger });
+  assert.equal(result.answer_source, "ai_filtered");
+  assert.match(result.answer, /100 % positive share/);
+});
+
 test("accepts the percent word form and faithful rounding of ledger values", async () => {
   const ledger = [
     { id: "BTC:funding_history_72h", kind: "funding_history", symbol: "BTC", data: { status: "available", observed_samples: 72, expected_samples: 72, positive_share_fraction: 1, sign_reversals: 0, retrospective_simple_apr_percent: 13.75 } },

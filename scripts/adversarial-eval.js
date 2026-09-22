@@ -52,7 +52,7 @@ function ungroundedNumbers(text, ledger) {
   for (const match of text.matchAll(NUMBER_TOKEN)) {
     const token = match[0];
     const after = text.slice(match.index + token.length);
-    const percent = token.endsWith("%") || /^\s*percent\b/i.test(after);
+    const percent = token.endsWith("%") || /^\s*(?:%|percent\b)/i.test(after);
     const raw = token.replace(/%$/, "").replace(/,/g, "");
     const value = Number(raw);
     if (!Number.isFinite(value)) { bad.push(token); continue; }
