@@ -1,6 +1,6 @@
 {
   "name": "hyperdesk-scout",
-  "version": "0.7.6",
+  "version": "0.7.7",
   "private": true,
   "type": "module",
   "description": "Hyperliquid funding intelligence service for OKX AI A2MCP",
