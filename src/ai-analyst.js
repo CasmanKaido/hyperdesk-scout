@@ -23,8 +23,10 @@ const SCHEMA = {
   },
 };
 const PROMPT = `You are LiquidFlux's evidence analyst. Answer the user's market research question from the supplied server-built evidence ledger only.
-Lead with a qualitative conclusion, then explain the strongest supporting evidence, contradictions, what could invalidate the conclusion, and what remains unknown. Do not put numeric values or perform unit conversions in the answer; LiquidFlux renders numeric findings deterministically. Compare markets when more than one is supplied. Distinguish a current snapshot from 72-hour history. Historical APR is retrospective simple annualization, never a forecast. Visible order-book notional is one bounded snapshot, not an executable quote, fill guarantee, durable liquidity measure, recommendation, or basis for saying what is decisive for traders. Describe asymmetry without calling either market superior. Mark/oracle deviation is not spot/perp basis. Venue leverage limits are not recommendations. Rate field names in the ledger include their units; never rename decimal fractions as ppm. Describe historical funding as observed persistence, not stable future carry.
-Every finding must cite one or more exact evidence IDs. Use exact numbers only when present in those records. Never use the words trader, trade, position, best, superior, decisive, recommendation, execution cost, or say visible notional supports an order size. Do not invent correlations, costs, borrow availability, hedge availability, probabilities, confidence scores, forecasts, trades, execution advice, or unsupported units. Suggested next questions must be answerable using LiquidFlux's available snapshot, funding-history, order-book, or comparison evidence; do not suggest unavailable full-depth or future data. If evidence is missing, limited, stale, conflicting, or unavailable, say so prominently. Do not merely restate every metric; explain why the available evidence matters. Return JSON only matching the schema.`;
+Write three to six sentences: a direct qualitative answer to the question, the strongest supporting evidence, any contradictions or asymmetries, what could invalidate the conclusion, and what remains unknown. Compare markets when more than one is supplied. Distinguish a current snapshot from 72-hour history. Do not merely restate every metric; explain why the available evidence matters for the question.
+You may quote numeric values exactly as they appear in ledger fields, with the units given in field names: values in fields ending in _percent may be written with a % sign, and values in fields ending in _fraction may be written as their percentage equivalent. Never convert units, rescale, or compute new values; never rename decimal fractions as ppm; if a number is not in the ledger, do not state one. LiquidFlux separately renders key numeric findings deterministically, so interpret the evidence rather than listing every metric.
+Historical APR is retrospective simple annualization, never a forecast. Visible order-book notional is one bounded snapshot, not an executable quote, fill guarantee, durable liquidity measure, recommendation, or basis for saying what is decisive for traders. Describe asymmetry without calling either market superior. Mark/oracle deviation is not spot/perp basis. Venue leverage limits are not recommendations. Describe historical funding as observed persistence, not stable future carry.
+Every finding must cite one or more exact evidence IDs. Use exact numbers only when present in those records. Never use the words trader, trade, position, best, superior, decisive, recommendation, execution cost, or say visible notional supports an order size. Do not invent correlations, costs, borrow availability, hedge availability, probabilities, confidence scores, forecasts, trades, execution advice, or unsupported units. Suggested next questions must be answerable using LiquidFlux's available snapshot, funding-history, order-book, or comparison evidence; do not suggest unavailable full-depth or future data. If evidence is missing, limited, stale, conflicting, or unavailable, say so prominently. Return JSON only matching the schema.`;
 
 function cleanText(value, field, max = 2500) {
   if (typeof value !== "string" || !value.trim() || value.trim().length > max) throw new Error(`invalid_${field}`);
@@ -59,6 +61,51 @@ function canonicalAnswer(evidence) {
   return parts.join(" ") || "LiquidFlux retrieved evidence, but it is not sufficient for a stronger conclusion.";
 }
 
+// Number-grounding gate: prose may only quote values that trusted code extracted from the
+// unit-labeled ledger. *_percent values may carry a % sign; *_fraction values may appear as
+// their code-computed percentage. Everything else (including model unit conversions) fails.
+function numberPools(evidence) {
+  const global = { plain: [], percentOk: [] };
+  const bySymbol = new Map();
+  const collect = (value, key, pool) => {
+    if (typeof value === "number" && Number.isFinite(value)) {
+      pool.plain.push(value);
+      if (/_percent$/.test(key)) pool.percentOk.push(value);
+      if (/_fraction$/.test(key)) pool.percentOk.push(value * 100);
+      return;
+    }
+    if (Array.isArray(value)) { for (const item of value) collect(item, key, pool); return; }
+    if (value && typeof value === "object") for (const [k, v] of Object.entries(value)) collect(v, k, pool);
+  };
+  for (const item of evidence) {
+    const symbol = typeof item?.symbol === "string" && item.symbol ? item.symbol : null;
+    if (symbol && !bySymbol.has(symbol)) bySymbol.set(symbol, { plain: [], percentOk: [] });
+    collect(item?.data, "", symbol ? bySymbol.get(symbol) : global);
+  }
+  return { global, bySymbol };
+}
+const NUMBER_TOKEN = /(?<![\w.])-?\d[\d,]*(?:\.\d+)?%?/g;
+function numbersGrounded(text, evidence) {
+  const symbols = [...new Set(evidence.map((item) => item?.symbol).filter((symbol) => typeof symbol === "string" && symbol))];
+  const pools = numberPools(evidence);
+  const mentioned = symbols.filter((symbol) => new RegExp(`\\b${symbol}\\b`).test(text));
+  const available = mentioned.length === 1
+    ? [pools.global, pools.bySymbol.get(mentioned[0])]
+    : [pools.global, ...pools.bySymbol.values()];
+  for (const match of text.matchAll(NUMBER_TOKEN)) {
+    const token = match[0];
+    const after = text.slice(match.index + token.length);
+    const percent = token.endsWith("%") || /^\s*percent\b/i.test(after);
+    const raw = token.replace(/%$/, "").replace(/,/g, "");
+    const value = Number(raw);
+    if (!Number.isFinite(value)) return false;
+    const tolerance = 0.5 * 10 ** -(raw.split(".")[1] || "").length + 1e-12;
+    const key = percent ? "percentOk" : "plain";
+    if (!available.some((pool) => pool?.[key].some((allowed) => Math.abs(allowed - value) <= tolerance))) return false;
+  }
+  return true;
+}
+
 function validate(output, ids, evidence) {
   if (!output || typeof output !== "object" || Array.isArray(output)) throw new Error("invalid_output");
   const allowed = new Set(["answer", "findings", "caveats", "next_questions"]);
@@ -77,11 +124,11 @@ function validate(output, ids, evidence) {
   const caveats = strings(output.caveats, "caveats", 8);
   const prohibited = /\b(?:traders?|trades?|positions?|best|superior|decisive|recommend(?:ation|ed)?|costs?|supports? (?:a |an )?(?:larger|bigger) order)\b/i;
   const filteredAnswer = rawAnswer.split(/(?<=[.!?])\s+/).filter((sentence) =>
-    !prohibited.test(sentence) && !/(?:^|\s)(?!72(?:\s|-|‑|–|—)?(?:hours?|h)\b)\d+(?:[.,]\d+)?/i.test(sentence)).join(" ").trim();
+    !prohibited.test(sentence) && numbersGrounded(sentence, evidence)).join(" ").trim();
   const answer = filteredAnswer || canonicalAnswer(evidence);
   const answer_source = filteredAnswer ? "ai_filtered" : "deterministic_fallback";
   const deterministicFindings = canonicalFindings(evidence);
-  const safeFindings = deterministicFindings.length ? deterministicFindings : findings.filter((item) => !prohibited.test(item.text) && !/\d/.test(item.text));
+  const safeFindings = deterministicFindings.length ? deterministicFindings : findings.filter((item) => !prohibited.test(item.text) && numbersGrounded(item.text, evidence));
   if (safeFindings.length < 1) throw new Error("invalid_claim_scope");
   strings(output.next_questions, "next_questions", 4);
   // Follow-up prompts must come from an actual tool-capability registry, not model imagination.

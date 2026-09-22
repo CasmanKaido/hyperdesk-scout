@@ -71,6 +71,64 @@ test("removes unsafe inference sentences and unavailable follow-up suggestions",
   assert.deepEqual(result.next_questions, []);
 });
 
+test("keeps rich prose that quotes exact ledger numbers", async () => {
+  const ledger = [
+    { id: "BTC:funding_history_72h", kind: "funding_history", symbol: "BTC", data: { status: "available", observed_samples: 72, expected_samples: 72, positive_share_fraction: 1, sign_reversals: 0, retrospective_simple_apr_percent: 10.124954 } },
+    { id: "BTC:order_book", kind: "order_book", symbol: "BTC", data: { status: "available", spread_bps: 0.123077, bid_visible_notional_within_10bps: 8019856.7, ask_visible_notional_within_10bps: 2462143.2 } },
+  ];
+  const rich = { ...output, findings: [{ text: "Funding persisted.", evidence_ids: ["BTC:funding_history_72h"] }], answer: "BTC funding was positive in 72 of 72 observed hourly settlements, a 100% positive share with 0 adjacent sign reversals. The retrospective simple APR is 10.12%, which describes realized carry rather than future rates. The visible book shows a 0.123 bps spread with about 8,019,857 bid-side notional within 10 bps of midpoint, but that is one bounded snapshot. What remains unknown is whether the observed persistence continues." };
+  const analyst = createAIAnalyst({ env: { GROQ_API_KEY: "secret" }, fetchImpl: async () => response({ choices: [{ message: { content: JSON.stringify(rich) } }] }) });
+  const result = await analyst({ question: "Has BTC funding persisted?", evidence: ledger });
+  assert.equal(result.answer_source, "ai_filtered");
+  assert.match(result.answer, /100% positive share/);
+  assert.match(result.answer, /10\.12%/);
+  assert.match(result.answer, /0\.123 bps/);
+  assert.match(result.answer, /8,019,857/);
+});
+
+test("drops sentences with invented, misconverted, or mislabeled numbers", async () => {
+  const ledger = [
+    { id: "BTC:funding_history_72h", kind: "funding_history", symbol: "BTC", data: { status: "available", observed_samples: 72, expected_samples: 72, positive_share_fraction: 1, sign_reversals: 2, retrospective_simple_apr_percent: 10.124954 } },
+    { id: "BTC:order_book", kind: "order_book", symbol: "BTC", data: { status: "available", spread_bps: 0.123077 } },
+  ];
+  const mixed = { ...output, findings: [{ text: "Funding persisted.", evidence_ids: ["BTC:funding_history_72h"] }], answer: "The spread is 1.219 bps, which is tight. Sign reversals occurred in 2% of the window. Funding persisted across the 72-hour window. The APR converts to 28.9 bps per day." };
+  const analyst = createAIAnalyst({ env: { GROQ_API_KEY: "secret" }, fetchImpl: async () => response({ choices: [{ message: { content: JSON.stringify(mixed) } }] }) });
+  const result = await analyst({ question: "What matters?", evidence: ledger });
+  assert.equal(result.answer, "Funding persisted across the 72-hour window.");
+});
+
+test("scopes quoted numbers to the symbol mentioned in the sentence", async () => {
+  const ledger = [
+    { id: "BTC:funding_history_72h", kind: "funding_history", symbol: "BTC", data: { status: "available", observed_samples: 72, expected_samples: 72, positive_share_fraction: 1, sign_reversals: 0, retrospective_simple_apr_percent: 10.124954 } },
+    { id: "ETH:funding_history_72h", kind: "funding_history", symbol: "ETH", data: { status: "available", observed_samples: 72, expected_samples: 72, positive_share_fraction: 0.9, sign_reversals: 1, retrospective_simple_apr_percent: 5.5 } },
+  ];
+  const crossed = { ...output, findings: [{ text: "Funding persisted.", evidence_ids: ["BTC:funding_history_72h"] }], answer: "BTC shows a 5.5% retrospective simple APR. BTC and ETH both observed 72 settlements. ETH shows a 5.5% retrospective simple APR." };
+  const analyst = createAIAnalyst({ env: { GROQ_API_KEY: "secret" }, fetchImpl: async () => response({ choices: [{ message: { content: JSON.stringify(crossed) } }] }) });
+  const result = await analyst({ question: "Compare BTC and ETH funding.", evidence: ledger });
+  assert.equal(result.answer, "BTC and ETH both observed 72 settlements. ETH shows a 5.5% retrospective simple APR.");
+});
+
+test("accepts the percent word form and faithful rounding of ledger values", async () => {
+  const ledger = [
+    { id: "BTC:funding_history_72h", kind: "funding_history", symbol: "BTC", data: { status: "available", observed_samples: 72, expected_samples: 72, positive_share_fraction: 1, sign_reversals: 0, retrospective_simple_apr_percent: 13.75 } },
+  ];
+  const worded = { ...output, findings: [{ text: "Funding persisted.", evidence_ids: ["BTC:funding_history_72h"] }], answer: "Every observed settlement was positive, a 100 percent positive share. The retrospective simple APR rounds to 13.8%." };
+  const analyst = createAIAnalyst({ env: { GROQ_API_KEY: "secret" }, fetchImpl: async () => response({ choices: [{ message: { content: JSON.stringify(worded) } }] }) });
+  const result = await analyst({ question: "Has funding persisted?", evidence: ledger });
+  assert.equal(result.answer_source, "ai_filtered");
+  assert.match(result.answer, /100 percent positive share/);
+  assert.match(result.answer, /13\.8%/);
+});
+
+test("uses grounded model findings when no deterministic findings exist", async () => {
+  const snapshotOnly = [{ id: "BTC:snapshot", kind: "market_snapshot", symbol: "BTC", data: { status: "available", funding: { hourly_rate_decimal: 0.00002, annualized_simple_percent: 17.52 } } }];
+  const model = { ...output, findings: [{ text: "The snapshot annualizes funding to 17.52%.", evidence_ids: ["BTC:snapshot"] }, { text: "The hourly rate is 0.002% per hour.", evidence_ids: ["BTC:snapshot"] }] };
+  const analyst = createAIAnalyst({ env: { GROQ_API_KEY: "secret" }, fetchImpl: async () => response({ choices: [{ message: { content: JSON.stringify(model) } }] }) });
+  const result = await analyst({ question: "What does the snapshot show?", evidence: snapshotOnly });
+  assert.equal(result.findings.length, 1);
+  assert.match(result.findings[0].text, /17\.52%/);
+});
+
 test("returns safe unavailable states for absent keys and failed providers", async () => {
   assert.deepEqual(await createAIAnalyst({ env: {} })({ question: "What?", evidence }), { status: "unavailable", reason: "not_configured" });
   const logs = [];
