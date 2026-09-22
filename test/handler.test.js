@@ -4,6 +4,7 @@ import { createRequestHandler } from "../src/handler.js";
 import { UpstreamError } from "../src/hyperliquid.js";
 import { createRateLimiter } from "../src/rate-limit.js";
 import { createAIPlanner, PlannerError } from "../src/ai-planner.js";
+import { VERSION } from "../src/version.js";
 
 const market = {
   symbol: "ETH",
@@ -39,7 +40,7 @@ test("serves a discoverable index and health without market data", async () => {
 
   const result = await handle({ method: "GET", pathname: "/health" });
   assert.equal(result.status, 200);
-  assert.deepEqual(result.body, { status: "ok", service: "hyperdesk-scout", version: "0.7.6" });
+  assert.deepEqual(result.body, { status: "ok", service: "hyperdesk-scout", version: VERSION });
 });
 
 test("serves the OpenAPI contract when configured", async () => {

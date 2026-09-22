@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import { calculateMetrics } from "./scoring.js";
 import { ValidationError } from "./service.js";
 import { getSpecialist } from "./specialists/registry.js";
+import { VERSION } from "./version.js";
 
 const DEFAULT_SYMBOLS = ["BTC", "ETH", "SOL"];
 const RISK_LEVELS = new Set(["conservative", "moderate", "aggressive"]);
@@ -153,7 +154,7 @@ export async function orchestrateMarketNeutral({
 
   return {
     service: "LiquidFlux Orchestrator",
-    version: "0.7.6",
+    version: VERSION,
     workflow_id: workflowId,
     generated_at: generatedAt.toISOString(),
     objective: input.objective,

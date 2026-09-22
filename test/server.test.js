@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { createApp } from "../src/server.js";
 import { getStaticAsset, loadStaticAssets } from "../src/static.js";
+import { VERSION } from "../src/version.js";
 
 const silentLogger = { info() {}, error() {} };
 
@@ -43,5 +44,5 @@ test("serves the dashboard and preserves JSON health checks", async (context) =>
   const health = await fetch(`${origin}/health`);
   assert.equal(health.status, 200);
   assert.match(health.headers.get("content-type"), /application\/json/);
-  assert.deepEqual(await health.json(), { status: "ok", service: "hyperdesk-scout", version: "0.7.6" });
+  assert.deepEqual(await health.json(), { status: "ok", service: "hyperdesk-scout", version: VERSION });
 });

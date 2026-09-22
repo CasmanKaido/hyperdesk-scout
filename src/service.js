@@ -1,4 +1,5 @@
 import { calculateMetrics } from "./scoring.js";
+import { VERSION } from "./version.js";
 
 const DEFAULT_SYMBOLS = ["BTC", "ETH", "SOL"];
 const RISK_LEVELS = new Set(["conservative", "moderate", "aggressive"]);
@@ -65,7 +66,7 @@ export function buildFundingScan(markets, input, metadata = {}) {
   const available = new Set(markets.map((market) => market.symbol.toUpperCase()));
   return {
     service: "LiquidFlux Funding Specialist",
-    version: "0.7.6",
+    version: VERSION,
     generated_at: generatedAt.toISOString(),
     data_source: "Hyperliquid mainnet",
     data_status: metadata.cacheStatus === "stale_fallback" ? "stale" : "fresh",

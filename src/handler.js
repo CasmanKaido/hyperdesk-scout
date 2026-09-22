@@ -5,6 +5,7 @@ import { orchestrateMarketNeutral, validateOrchestrationInput } from "./orchestr
 import { PlannerError } from "./ai-planner.js";
 import { buildEvidenceLedger } from "./ai-analyst.js";
 import { buildMarketOverview, validateMarketOverviewInput } from "./market-overview.js";
+import { VERSION } from "./version.js";
 
 const JSON_HEADERS = {
   "content-type": "application/json; charset=utf-8",
@@ -60,7 +61,7 @@ export function createRequestHandler({
         result = json(200, {
           service: "LiquidFlux",
           product: "LiquidFlux Orchestrator",
-          version: "0.7.6",
+          version: VERSION,
           status: "operational",
           description: "AI-assisted planning with approval-gated, deterministic Hyperliquid funding, liquidity, and risk evidence.",
           endpoints: {
@@ -74,7 +75,7 @@ export function createRequestHandler({
           execution_included: false,
         }, id, corsHeaders);
       } else if (method === "GET" && pathname === "/health") {
-        result = json(200, { status: "ok", service: "hyperdesk-scout", version: "0.7.6" }, id, corsHeaders);
+        result = json(200, { status: "ok", service: "hyperdesk-scout", version: VERSION }, id, corsHeaders);
       } else if (method === "GET" && pathname === "/openapi.json" && openApiSpec) {
         result = json(200, openApiSpec, id, corsHeaders);
       } else if (method === "POST" && pathname === "/api/v1/plan") {
