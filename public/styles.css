@@ -2053,8 +2053,8 @@ input[aria-invalid="true"] {
 .intro-wash { position: absolute; inset: 0; pointer-events: none; background: linear-gradient(#f2f0eceb, transparent 20%, transparent 75%, #f2f0eced), radial-gradient(ellipse at center, #f2f0ec99, #f2f0ec88 42%, #f2f0ec50); }
 .intro-grain { position: absolute; inset: 0; opacity: .12; background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 140 140' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)' opacity='.5'/%3E%3C/svg%3E"); pointer-events: none; }
 .intro-chrome { position: absolute; z-index: 4; top: 0; left: 0; right: 0; display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: max(20px, env(safe-area-inset-top)) clamp(20px, 3.4vw, 48px); }
-.intro-mark { font-size: 1.15rem; font-weight: 600; letter-spacing: -.04em; white-space: nowrap; text-decoration: none; }
-.intro-mark span { margin-left: .25rem; }
+.intro-mark { display: inline-flex; align-items: center; gap: .65rem; font-size: 1.15rem; font-weight: 600; letter-spacing: -.04em; white-space: nowrap; text-decoration: none; }
+.intro-mark img { display: block; width: 36px; height: 36px; border-radius: 50%; background: #0d0c0b; }
 .intro-chrome-note, .intro-bottom, .intro-eyebrow { font-size: .75rem; letter-spacing: .08em; }
 .intro-chrome-note { color: #0d0c0b99; }
 .intro-pill { display: inline-flex; align-items: center; justify-content: center; gap: 1.3rem; min-height: 44px; padding: 0 1.3rem; color: #fff; background: #0a0908; border-radius: 999px; text-decoration: none; font-size: .9rem; white-space: nowrap; transition: transform .25s ease, background .25s ease; }
