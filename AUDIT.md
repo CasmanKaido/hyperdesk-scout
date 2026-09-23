@@ -96,6 +96,8 @@ The first v0.8.3 Render deployment built an image but failed at process startup 
 
 Full tests passed 148/148 and syntax/JSON checks passed. Docker is unavailable in the local agent environment, so an image build could not be run there; instead, a clean staged directory ran the exact production-only `npm ci` command from the lockfile and successfully imported `src/payments.js`, directly reproducing the dependency-resolution boundary that failed on Render.
 
+After commit `bbe6c96` was pushed, Render completed the rebuilt container and `GET /health` reported version `0.8.4`. A production `POST /api/v1/research-report` remained safely disabled with HTTP 503 `payments_not_configured`; request `247bf6f6-e0db-4c17-923e-918c3bb884ec`. This confirms the dependency fix and fail-closed deployment state, not facilitator testnet support or a live payment.
+
 ## Findings and priorities
 
 ### P0 — Complete and validate the information/strategy split
