@@ -53,7 +53,11 @@ function signedHeaders({ accepted = {}, nonce = "0x1", signature = "0xabc", requ
       asset: ASSET,
       payTo: PAYTO,
       maxTimeoutSeconds: X402_DEFAULTS.maxTimeoutSeconds,
-      extra: { name: X402_DEFAULTS.assetName, version: "2" },
+      extra: {
+        name: X402_DEFAULTS.assetName,
+        version: "2",
+        liquidfluxRequest: { version: "research-report:v1", requestFingerprint },
+      },
       ...accepted,
     },
     payload: {
@@ -66,9 +70,6 @@ function signedHeaders({ accepted = {}, nonce = "0x1", signature = "0xabc", requ
         validBefore: "9999999999",
         nonce,
       },
-    },
-    extensions: {
-      liquidfluxRequest: { info: { version: "research-report:v1", requestFingerprint } },
     },
   };
   return { "payment-signature": Buffer.from(JSON.stringify(payload)).toString("base64") };
@@ -148,7 +149,7 @@ test("unpaid verification returns a spec-compliant 402 challenge", async () => {
   assert.equal(decoded.x402Version, 2);
   assert.equal(decoded.resource.url, RESOURCE.resourceUrl);
   assert.equal(decoded.resource.mimeType, "application/json");
-  assert.equal(decoded.extensions.liquidfluxRequest.info.requestFingerprint, FINGERPRINT);
+  assert.equal(decoded.extensions, undefined);
   assert.deepEqual(decoded.accepts[0], {
     scheme: "exact",
     network: "eip155:1952",
@@ -156,8 +157,29 @@ test("unpaid verification returns a spec-compliant 402 challenge", async () => {
     asset: ASSET,
     payTo: PAYTO,
     maxTimeoutSeconds: 300,
-    extra: { name: "USD₮0", version: "2" },
+    extra: {
+      name: "USD₮0",
+      version: "2",
+      liquidfluxRequest: { version: "research-report:v1", requestFingerprint: FINGERPRINT },
+    },
   });
+});
+
+test("top-level challenge extensions cannot substitute for the echoed accepts binding", async () => {
+  const calls = [];
+  const gate = createPaymentGate(gateConfig({ fetchImpl: facilitatorFetch({ calls }) }));
+  const headers = signedHeaders();
+  const payload = decodeHeader(headers, "payment-signature");
+  delete payload.accepted.extra.liquidfluxRequest;
+  payload.extensions = {
+    liquidfluxRequest: { info: { version: "research-report:v1", requestFingerprint: FINGERPRINT } },
+  };
+  headers["payment-signature"] = Buffer.from(JSON.stringify(payload)).toString("base64");
+
+  const result = await gate.verify({ headers, requestId: "req_extension", requestFingerprint: FINGERPRINT, ...RESOURCE });
+  assert.equal(result.response.status, 402);
+  assert.equal(result.response.body.invalid_reason, "payment_request_binding_mismatch");
+  assert.equal(calls.length, 0);
 });
 
 test("malformed, incomplete, or mismatched signatures never reach the facilitator", async () => {
@@ -224,6 +246,10 @@ test("successful lifecycle verifies, persists artifact, settles, and returns a r
   const authorization = await verifyPaid(gate);
   assert.equal(authorization.status, "verified");
   assert.deepEqual(calls.map((call) => call.path), ["/verify"]);
+  assert.deepEqual(calls[0].body.paymentRequirements.extra.liquidfluxRequest, {
+    version: "research-report:v1",
+    requestFingerprint: FINGERPRINT,
+  });
 
   const artifact = { generated: true };
   const result = await gate.settle({ context: authorization.context, artifact, requestId: "req_settle" });

@@ -68,6 +68,12 @@ Focused payment/handler/OpenAPI validation passed 42/42 tests. Coverage includes
 
 The default store is bounded process-local memory: unused verified operations expire after 24 hours; settling/settled bindings are retained; capacity rejects new work at 1,000 operations rather than evicting replay evidence. This proves small-scale same-process testnet behavior but not restart-safe, multi-instance, or production-scalable recovery. Production/mainnet still requires a durable shared transactional store and facilitator/on-chain reconciliation for a crash after chain settlement but before receipt persistence. After commit `43dfdfd` was pushed, Render reported version `0.8.1`. The deployed paid route remained disabled and returned HTTP 503 `payments_not_configured` for request `18c8d916-6561-4f25-8d06-f6fc87afed99`; no live settlement is claimed by this record.
 
+## OKX buyer compatibility verification — 2026-09-23 (v0.8.2, local)
+
+The official `okx/onchainos-skills` CLI source shows that `payment quote` stores the original `accepts[]` entries and `payment pay` echoes the selected entry verbatim as `PAYMENT-SIGNATURE.accepted`. Its assembled v2 header contains `x402Version`, `resource`, `accepted`, and `payload`; unknown top-level challenge extensions are not retained. LiquidFlux previously put `liquidfluxRequest` at the challenge's top level, so the official buyer would have dropped it and the server would have rejected a legitimate payment as `payment_request_binding_mismatch`.
+
+The binding now lives at `accepts[].extra.liquidfluxRequest` and is checked at `PAYMENT-SIGNATURE.accepted.extra.liquidfluxRequest`, preserving the EIP-712 token-domain `extra.name` and `extra.version` fields. Tests assert the challenge shape, facilitator requirement body, and rejection of a legacy top-level-only extension. This resolves buyer/header interoperability only; no token contract, facilitator, funded wallet, signature, or settlement has yet been verified.
+
 ## Findings and priorities
 
 ### P0 — Complete and validate the information/strategy split

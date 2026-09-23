@@ -140,7 +140,7 @@ export function createPaymentGate({
   const configured = problems.length === 0;
   const facilitatorBase = configured ? facilitatorUrl.replace(/\/+$/, "") : null;
 
-  function paymentRequirements(amountAtomic) {
+  function paymentRequirements(amountAtomic, requestFingerprint) {
     if (!validAmount(amountAtomic)) throw new PaymentError("Invalid price configuration", "invalid_price", 500);
     return {
       scheme: "exact",
@@ -149,7 +149,11 @@ export function createPaymentGate({
       asset,
       payTo,
       maxTimeoutSeconds,
-      extra: { name: assetName, version: "2" },
+      extra: {
+        name: assetName,
+        version: "2",
+        liquidfluxRequest: { version: "research-report:v1", requestFingerprint },
+      },
     };
   }
 
@@ -158,20 +162,9 @@ export function createPaymentGate({
       x402Version: 2,
       ...(error ? { error } : {}),
       resource: { url: resourceUrl, description, mimeType: "application/json" },
-      accepts: [paymentRequirements(amountAtomic)],
-      extensions: {
-        liquidfluxRequest: {
-          info: { version: "research-report:v1", requestFingerprint },
-          schema: {
-            type: "object",
-            required: ["version", "requestFingerprint"],
-            properties: {
-              version: { const: "research-report:v1" },
-              requestFingerprint: { type: "string", pattern: "^[0-9a-f]{64}$" },
-            },
-          },
-        },
-      },
+      // The OKX buyer preserves the selected accepts[] entry in
+      // PAYMENT-SIGNATURE, while top-level challenge extensions are not echoed.
+      accepts: [paymentRequirements(amountAtomic, requestFingerprint)],
     };
   }
 
@@ -224,8 +217,8 @@ export function createPaymentGate({
   }
 
   function matchesRequestBinding(payload, requestFingerprint) {
-    const info = payload.extensions?.liquidfluxRequest?.info;
-    return info?.version === "research-report:v1" && info.requestFingerprint === requestFingerprint;
+    const binding = payload.accepted?.extra?.liquidfluxRequest;
+    return binding?.version === "research-report:v1" && binding.requestFingerprint === requestFingerprint;
   }
 
   function operationKey(payload, requirements) {
@@ -269,7 +262,7 @@ export function createPaymentGate({
       return failure(500, requestId, "invalid_payment_binding", "The paid request could not be bound safely");
     }
 
-    const requirements = paymentRequirements(amountAtomic);
+    const requirements = paymentRequirements(amountAtomic, requestFingerprint);
     const challenge = (error, invalidReason) => challengeResponse({
       resourceUrl, description, amountAtomic, requestId, requestFingerprint, error, invalidReason,
     });
@@ -346,7 +339,7 @@ export function createPaymentGate({
     if (!configured) return null;
     const { payload, proofDigest } = extractPaymentPayload(headers);
     if (!payload) return null;
-    const requirements = paymentRequirements(amountAtomic);
+    const requirements = paymentRequirements(amountAtomic, requestFingerprint);
     if (!matchesRequirements(payload, requirements)) return null;
     const key = operationKey(payload, requirements);
     const existing = await operationStore.get(key);

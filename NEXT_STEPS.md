@@ -66,6 +66,7 @@ Required operator values:
 - [ ] Choose and verify the LiquidFlux receiving EVM address.
 - [ ] Confirm the official USD₮0 testnet contract address and decimals.
 - [ ] Confirm a compatible facilitator URL supporting x402 v2 `exact` on `eip155:1952`.
+- [x] Confirm the official OKX buyer preserves LiquidFlux request binding in `PAYMENT-SIGNATURE` (binding moved into the selected `accepts[].extra` entry; unknown top-level extensions are not echoed).
 - [ ] Fund the buyer test wallet with test USD₮0 if required.
 - [ ] Configure Render secrets:
   - [ ] `X402_PAYTO_ADDRESS`
