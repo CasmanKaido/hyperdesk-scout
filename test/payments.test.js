@@ -23,6 +23,11 @@ const RESOURCE = {
   amountAtomic: "10000",
 };
 const FINGERPRINT = "a".repeat(64);
+const OKX_CREDENTIALS = {
+  facilitatorApiKey: "test-api-key",
+  facilitatorSecretKey: "test-secret-key",
+  facilitatorPassphrase: "test-passphrase",
+};
 
 const silentLogger = { info() {}, error() {} };
 
@@ -32,6 +37,7 @@ function gateConfig(overrides = {}) {
     payTo: PAYTO,
     asset: ASSET,
     facilitatorUrl: "https://facilitator.example.com",
+    ...OKX_CREDENTIALS,
     logger: silentLogger,
     ...overrides,
   };
@@ -110,6 +116,9 @@ test("gate is not configured when disabled or misconfigured", () => {
   assert.equal(createPaymentGate(gateConfig({ asset: null })).configured, false);
   assert.equal(createPaymentGate(gateConfig({ facilitatorUrl: "http://insecure.example.com" })).configured, false);
   assert.equal(createPaymentGate(gateConfig({ operationStore: {} })).configured, false);
+  assert.equal(createPaymentGate(gateConfig({ facilitatorApiKey: null })).configured, false);
+  assert.equal(createPaymentGate(gateConfig({ facilitatorSecretKey: null })).configured, false);
+  assert.equal(createPaymentGate(gateConfig({ facilitatorPassphrase: null })).configured, false);
   assert.equal(createPaymentGate(gateConfig()).configured, true);
 });
 
@@ -119,11 +128,32 @@ test("paymentGateFromEnv parses configuration", () => {
     X402_PAYTO_ADDRESS: PAYTO,
     X402_ASSET_ADDRESS: ASSET,
     X402_FACILITATOR_URL: "https://facilitator.example.com",
+    OKX_API_KEY: "test-api-key",
+    OKX_SECRET_KEY: "test-secret-key",
+    OKX_API_PASSPHRASE: "test-passphrase",
   }, { logger: silentLogger });
   assert.equal(gate.configured, true);
   assert.equal(gate.network, "eip155:1952");
   assert.equal(gate.storeDurability, "process_local");
+  assert.equal(gate.facilitatorMode, "okx_sdk");
   assert.equal(paymentGateFromEnv({}, { logger: silentLogger }).configured, false);
+});
+
+test("support discovery delegates to the configured facilitator client", async () => {
+  const supported = {
+    kinds: [{ x402Version: 2, scheme: "exact", network: "eip155:1952" }],
+    extensions: [],
+    signers: {},
+  };
+  const gate = createPaymentGate(gateConfig({
+    facilitatorClient: {
+      async getSupported() { return supported; },
+      async verify() { return { isValid: true }; },
+      async settle() { return { success: true, status: "success", transaction: TX, network: X402_DEFAULTS.network }; },
+    },
+  }));
+  assert.equal(gate.facilitatorMode, "okx_sdk");
+  assert.deepEqual(await gate.getSupported(), supported);
 });
 
 test("operation store expires only unconsumed verification and never evicts recovery state", async () => {
@@ -373,6 +403,21 @@ test("unconfirmed settlement remains pending and is never retried blindly", asyn
   const retry = await verifyPaid(gate, { requestId: "req_retry" });
   assert.equal(retry.response.status, 202);
   assert.equal(retry.response.body.error, "settlement_pending");
+  assert.deepEqual(calls.map((call) => call.path), ["/verify", "/settle"]);
+});
+
+test("asynchronous pending settlement is never treated as paid access", async () => {
+  const calls = [];
+  const gate = createPaymentGate(gateConfig({
+    fetchImpl: facilitatorFetch({
+      calls,
+      settle: { success: true, status: "pending", transaction: TX, network: X402_DEFAULTS.network, payer: PAYER },
+    }),
+  }));
+  const authorization = await verifyPaid(gate);
+  const pending = await gate.settle({ context: authorization.context, artifact: { report: true }, requestId: "req_pending" });
+  assert.equal(pending.response.status, 502);
+  assert.equal(pending.response.body.error, "settlement_outcome_unknown");
   assert.deepEqual(calls.map((call) => call.path), ["/verify", "/settle"]);
 });
 

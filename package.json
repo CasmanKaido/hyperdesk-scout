@@ -1,6 +1,6 @@
 {
   "name": "hyperdesk-scout",
-  "version": "0.8.2",
+  "version": "0.8.3",
   "private": true,
   "type": "module",
   "description": "Hyperliquid funding intelligence service for OKX AI A2MCP",
@@ -9,9 +9,13 @@
     "start": "node src/server.js",
     "test": "NODE_ENV=test node --test",
     "check": "node scripts/check.js",
+    "check:x402-support": "node scripts/check-x402-facilitator.js",
     "smoke:live": "node scripts/live-browser-smoke.js"
   },
   "engines": {
     "node": ">=20"
+  },
+  "dependencies": {
+    "@okxweb3/x402-core": "0.1.0"
   }
 }

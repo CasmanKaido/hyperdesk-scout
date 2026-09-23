@@ -82,6 +82,14 @@ The operator explicitly selected the current agent wallet as LiquidFlux's receiv
 
 After commits `ae0d1be` and `758264a` were pushed, Render reported version `0.8.2`. A deployed `POST /api/v1/research-report` request still failed closed with HTTP 503 `payments_not_configured`; request `c28e14fa-2157-4b68-b4ad-327fd88ddcfa`. No live challenge, signature, or settlement is claimed.
 
+## Official facilitator client integration — 2026-09-23 (v0.8.3, local)
+
+LiquidFlux now pins and imports the official `@okxweb3/x402-core@0.1.0` `OKXFacilitatorClient` instead of using unauthenticated direct production fetches. When payments are enabled, configuration requires `OKX_API_KEY`, `OKX_SECRET_KEY`, and `OKX_API_PASSPHRASE`; the SDK applies OKX HMAC authentication to `/api/v6/pay/x402/supported`, `/verify`, and `/settle`. Settlement uses `syncSettle: true`, and LiquidFlux still rejects any pending or otherwise unconfirmed result rather than releasing the report.
+
+The existing request binding, exact-proof recovery, artifact-before-settlement sequence, atomic settlement ownership, and secret-safe logging remain in LiquidFlux's gate rather than being delegated to default middleware. A sanitized `npm run check:x402-support` command now checks only for x402 v2 `exact` on the configured network and never prints credentials. Focused payment tests passed 29/29, the full suite passed 148/148, syntax/JSON checks passed, and changed-file diagnostics were clean. A credential-free support-check invocation failed closed with only the required environment-variable names and no values.
+
+This integration does not prove hosted facilitator support for `eip155:1952`: that requires operator credentials configured outside Git and a real read-only `/supported` response. Payments remain disabled until that evidence exists.
+
 ## Findings and priorities
 
 ### P0 — Complete and validate the information/strategy split

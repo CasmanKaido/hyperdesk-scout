@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import { OKXFacilitatorClient } from "@okxweb3/x402-core";
 
 /**
  * x402 v2 seller gate (OKX Agent Payments Protocol compatible).
@@ -35,6 +36,7 @@ export const X402_DEFAULTS = {
   timeoutMs: 10000,
   operationTtlMs: 24 * 60 * 60 * 1000,
   maxOperations: 1000,
+  facilitatorUrl: "https://web3.okx.com",
 };
 
 function base64Encode(value) {
@@ -121,8 +123,12 @@ export function createPaymentGate({
   assetName = X402_DEFAULTS.assetName,
   assetDecimals = X402_DEFAULTS.assetDecimals,
   facilitatorUrl = null,
+  facilitatorApiKey = null,
+  facilitatorSecretKey = null,
+  facilitatorPassphrase = null,
+  facilitatorClient = null,
   maxTimeoutSeconds = X402_DEFAULTS.maxTimeoutSeconds,
-  fetchImpl = globalThis.fetch,
+  fetchImpl = null,
   logger = console,
   timeoutMs = X402_DEFAULTS.timeoutMs,
   operationStore = createPaymentOperationStore(),
@@ -132,6 +138,12 @@ export function createPaymentGate({
   if (enabled && (typeof payTo !== "string" || !ADDRESS_PATTERN.test(payTo))) problems.push("invalid_payto_address");
   if (enabled && (typeof asset !== "string" || !ADDRESS_PATTERN.test(asset))) problems.push("invalid_asset_address");
   if (enabled && (typeof facilitatorUrl !== "string" || !/^https:\/\//.test(facilitatorUrl))) problems.push("invalid_facilitator_url");
+  const customFacilitator = facilitatorClient !== null || fetchImpl !== null;
+  if (enabled && !customFacilitator && (typeof facilitatorApiKey !== "string" || facilitatorApiKey.trim() === "")) problems.push("missing_facilitator_api_key");
+  if (enabled && !customFacilitator && (typeof facilitatorSecretKey !== "string" || facilitatorSecretKey.trim() === "")) problems.push("missing_facilitator_secret_key");
+  if (enabled && !customFacilitator && (typeof facilitatorPassphrase !== "string" || facilitatorPassphrase.trim() === "")) problems.push("missing_facilitator_passphrase");
+  if (enabled && facilitatorClient !== null && (typeof facilitatorClient?.verify !== "function" || typeof facilitatorClient?.settle !== "function")) problems.push("invalid_facilitator_client");
+  if (enabled && fetchImpl !== null && typeof fetchImpl !== "function") problems.push("invalid_facilitator_transport");
   if (enabled && (!Number.isInteger(assetDecimals) || assetDecimals < 0 || assetDecimals > 36)) problems.push("invalid_asset_decimals");
   if (enabled && (!Number.isInteger(maxTimeoutSeconds) || maxTimeoutSeconds < 1)) problems.push("invalid_max_timeout");
   for (const method of ["get", "create", "update", "transition", "delete"]) {
@@ -139,6 +151,17 @@ export function createPaymentGate({
   }
   const configured = problems.length === 0;
   const facilitatorBase = configured ? facilitatorUrl.replace(/\/+$/, "") : null;
+  const activeFacilitator = configured && facilitatorClient
+    ? facilitatorClient
+    : configured && !fetchImpl
+      ? new OKXFacilitatorClient({
+        apiKey: facilitatorApiKey,
+        secretKey: facilitatorSecretKey,
+        passphrase: facilitatorPassphrase,
+        baseUrl: facilitatorBase,
+        syncSettle: true,
+      })
+      : null;
 
   function paymentRequirements(amountAtomic, requestFingerprint) {
     if (!validAmount(amountAtomic)) throw new PaymentError("Invalid price configuration", "invalid_price", 500);
@@ -232,7 +255,25 @@ export function createPaymentGate({
     ]);
   }
 
-  async function postFacilitator(path, body) {
+  async function withTimeout(operation) {
+    let timer;
+    try {
+      return await Promise.race([
+        operation,
+        new Promise((_, reject) => {
+          timer = setTimeout(() => {
+            const error = new Error("Facilitator request timed out");
+            error.name = "AbortError";
+            reject(error);
+          }, timeoutMs);
+        }),
+      ]);
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+
+  async function postTestFacilitator(path, body) {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), timeoutMs);
     try {
@@ -243,7 +284,34 @@ export function createPaymentGate({
         signal: controller.signal,
       });
       const data = await response.json().catch(() => null);
-      return { status: response.status, data };
+      if (response.status !== 200) throw new Error(`Facilitator request failed: ${response.status}`);
+      return data;
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+
+  async function callFacilitator(method, payload, requirements) {
+    if (activeFacilitator) return withTimeout(activeFacilitator[method](payload, requirements));
+    return postTestFacilitator(`/${method}`, {
+      x402Version: 2,
+      paymentPayload: payload,
+      paymentRequirements: requirements,
+    });
+  }
+
+  async function getSupported() {
+    if (!configured) throw new PaymentError("Paid access is not configured", "payments_not_configured", 503);
+    if (activeFacilitator && typeof activeFacilitator.getSupported === "function") {
+      return withTimeout(activeFacilitator.getSupported());
+    }
+    if (!fetchImpl) throw new PaymentError("Facilitator support discovery is unavailable", "facilitator_supported_unavailable", 503);
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
+    try {
+      const response = await fetchImpl(`${facilitatorBase}/supported`, { signal: controller.signal });
+      if (response.status !== 200) throw new Error(`Facilitator request failed: ${response.status}`);
+      return response.json();
     } finally {
       clearTimeout(timer);
     }
@@ -305,13 +373,13 @@ export function createPaymentGate({
 
     let verification;
     try {
-      verification = await postFacilitator("/verify", { x402Version: 2, paymentPayload: payload, paymentRequirements: requirements });
+      verification = await callFacilitator("verify", payload, requirements);
     } catch (cause) {
       logger.error?.(JSON.stringify({ event: "payment_facilitator_unreachable", stage: "verify", requestId, errorType: cause?.name || "Error" }));
       return failure(502, requestId, "facilitator_unavailable", "Payment verification service is unavailable");
     }
-    if (verification.status !== 200 || !verification.data || verification.data.isValid !== true) {
-      const reason = typeof verification.data?.invalidReason === "string" ? verification.data.invalidReason : "verification_failed";
+    if (!verification || verification.isValid !== true) {
+      const reason = typeof verification?.invalidReason === "string" ? verification.invalidReason : "verification_failed";
       return { ok: false, response: challenge("Payment verification failed", reason) };
     }
 
@@ -323,7 +391,7 @@ export function createPaymentGate({
       requirements,
       resourceUrl,
       description,
-      payer: verification.data.payer || payload.payload.authorization.from,
+      payer: verification.payer || payload.payload.authorization.from,
       artifact: null,
       receipt: null,
     };
@@ -415,30 +483,26 @@ export function createPaymentGate({
     }
     let settlement;
     try {
-      settlement = await postFacilitator("/settle", {
-        x402Version: 2,
-        paymentPayload: operation.payload,
-        paymentRequirements: operation.requirements,
-      });
+      settlement = await callFacilitator("settle", operation.payload, operation.requirements);
     } catch (cause) {
       // The outcome may be ambiguous; retain settling state and artifact. Never
       // blindly retry a potentially consumed EIP-3009 authorization.
       logger.error?.(JSON.stringify({ event: "payment_settlement_unknown", requestId, operation: context.key.slice(0, 12), errorType: cause?.name || "Error" }));
       return failure(502, requestId, "settlement_outcome_unknown", "Payment settlement outcome is unknown and requires reconciliation", {}, { retryable: true });
     }
-    if (settlement.status !== 200 || !settlement.data || settlement.data.success !== true) {
+    if (!settlement || settlement.success !== true || (settlement.status && settlement.status !== "success")) {
       // Any response after a settlement attempt may be ambiguous (including a
       // proxy 500 or nonce-used response). Preserve artifact/state; never retry
       // or delete the authorization without reconciliation evidence.
-      logger.error?.(JSON.stringify({ event: "payment_settlement_unconfirmed", requestId, operation: context.key.slice(0, 12), facilitatorStatus: settlement.status }));
+      logger.error?.(JSON.stringify({ event: "payment_settlement_unconfirmed", requestId, operation: context.key.slice(0, 12), facilitatorStatus: settlement?.status || "unconfirmed" }));
       return failure(502, requestId, "settlement_outcome_unknown", "Payment settlement was not confirmed and requires reconciliation", {}, { retryable: true });
     }
 
     const receipt = {
       success: true,
-      transaction: settlement.data.transaction,
-      network: settlement.data.network || network,
-      payer: settlement.data.payer || operation.payer || null,
+      transaction: settlement.transaction,
+      network: settlement.network || network,
+      payer: settlement.payer || operation.payer || null,
     };
     // Remove the raw signed payload after settlement; only recovery material remains.
     const recorded = await operationStore.transition(context.key, "settling", {
@@ -465,7 +529,9 @@ export function createPaymentGate({
     assetName,
     assetDecimals,
     storeDurability: operationStore?.durability || "custom",
+    facilitatorMode: activeFacilitator ? "okx_sdk" : fetchImpl ? "custom_transport" : "unavailable",
     requirements: configured ? paymentRequirements : null,
+    getSupported,
     recover,
     verify,
     settle,
@@ -486,7 +552,10 @@ export function paymentGateFromEnv(env = {}, deps = {}) {
     asset: env.X402_ASSET_ADDRESS || null,
     assetName: env.X402_ASSET_NAME || X402_DEFAULTS.assetName,
     assetDecimals: integerFromEnv(env.X402_ASSET_DECIMALS, X402_DEFAULTS.assetDecimals),
-    facilitatorUrl: env.X402_FACILITATOR_URL || null,
+    facilitatorUrl: env.X402_FACILITATOR_URL || X402_DEFAULTS.facilitatorUrl,
+    facilitatorApiKey: env.OKX_API_KEY || null,
+    facilitatorSecretKey: env.OKX_SECRET_KEY || null,
+    facilitatorPassphrase: env.OKX_API_PASSPHRASE || null,
     maxTimeoutSeconds: integerFromEnv(env.X402_MAX_TIMEOUT_SECONDS, X402_DEFAULTS.maxTimeoutSeconds),
     ...deps,
   });
