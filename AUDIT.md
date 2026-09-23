@@ -90,6 +90,12 @@ The existing request binding, exact-proof recovery, artifact-before-settlement s
 
 This integration does not prove hosted facilitator support for `eip155:1952`: that requires operator credentials configured outside Git and a real read-only `/supported` response. Payments remain disabled until that evidence exists.
 
+## Container dependency fix — 2026-09-23 (v0.8.4, local)
+
+The first v0.8.3 Render deployment built an image but failed at process startup with `ERR_MODULE_NOT_FOUND` for `@okxweb3/x402-core`. Root cause: the repository Dockerfile copied application sources and `package.json` but never copied `package-lock.json` or installed production dependencies. The Dockerfile now copies both manifests and runs `npm ci --omit=dev --ignore-scripts` before switching to the unprivileged `node` user. The deployment-config test now requires both the lockfile copy and production install command so a dependency-free runtime image cannot pass CI again.
+
+Full tests passed 148/148 and syntax/JSON checks passed. Docker is unavailable in the local agent environment, so an image build could not be run there; instead, a clean staged directory ran the exact production-only `npm ci` command from the lockfile and successfully imported `src/payments.js`, directly reproducing the dependency-resolution boundary that failed on Render.
+
 ## Findings and priorities
 
 ### P0 — Complete and validate the information/strategy split

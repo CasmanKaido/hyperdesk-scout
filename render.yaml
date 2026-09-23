@@ -29,7 +29,8 @@ services:
       # x402 paid research report (OKX Agent Payments Protocol). Disabled until
       # the secrets below are set in the Render dashboard, never in this file:
       # X402_ENABLED=true, X402_PAYTO_ADDRESS, X402_ASSET_ADDRESS (USD₮0 on the
-      # chosen network), X402_FACILITATOR_URL. Defaults: X Layer testnet
+      # chosen network), X402_FACILITATOR_URL, OKX_API_KEY, OKX_SECRET_KEY, and
+      # OKX_API_PASSPHRASE. Defaults: X Layer testnet
       # eip155:1952, 0.01 USD₮0 per report (X402_PRICE_RESEARCH_REPORT_ATOMIC=10000).
       - key: X402_ENABLED
         value: "false"

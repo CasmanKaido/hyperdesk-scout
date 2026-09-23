@@ -10,6 +10,8 @@ test("deployment config uses the Docker runtime and health endpoint", () => {
   assert.match(renderConfig, /plan: free/);
   assert.match(renderConfig, /healthCheckPath: \/health/);
   assert.match(renderConfig, /branch: main/);
+  assert.match(dockerfile, /COPY package\.json package-lock\.json \.\//);
+  assert.match(dockerfile, /RUN npm ci --omit=dev --ignore-scripts/);
   assert.match(dockerfile, /COPY public \.\/public/);
   assert.match(dockerfile, /COPY assets \.\/assets/);
   assert.match(dockerfile, /HEALTHCHECK/);
