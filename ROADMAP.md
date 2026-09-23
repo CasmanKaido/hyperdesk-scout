@@ -1,6 +1,6 @@
 # LiquidFlux Execution Roadmap
 
-This is the project's source of truth for build order. Work on one milestone at a time. A milestone is complete only when every exit criterion is satisfied.
+This records the project's milestone history. The current, dependency-ordered working queue is [`NEXT_STEPS.md`](NEXT_STEPS.md). Work on one stage at a time and mark it complete only when its evidence criteria are satisfied.
 
 ## Status legend
 
@@ -15,7 +15,7 @@ This is the project's source of truth for build order. Work on one milestone at 
 
 **In progress:** M3 — Hyperliquid orchestration MVP and free OKX.AI integration; M6 — Demo interface
 
-**Next:** Verify the integrated information/strategy split with real providers and deployed browser journeys before recording a new demo. `market_information`, enriched `POST /api/v1/market-overview`, and short replies pass local automated coverage (106/106 tests); direct live BTC funding-history and L2-book calls also passed. Live-verify Gemini after correcting the adapter to the official `generateContent` contract; the prior failure cause remains unknown. Paid external specialists remain deferred. Existing modules run locally; OKX.AI distributes first-party services.
+**Next:** Follow [`NEXT_STEPS.md`](NEXT_STEPS.md): rotate previously exposed provider credentials, verify the `0.8.0` deployment, harden payment sequencing/idempotency, then complete and record the X Layer testnet paid flow. Do not enable payments before those payment-correctness tasks pass. Independent external specialists remain after the first paid-service proof.
 
 ## Audit-driven priorities (2026-09-19)
 
