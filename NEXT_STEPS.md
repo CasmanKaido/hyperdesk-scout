@@ -63,13 +63,13 @@ This is the working order from the current `0.8.0` state. Complete each numbered
 
 Required operator values:
 
-- [ ] Choose and verify the LiquidFlux receiving EVM address.
+- [x] Choose and verify the LiquidFlux receiving EVM address: `0x49d948895262dbaa485dde3d5785d7d3d3165508` (`xlayer_test`, chain `1952`). Reverified with `onchainos wallet addresses` and explicitly approved by the operator on 2026-09-23.
 - [x] Confirm the X Layer testnet USD₮0 contract and decimals: `0x9e29b3aada05bf2d2c827af80bd28dc0b9b4fb0c`, 6 decimals. The official OKX CLI token registry identifies it as testnet USDT; both official RPCs report `USD₮0`, and the EIP-1967 implementation exposes EIP-3009 authorization methods.
-- [ ] Confirm a compatible facilitator URL supporting x402 v2 `exact` on `eip155:1952`. The SDK's keyless default `https://web3.okx.com/facilitator` is not live; the official credentialed route is `https://web3.okx.com/api/v6/pay/x402/*`, but its `/supported` response cannot be checked without an API key, secret, and passphrase, and the published EVM SDK currently documents `eip155:196` rather than testnet.
+- [ ] Confirm a compatible facilitator URL supporting x402 v2 `exact` on `eip155:1952`. The SDK's keyless default `https://web3.okx.com/facilitator` is not live; the official credentialed route is `https://web3.okx.com/api/v6/pay/x402/*`, but its `/supported` response cannot be checked without an API key, secret, and passphrase from the official Onchain OS Developer Portal (`https://web3.okx.com/onchainos/dev-portal`), and the published EVM SDK currently documents `eip155:196` rather than testnet.
 - [x] Confirm the official OKX buyer preserves LiquidFlux request binding in `PAYMENT-SIGNATURE` (binding moved into the selected `accepts[].extra` entry; unknown top-level extensions are not echoed).
 - [ ] Fund the buyer test wallet with test USD₮0 if required.
 - [ ] Configure Render secrets:
-  - [ ] `X402_PAYTO_ADDRESS`
+  - [ ] `X402_PAYTO_ADDRESS` = the verified receiver above
   - [ ] `X402_ASSET_ADDRESS`
   - [ ] `X402_FACILITATOR_URL`
   - [ ] `X402_ENABLED=true`

@@ -78,6 +78,8 @@ The official OKX CLI `token_alias.rs` registry identifies X Layer testnet USDT a
 
 Facilitator discovery remains blocked. The official `@okxweb3/x402-core` package defaults its generic HTTP client to `https://web3.okx.com/facilitator`, but that path is not a live public facilitator. Its `OKXFacilitatorClient` instead signs requests to `/api/v6/pay/x402/supported`, `/verify`, `/settle`, and `/settle/status` using an API key, secret, and passphrase. The published `@okxweb3/x402-evm` README documents X Layer mainnet (`eip155:196`) only. Without credentials, an authoritative `/supported` response proving `exact` on `eip155:1952` is still unavailable, so production payments remain disabled.
 
+The operator explicitly selected the current agent wallet as LiquidFlux's receiver on 2026-09-23. A fresh read-only `onchainos wallet addresses` call confirmed `0x49d948895262dbaa485dde3d5785d7d3d3165508` for `xlayer_test` (chain `1952`). This records the intended public `X402_PAYTO_ADDRESS`; it does not configure Render, enable payments, fund a wallet, authorize a payment, or prove facilitator support.
+
 After commits `ae0d1be` and `758264a` were pushed, Render reported version `0.8.2`. A deployed `POST /api/v1/research-report` request still failed closed with HTTP 503 `payments_not_configured`; request `c28e14fa-2157-4b68-b4ad-327fd88ddcfa`. No live challenge, signature, or settlement is claimed.
 
 ## Findings and priorities
