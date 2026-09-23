@@ -130,6 +130,12 @@ If neither key is configured, the endpoint returns `503 ai_unavailable`; the das
 
 The local implementation accepts required `symbols` (1–50) and optional `topics` drawn from `funding`, `basis`, `liquidity`, and `risk`. It returns a read-only snapshot with `query`, `evidence`, per-market `facts`, `calculations`, and `notices`, plus `execution_included: false`. Missing values are null, not synthetic zeroes. It does not accept investment constraints or rank strategy candidates. Browser integration, OpenAPI alignment, tests, and deployment must be validated together before treating this as a released capability.
 
+### `POST /api/v1/research-report`
+
+The paid tier, gated by the **OKX Agent Payments Protocol** (x402 v2). Accepts `symbols` (1–5) and an optional `question` (a default research prompt is used when omitted). Returns the full enriched overview — snapshot facts, 72-hour realized funding, visible L2-book evidence, evidence ledger, and grounded AI analysis — plus `report.payment` settlement metadata.
+
+Unpaid requests receive `HTTP 402` with a base64 `PAYMENT-REQUIRED` header (x402 v2 `PaymentRequired`; the body nests the same payload under `payment_required`). Paid requests carry a base64 `PAYMENT-SIGNATURE` header; the server rejects malformed payloads and term mismatches locally, then verifies and settles through the configured facilitator before releasing the report with a base64 `PAYMENT-RESPONSE` receipt header. Input is validated and rate-limited before any payment processing. When the payment gate is not configured the route returns `503 payments_not_configured` — it never falls back to free. See [`BUSINESS_MODEL.md`](BUSINESS_MODEL.md).
+
 ### `POST /api/v1/orchestrate`
 
 This free read-only endpoint does not require a server-issued approval token. The dashboard supplies the separate review step. Coordinates the Funding and Liquidity specialists in parallel, then applies the dependent Risk Policy specialist and deterministic synthesis.
@@ -177,6 +183,14 @@ Set the following values in the process or deployment environment. `npm start` d
 | `AI_PLANNER_TIMEOUT_MS` | `15000` | Timeout applied separately to each configured AI provider |
 | `GEMINI_MODEL` | `gemini-3.6-flash` | Gemini planner model override |
 | `GROQ_MODEL` | `openai/gpt-oss-20b` | Groq planner model override |
+| `PUBLIC_BASE_URL` | `https://hyperdesk-scout.onrender.com` | Public base URL used in x402 resource descriptors |
+| `X402_ENABLED` | `false` | Master switch for the paid research report |
+| `X402_PAYTO_ADDRESS` | unset | Receiving address for x402 payments (public, not a secret) |
+| `X402_NETWORK` | `eip155:1952` | CAIP-2 payment network (X Layer testnet) |
+| `X402_ASSET_ADDRESS` | unset | Payment token contract (USD₮0 on the chosen network) |
+| `X402_FACILITATOR_URL` | unset | HTTPS facilitator for payment verification and settlement |
+| `X402_PRICE_RESEARCH_REPORT_ATOMIC` | `10000` | Report price in atomic token units (0.01 USD₮0) |
+| `X402_MAX_TIMEOUT_SECONDS` | `300` | Payment authorization validity window |
 
 ## Deployment
 

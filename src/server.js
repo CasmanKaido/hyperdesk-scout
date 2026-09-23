@@ -7,6 +7,7 @@ import { getStaticAsset, loadStaticAssets } from "./static.js";
 import { createAIPlanner } from "./ai-planner.js";
 import { createAIAnalyst } from "./ai-analyst.js";
 import { createResearchEvidenceProvider } from "./research-evidence.js";
+import { paymentGateFromEnv } from "./payments.js";
 
 const PORT = Number(process.env.PORT || 3000);
 const MAX_BODY_BYTES = 32 * 1024;
@@ -33,8 +34,14 @@ export function createApp({
   planObjective = createAIPlanner({ logger }),
   enrichMarketEvidence = process.env.NODE_ENV === "test" ? null : createResearchEvidenceProvider(),
   analyzeEvidence = process.env.NODE_ENV === "test" ? null : createAIAnalyst({ logger }),
+  paymentGate = process.env.NODE_ENV === "test" ? null : paymentGateFromEnv(process.env, { logger }),
+  researchReportPriceAtomic = process.env.X402_PRICE_RESEARCH_REPORT_ATOMIC || "10000",
+  publicBaseUrl = process.env.PUBLIC_BASE_URL || "https://hyperdesk-scout.onrender.com",
 } = {}) {
-  const handleRequest = createRequestHandler({ getMarketData, rateLimiter, logger, openApiSpec, planObjective, enrichMarketEvidence, analyzeEvidence });
+  const handleRequest = createRequestHandler({
+    getMarketData, rateLimiter, logger, openApiSpec, planObjective, enrichMarketEvidence, analyzeEvidence,
+    paymentGate, researchReportPriceAtomic, publicBaseUrl,
+  });
 
   return createServer(async (request, response) => {
     try {

@@ -176,37 +176,37 @@ Selected target: **Render Free web service using the repository Dockerfile**. Th
 
 ## M4 — Paid A2MCP endpoint on X Layer testnet
 
-**Status:** Deferred; no implemented payment or external paid-specialist capability is claimed. This possible premium-endpoint milestone is distinct from buying an independent specialist's evidence.
+**Status:** In progress. The seller rail is implemented, tested, and documented in [`BUSINESS_MODEL.md`](BUSINESS_MODEL.md); live payment verification is blocked on operator secrets. This premium-endpoint milestone is distinct from buying an independent specialist's evidence.
 
-**Goal:** If resumed after the audit priorities, prove the business model using the official OKX Payment SDK before using real funds.
+**Goal:** Prove the business model on X Layer testnet before using real funds.
 
 ### Prerequisites
 
-- [ ] OKX Developer Portal API key
-- [ ] OKX API secret and passphrase stored only as deployment secrets
-- [ ] EVM receiving address
-- [ ] X Layer testnet gas and test USD₮0
+- [ ] EVM receiving address (`X402_PAYTO_ADDRESS`)
+- [ ] USD₮0 contract address on the chosen network (`X402_ASSET_ADDRESS`)
+- [ ] Facilitator URL for verification and settlement (`X402_FACILITATOR_URL`)
+- [ ] X Layer testnet gas and test USD₮0 (buyer side)
 
 ### Build
 
-- [ ] Add official OKX x402 dependencies
-- [ ] Keep `/health` free
-- [ ] Keep a free sample or limited scan for discovery
-- [ ] Add a paid detailed scan route
-- [ ] Configure X Layer testnet `eip155:1952`
-- [ ] Configure a small test price
-- [ ] Verify an unpaid call returns `HTTP 402`
-- [ ] Verify the `PAYMENT-REQUIRED` response header
+- [x] Implement the x402 v2 seller gate (`src/payments.js`) — dependency-free, consistent with the codebase; the OKX buyer CLI/facilitator handles signing and settlement
+- [x] Keep `/health` free
+- [x] Keep a free sample or limited scan for discovery (funding scan, market overview, orchestrator remain free)
+- [x] Add a paid detailed route: `POST /api/v1/research-report` (1–5 symbols, enriched evidence + grounded AI analysis)
+- [x] Configure X Layer testnet `eip155:1952` as the default network
+- [x] Configure a small test price (0.01 USD₮0, `X402_PRICE_RESEARCH_REPORT_ATOMIC=10000`)
+- [x] Verify an unpaid call returns `HTTP 402` (automated coverage; live re-verification after secret configuration)
+- [x] Verify the `PAYMENT-REQUIRED` response header decodes to a spec-compliant x402 v2 payload (automated coverage)
 - [ ] Complete payment with the supported OKX buyer flow
 - [ ] Verify the paid request is replayed and returns `HTTP 200`
 - [ ] Verify settlement receipt
-- [ ] Document the payment flow and security model
+- [x] Document the payment flow and security model ([`BUSINESS_MODEL.md`](BUSINESS_MODEL.md))
 
 ### Exit criteria
 
-- [ ] Unpaid request consistently returns a valid challenge
-- [ ] Paid replay consistently returns the resource
-- [ ] No credentials appear in source code or logs
+- [x] Unpaid request consistently returns a valid challenge (local + automated)
+- [ ] Paid replay consistently returns the resource (blocked on prerequisites)
+- [x] No credentials appear in source code or logs (gate holds only a public address and facilitator URL)
 - [ ] Testnet transaction or settlement evidence is recorded
 
 **Next after completion:** M5 — Trade preview.

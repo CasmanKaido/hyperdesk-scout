@@ -3,8 +3,8 @@ import { UpstreamError } from "./hyperliquid.js";
 import { buildFundingScan, validateScanInput, ValidationError } from "./service.js";
 import { orchestrateMarketNeutral, validateOrchestrationInput } from "./orchestrator.js";
 import { PlannerError } from "./ai-planner.js";
-import { buildEvidenceLedger } from "./ai-analyst.js";
-import { buildMarketOverview, validateMarketOverviewInput } from "./market-overview.js";
+import { validateMarketOverviewInput } from "./market-overview.js";
+import { assembleEnrichedOverview, validateResearchReportInput } from "./research-report.js";
 import { VERSION } from "./version.js";
 
 const JSON_HEADERS = {
@@ -41,6 +41,9 @@ export function createRequestHandler({
   planObjective = null,
   enrichMarketEvidence = null,
   analyzeEvidence = null,
+  paymentGate = null,
+  researchReportPriceAtomic = "10000",
+  publicBaseUrl = "https://hyperdesk-scout.onrender.com",
 } = {}) {
   if (typeof getMarketData !== "function") throw new TypeError("getMarketData is required");
 
@@ -51,6 +54,7 @@ export function createRequestHandler({
       "access-control-allow-origin": corsAllowOrigin,
       "access-control-allow-methods": "GET, POST, OPTIONS",
       "access-control-allow-headers": "Content-Type, X-Request-Id, PAYMENT-SIGNATURE",
+      "access-control-expose-headers": "X-Request-Id, PAYMENT-REQUIRED, PAYMENT-RESPONSE",
     };
 
     try {
@@ -70,6 +74,7 @@ export function createRequestHandler({
             ai_planner: { method: "POST", path: "/api/v1/plan" },
             funding_specialist: { method: "POST", path: "/api/v1/funding-scan" },
             market_overview: { method: "POST", path: "/api/v1/market-overview" },
+            research_report: { method: "POST", path: "/api/v1/research-report", payment: "x402" },
             orchestrator: { method: "POST", path: "/api/v1/orchestrate" },
           },
           execution_included: false,
@@ -160,23 +165,9 @@ export function createRequestHandler({
           });
         } else {
           const input = validateMarketOverviewInput(parseJsonBody(bodyText));
-          const marketData = await getMarketData();
-          const overview = buildMarketOverview(marketData.markets, input, {
-            generatedAt: now(),
-            fetchedAt: marketData.fetchedAt,
-            ageMs: marketData.ageMs,
-            cacheStatus: marketData.cacheStatus,
+          const overview = await assembleEnrichedOverview({
+            input, getMarketData, enrichMarketEvidence, analyzeEvidence, now,
           });
-          if (typeof enrichMarketEvidence === "function") {
-            const research = await enrichMarketEvidence(input);
-            const bySymbol = new Map(research.markets.map((item) => [item.symbol, item]));
-            for (const market of overview.markets) market.research = bySymbol.get(market.symbol) || null;
-            overview.research = { window_hours: research.window_hours, limitations: research.limitations };
-          }
-          overview.evidence_ledger = buildEvidenceLedger(overview);
-          overview.analysis = input.question && typeof analyzeEvidence === "function"
-            ? await analyzeEvidence({ question: input.question, evidence: overview.evidence_ledger })
-            : { status: "unavailable", reason: input.question ? "not_configured" : "question_not_supplied" };
           result = json(200, {
             request_id: id,
             ...overview,
@@ -187,6 +178,58 @@ export function createRequestHandler({
               "x-ratelimit-remaining": String(rate.remaining),
             } : {}),
           });
+        }
+      } else if (method === "POST" && pathname === "/api/v1/research-report") {
+        const rate = rateLimiter?.consume(clientIp);
+        if (rate && !rate.allowed) {
+          result = json(429, {
+            request_id: id,
+            error: "rate_limited",
+            message: "Too many requests",
+          }, id, {
+            ...corsHeaders,
+            "retry-after": String(Math.max(1, Math.ceil((rate.resetAt - Date.now()) / 1000))),
+            "x-ratelimit-limit": String(rate.limit),
+            "x-ratelimit-remaining": "0",
+          });
+        } else {
+          const input = validateResearchReportInput(parseJsonBody(bodyText));
+          const product = {
+            resourceUrl: `${publicBaseUrl}/api/v1/research-report`,
+            description: "LiquidFlux Hyperliquid research report: 72-hour realized funding, visible order-book evidence, and grounded AI analysis",
+            amountAtomic: researchReportPriceAtomic,
+          };
+          if (!paymentGate || !paymentGate.configured) {
+            result = json(503, {
+              request_id: id,
+              error: "payments_not_configured",
+              message: "Paid access is not configured on this deployment",
+            }, id, corsHeaders);
+          } else {
+            const charge = await paymentGate.charge({ headers, requestId: id, ...product });
+            if (!charge.ok) {
+              result = json(charge.response.status, charge.response.body, id, { ...corsHeaders, ...charge.response.headers });
+            } else {
+              const overview = await assembleEnrichedOverview({
+                input, getMarketData, enrichMarketEvidence, analyzeEvidence, now,
+              });
+              result = json(200, {
+                request_id: id,
+                report: {
+                  kind: "hyperliquid_research_report",
+                  payment: {
+                    scheme: "x402",
+                    network: paymentGate.network,
+                    asset: paymentGate.assetName,
+                    amount_atomic: researchReportPriceAtomic,
+                    payer: charge.payer,
+                    transaction: charge.transaction,
+                  },
+                },
+                ...overview,
+              }, id, { ...corsHeaders, ...charge.responseHeaders });
+            }
+          }
         }
       } else if (method === "POST" && pathname === "/api/v1/funding-scan") {
         const rate = rateLimiter?.consume(clientIp);

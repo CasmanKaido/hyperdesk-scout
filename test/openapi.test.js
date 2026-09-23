@@ -12,6 +12,8 @@ test("publishes an OpenAPI 3.1 contract for every route", () => {
   assert.ok(spec.paths["/openapi.json"].get);
   assert.ok(spec.paths["/api/v1/plan"].post);
     assert.ok(spec.paths["/api/v1/market-overview"].post);
+  assert.ok(spec.paths["/api/v1/research-report"].post);
+  assert.ok(spec.paths["/api/v1/research-report"].post.responses["402"]);
   assert.ok(spec.paths["/api/v1/orchestrate"].post);
   assert.ok(spec.paths["/api/v1/funding-scan"].post);
   assert.ok(spec.components.schemas.FundingScanResponse.required.includes("market_data"));

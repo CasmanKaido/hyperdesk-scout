@@ -126,3 +126,14 @@ Verified result:
 The synchronous result preserved the complete workflow plan, trace, provenance, constraints, specialist evidence, synthesis, and safety disclaimer. The next product milestone is adding a genuinely independent marketplace-callable specialist; the current result proves distribution of the first-party orchestrator, not external-agent hiring.
 
 Next steps are preserving visual evidence and later publishing or integrating additional independent specialist services. Additional services must provide distinct evidence and must not be added merely to inflate the service count.
+
+## Paid service: Hyperliquid Research Report (pending configuration)
+
+The business model and seller rail are documented in [`BUSINESS_MODEL.md`](BUSINESS_MODEL.md). `POST /api/v1/research-report` is the first paid service: x402 v2 (`exact` scheme) on X Layer testnet (`eip155:1952`), 0.01 USD₮0 per report. The marketplace A2MCP invoke flow handles the endpoint's `HTTP 402` challenge natively and hands settlement to the OKX Agent Payments Protocol, so no custom buyer UX is required.
+
+Publication checklist (none of this is claimed before it happens):
+
+1. Configure `X402_ENABLED`, `X402_PAYTO_ADDRESS`, `X402_ASSET_ADDRESS`, and `X402_FACILITATOR_URL` as deployment secrets.
+2. Verify unpaid `HTTP 402` → paid replay `HTTP 200` → settlement receipt with the official OKX buyer flow on testnet; record the transaction hash.
+3. Publish the research report as a paid A2MCP service with accurate pricing copy; keep the two free services for discovery.
+4. Only then update this section with dated, verifiable payment evidence.

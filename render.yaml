@@ -24,3 +24,16 @@ services:
         value: "60000"
       - key: CORS_ALLOW_ORIGIN
         value: "*"
+      - key: PUBLIC_BASE_URL
+        value: https://hyperdesk-scout.onrender.com
+      # x402 paid research report (OKX Agent Payments Protocol). Disabled until
+      # the secrets below are set in the Render dashboard, never in this file:
+      # X402_ENABLED=true, X402_PAYTO_ADDRESS, X402_ASSET_ADDRESS (USD₮0 on the
+      # chosen network), X402_FACILITATOR_URL. Defaults: X Layer testnet
+      # eip155:1952, 0.01 USD₮0 per report (X402_PRICE_RESEARCH_REPORT_ATOMIC=10000).
+      - key: X402_ENABLED
+        value: "false"
+      - key: X402_NETWORK
+        value: eip155:1952
+      - key: X402_PRICE_RESEARCH_REPORT_ATOMIC
+        value: "10000"
