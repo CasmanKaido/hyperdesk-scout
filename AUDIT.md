@@ -40,6 +40,20 @@ This verification exercised the grounded-analysis mitigations added after earlie
 
 Follow-up the same day (v0.7.7–v0.7.8, commits `1fc3793`–`7e135d0`): the blanket no-digits prose filter was replaced with a number-grounding gate so answers can quote ledger figures. Every numeric token in the answer and caveats must match a trusted code-extracted ledger value at the token's own precision; % signs require a `_percent`/`_fraction`-derived value; sentences mentioning one symbol may only use that symbol's numbers. Live result: a detailed evidence question produced a five-sentence answer quoting snapshot rates, 72-hour means, retrospective APR, and visible-level limits, all gate-passed. Answer richness still varies with question phrasing; the deterministic findings carry canonical numbers regardless. Two operational gaps were also fixed: model caveats were previously displayed without number/prescriptive gating, and the service version was hardcoded in four source files (health checks could not distinguish deployments); the version is now single-sourced from `package.json` via `src/version.js`. A transient live provider failure returned the safe `providers_failed` state; one retry on rate-limit/server errors was added.
 
+## Production verification — 2026-09-23 (v0.8.0)
+
+Render reported `0.8.0` for runtime feature commit `1f9780d`. Direct HTTPS and deployed-browser checks produced the following evidence:
+
+- `GET /health` returned `status: ok`, service `hyperdesk-scout`, version `0.8.0`.
+- The paid `POST /api/v1/research-report` route failed closed with HTTP 503 `payments_not_configured` while `X402_ENABLED=false`; request `588bb8ea-fc98-4585-914c-7b0bf3f77a59`. No market-data report was released.
+- Information planning returned `market_information` for BTC funding using Groq `openai/gpt-oss-20b`; request `61c6dba1-b19e-40de-8c22-9bffe623c3aa`.
+- A live BTC funding overview returned fresh Hyperliquid snapshot and complete 72/72-hour funding evidence. The first broader funding/liquidity analysis returned the safe `providers_failed` state (`394d7d30-1c92-499e-9ed4-a3b941928092`); a focused retry completed through Groq with `answer_source: ai_filtered`, a canonical deterministic finding, and no generated follow-up questions (`3fc78f99-d8f3-4158-920d-3de8e8aca590`). This demonstrates safe transient failure handling, not continuous provider availability. Gemini was not selected in these checks.
+- Explicit BTC strategy planning preserved moderate risk, 2× maximum leverage, and $1,000 maximum notional; Groq marked only the omitted 5% funding threshold as suggested in the direct API sample; request `3428ee2c-23f9-41ce-b94d-c8fc2f658fb4`.
+- Deterministic orchestration returned HTTP 200 with fresh Hyperliquid evidence, Funding/Liquidity → Risk → Synthesis trace, one review candidate, `approval_required: true`, and `execution_included: false`; request/workflow `a1f6bd81-c007-4966-b137-de3fb98e49bb`.
+- `node scripts/live-browser-smoke.js https://hyperdesk-scout.onrender.com/` passed against the deployed site: desktop and emulated 390×844 mobile loaded online with no horizontal overflow and a fully visible composer; the desktop journey completed information confirmation → evidence → strategy review → approval → result without runtime exceptions. The existing fixture browser smoke also passed both complete desktop/mobile journeys.
+
+One deployed browser run exposed a known provenance defect: after an explicit strategy message, model-reported `suggested_defaults` labeled objective, market, risk, leverage, notional, and funding threshold as defaults, although the message explicitly supplied all except the threshold. A direct isolated planner call classified only the threshold as defaulted. The UI accurately displayed the API field, so this is not a rendering bug; it confirms that `suggested_defaults` is nondeterministic model output rather than field-origin proof. Deterministic explicit/inherited/interpreted/defaulted provenance remains a P1 requirement and must be fixed before representing defaults as established facts.
+
 ## Findings and priorities
 
 ### P0 — Complete and validate the information/strategy split

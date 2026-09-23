@@ -34,14 +34,14 @@ This is the working order from the current `0.8.0` state. Complete each numbered
 
 ## Stage 1 — Verify the `0.8.0` deployment
 
-- [ ] Confirm `GET /health` reports `0.8.0`.
-- [ ] Confirm the homepage and chat load on desktop and mobile.
-- [ ] Confirm free market information still works with a live provider.
-- [ ] Confirm strategy review → approval → orchestration still works.
-- [ ] Confirm `POST /api/v1/research-report` returns `503 payments_not_configured` while payments are disabled.
-- [ ] Record date, revision, provider/model, request IDs, and results in `AUDIT.md`.
+- [x] Confirm `GET /health` reports `0.8.0`.
+- [x] Confirm the homepage and chat load on desktop and mobile.
+- [x] Confirm free market information still works with a live provider.
+- [x] Confirm strategy review → approval → orchestration still works.
+- [x] Confirm `POST /api/v1/research-report` returns `503 payments_not_configured` while payments are disabled.
+- [x] Record date, revision, provider/model, request IDs, and results in `AUDIT.md`.
 
-**Done when:** production behavior—not only local tests—matches the `0.8.0` contract.
+**Completed 2026-09-23:** production behavior—not only local tests—matches the `0.8.0` route and workflow contract. The live browser journey also exposed inconsistent model-reported default provenance: one plan labeled explicit user fields as suggested defaults. This pre-existing P1 product limitation is recorded in `AUDIT.md`; deterministic field-origin tracking remains separate follow-up work.
 
 ## Stage 2 — Harden payment correctness before enabling it
 
