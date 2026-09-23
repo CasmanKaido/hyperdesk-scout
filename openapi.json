@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "LiquidFlux API",
-    "version": "0.8.4",
+    "version": "0.8.5",
     "description": "AI-assisted objective planning with approval-gated, deterministic Hyperliquid funding, liquidity, and risk intelligence. AI interprets constraints but does not calculate market evidence, spend funds, or execute trades."
   },
   "servers": [
@@ -31,6 +31,45 @@
             "description": "Service is running",
             "content": { "application/json": { "schema": { "$ref": "#/components/schemas/HealthResponse" } } }
           }
+        }
+      }
+    },
+    "/health/payments": {
+      "get": {
+        "operationId": "getPaymentSupportHealth",
+        "summary": "Check sanitized facilitator compatibility without enabling payments",
+        "description": "Performs a cached read-only facilitator support query. Returns only the expected payment kind, match counts, and whether paid access is enabled; never returns credentials, authentication headers, signers, or raw facilitator data.",
+        "responses": {
+          "200": {
+            "description": "Facilitator support check completed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["request_id", "status", "payments_enabled", "expected", "supported", "matching_kind_count", "advertised_kind_count"],
+                  "properties": {
+                    "request_id": { "type": "string" },
+                    "status": { "type": "string", "enum": ["supported", "unsupported"] },
+                    "payments_enabled": { "type": "boolean" },
+                    "expected": {
+                      "type": "object",
+                      "required": ["x402Version", "scheme", "network"],
+                      "properties": {
+                        "x402Version": { "type": "integer", "const": 2 },
+                        "scheme": { "type": "string", "const": "exact" },
+                        "network": { "type": "string" }
+                      }
+                    },
+                    "supported": { "type": "boolean" },
+                    "matching_kind_count": { "type": "integer", "minimum": 0 },
+                    "advertised_kind_count": { "type": "integer", "minimum": 0 }
+                  }
+                }
+              }
+            }
+          },
+          "502": { "description": "Authenticated facilitator support query failed" },
+          "503": { "description": "Facilitator support discovery is not configured" }
         }
       }
     },

@@ -43,6 +43,58 @@ test("serves a discoverable index and health without market data", async () => {
   assert.deepEqual(result.body, { status: "ok", service: "hyperdesk-scout", version: VERSION });
 });
 
+test("serves a sanitized payment support probe while payments remain disabled", async () => {
+  const handle = handlerWith(async () => { throw new Error("should not run"); }, {
+    paymentGate: {
+      configured: false,
+      supportConfigured: true,
+      async checkSupport() {
+        return {
+          expected: { x402Version: 2, scheme: "exact", network: "eip155:1952" },
+          supported: true,
+          matching_kind_count: 1,
+          advertised_kind_count: 2,
+        };
+      },
+    },
+  });
+  const result = await handle({ method: "GET", pathname: "/health/payments" });
+  assert.equal(result.status, 200);
+  assert.deepEqual(result.body, {
+    request_id: "req_test",
+    status: "supported",
+    payments_enabled: false,
+    expected: { x402Version: 2, scheme: "exact", network: "eip155:1952" },
+    supported: true,
+    matching_kind_count: 1,
+    advertised_kind_count: 2,
+  });
+  assert.doesNotMatch(JSON.stringify(result.body), /api.?key|secret|passphrase|signer/i);
+
+  const unavailable = await handlerWith(async () => { throw new Error("should not run"); })({
+    method: "GET", pathname: "/health/payments",
+  });
+  assert.equal(unavailable.status, 503);
+  assert.equal(unavailable.body.error, "facilitator_support_not_configured");
+
+  const failed = await handlerWith(async () => { throw new Error("should not run"); }, {
+    paymentGate: {
+      configured: false,
+      supportConfigured: true,
+      async checkSupport() {
+        throw new Error("OKX rejected apiKey=private-key secret=private-secret passphrase=private-passphrase");
+      },
+    },
+  })({ method: "GET", pathname: "/health/payments" });
+  assert.equal(failed.status, 502);
+  assert.deepEqual(failed.body, {
+    request_id: "req_test",
+    status: "unavailable",
+    error: "facilitator_support_check_failed",
+  });
+  assert.doesNotMatch(JSON.stringify(failed), /private-key|private-secret|private-passphrase|OKX rejected/i);
+});
+
 test("serves the OpenAPI contract when configured", async () => {
   const handle = createRequestHandler({
     getMarketData: async () => { throw new Error("should not run"); },

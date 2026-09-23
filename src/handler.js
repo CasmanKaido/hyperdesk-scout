@@ -70,6 +70,7 @@ export function createRequestHandler({
           description: "AI-assisted planning with approval-gated, deterministic Hyperliquid funding, liquidity, and risk evidence.",
           endpoints: {
             health: { method: "GET", path: "/health" },
+            payment_support: { method: "GET", path: "/health/payments" },
             openapi: { method: "GET", path: "/openapi.json" },
             ai_planner: { method: "POST", path: "/api/v1/plan" },
             funding_specialist: { method: "POST", path: "/api/v1/funding-scan" },
@@ -81,6 +82,35 @@ export function createRequestHandler({
         }, id, corsHeaders);
       } else if (method === "GET" && pathname === "/health") {
         result = json(200, { status: "ok", service: "hyperdesk-scout", version: VERSION }, id, corsHeaders);
+      } else if (method === "GET" && pathname === "/health/payments") {
+        if (!paymentGate?.supportConfigured || typeof paymentGate.checkSupport !== "function") {
+          result = json(503, {
+            request_id: id,
+            status: "not_configured",
+            error: "facilitator_support_not_configured",
+          }, id, corsHeaders);
+        } else {
+          try {
+            const support = await paymentGate.checkSupport();
+            result = json(200, {
+              request_id: id,
+              status: support.supported ? "supported" : "unsupported",
+              payments_enabled: paymentGate.configured,
+              ...support,
+            }, id, corsHeaders);
+          } catch (error) {
+            logger.error?.(JSON.stringify({
+              event: "payment_support_check_failed",
+              requestId: id,
+              errorType: error?.name || "Error",
+            }));
+            result = json(502, {
+              request_id: id,
+              status: "unavailable",
+              error: "facilitator_support_check_failed",
+            }, id, corsHeaders);
+          }
+        }
       } else if (method === "GET" && pathname === "/openapi.json" && openApiSpec) {
         result = json(200, openApiSpec, id, corsHeaders);
       } else if (method === "POST" && pathname === "/api/v1/plan") {

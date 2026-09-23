@@ -9,6 +9,7 @@ test("publishes an OpenAPI 3.1 contract for every route", () => {
   assert.equal(spec.openapi, "3.1.0");
   assert.ok(spec.paths["/"].get);
   assert.ok(spec.paths["/health"].get);
+  assert.ok(spec.paths["/health/payments"].get);
   assert.ok(spec.paths["/openapi.json"].get);
   assert.ok(spec.paths["/api/v1/plan"].post);
     assert.ok(spec.paths["/api/v1/market-overview"].post);

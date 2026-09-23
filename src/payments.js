@@ -150,10 +150,17 @@ export function createPaymentGate({
     if (enabled && typeof operationStore?.[method] !== "function") problems.push("invalid_operation_store");
   }
   const configured = problems.length === 0;
-  const facilitatorBase = configured ? facilitatorUrl.replace(/\/+$/, "") : null;
-  const activeFacilitator = configured && facilitatorClient
+  const validFacilitatorUrl = typeof facilitatorUrl === "string" && /^https:\/\//.test(facilitatorUrl);
+  const facilitatorBase = validFacilitatorUrl ? facilitatorUrl.replace(/\/+$/, "") : null;
+  const credentialsAvailable = typeof facilitatorApiKey === "string" && facilitatorApiKey.trim() !== ""
+    && typeof facilitatorSecretKey === "string" && facilitatorSecretKey.trim() !== ""
+    && typeof facilitatorPassphrase === "string" && facilitatorPassphrase.trim() !== "";
+  const validInjectedClient = facilitatorClient !== null
+    && typeof facilitatorClient?.verify === "function"
+    && typeof facilitatorClient?.settle === "function";
+  const activeFacilitator = validInjectedClient
     ? facilitatorClient
-    : configured && !fetchImpl
+    : !fetchImpl && validFacilitatorUrl && credentialsAvailable
       ? new OKXFacilitatorClient({
         apiKey: facilitatorApiKey,
         secretKey: facilitatorSecretKey,
@@ -162,6 +169,15 @@ export function createPaymentGate({
         syncSettle: true,
       })
       : null;
+  const supportConfigured = Boolean(
+    (activeFacilitator && typeof activeFacilitator.getSupported === "function")
+    || (typeof fetchImpl === "function" && facilitatorBase),
+  );
+  let supportedCache = null;
+  let supportedCacheExpiresAt = 0;
+  let supportedError = null;
+  let supportedErrorExpiresAt = 0;
+  let supportedRequest = null;
 
   function paymentRequirements(amountAtomic, requestFingerprint) {
     if (!validAmount(amountAtomic)) throw new PaymentError("Invalid price configuration", "invalid_price", 500);
@@ -300,12 +316,10 @@ export function createPaymentGate({
     });
   }
 
-  async function getSupported() {
-    if (!configured) throw new PaymentError("Paid access is not configured", "payments_not_configured", 503);
+  async function requestSupported() {
     if (activeFacilitator && typeof activeFacilitator.getSupported === "function") {
       return withTimeout(activeFacilitator.getSupported());
     }
-    if (!fetchImpl) throw new PaymentError("Facilitator support discovery is unavailable", "facilitator_supported_unavailable", 503);
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), timeoutMs);
     try {
@@ -315,6 +329,48 @@ export function createPaymentGate({
     } finally {
       clearTimeout(timer);
     }
+  }
+
+  async function getSupported() {
+    if (!supportConfigured) {
+      throw new PaymentError("Facilitator support discovery is not configured", "facilitator_support_not_configured", 503);
+    }
+    if (supportedCache && Date.now() < supportedCacheExpiresAt) return supportedCache;
+    if (supportedError && Date.now() < supportedErrorExpiresAt) throw supportedError;
+    if (!supportedRequest) {
+      supportedRequest = requestSupported()
+        .then((response) => {
+          supportedCache = response;
+          supportedCacheExpiresAt = Date.now() + (5 * 60 * 1000);
+          supportedError = null;
+          supportedErrorExpiresAt = 0;
+          return response;
+        })
+        .catch((error) => {
+          supportedError = error;
+          supportedErrorExpiresAt = Date.now() + (60 * 1000);
+          throw error;
+        })
+        .finally(() => { supportedRequest = null; });
+    }
+    return supportedRequest;
+  }
+
+  async function checkSupport() {
+    const expected = { x402Version: 2, scheme: "exact", network };
+    const response = await getSupported();
+    const kinds = Array.isArray(response?.kinds) ? response.kinds : [];
+    const matchingKindCount = kinds.filter((kind) => (
+      kind?.x402Version === expected.x402Version
+      && kind?.scheme === expected.scheme
+      && kind?.network === expected.network
+    )).length;
+    return {
+      expected,
+      supported: matchingKindCount > 0,
+      matching_kind_count: matchingKindCount,
+      advertised_kind_count: kinds.length,
+    };
   }
 
   function receiptHeaders(receipt) {
@@ -530,8 +586,10 @@ export function createPaymentGate({
     assetDecimals,
     storeDurability: operationStore?.durability || "custom",
     facilitatorMode: activeFacilitator ? "okx_sdk" : fetchImpl ? "custom_transport" : "unavailable",
+    supportConfigured,
     requirements: configured ? paymentRequirements : null,
     getSupported,
+    checkSupport,
     recover,
     verify,
     settle,

@@ -136,24 +136,56 @@ test("paymentGateFromEnv parses configuration", () => {
   assert.equal(gate.network, "eip155:1952");
   assert.equal(gate.storeDurability, "process_local");
   assert.equal(gate.facilitatorMode, "okx_sdk");
+  const disabledProbe = paymentGateFromEnv({
+    OKX_API_KEY: "test-api-key",
+    OKX_SECRET_KEY: "test-secret-key",
+    OKX_API_PASSPHRASE: "test-passphrase",
+  }, { logger: silentLogger });
+  assert.equal(disabledProbe.configured, false);
+  assert.equal(disabledProbe.supportConfigured, true);
+  assert.equal(disabledProbe.facilitatorMode, "okx_sdk");
   assert.equal(paymentGateFromEnv({}, { logger: silentLogger }).configured, false);
 });
 
-test("support discovery delegates to the configured facilitator client", async () => {
+test("support discovery delegates to the configured facilitator client and caches the sanitized result", async () => {
   const supported = {
     kinds: [{ x402Version: 2, scheme: "exact", network: "eip155:1952" }],
     extensions: [],
     signers: {},
   };
+  let supportCalls = 0;
   const gate = createPaymentGate(gateConfig({
     facilitatorClient: {
-      async getSupported() { return supported; },
+      async getSupported() { supportCalls += 1; return supported; },
       async verify() { return { isValid: true }; },
       async settle() { return { success: true, status: "success", transaction: TX, network: X402_DEFAULTS.network }; },
     },
   }));
   assert.equal(gate.facilitatorMode, "okx_sdk");
   assert.deepEqual(await gate.getSupported(), supported);
+  assert.deepEqual(await gate.checkSupport(), {
+    expected: { x402Version: 2, scheme: "exact", network: "eip155:1952" },
+    supported: true,
+    matching_kind_count: 1,
+    advertised_kind_count: 1,
+  });
+  assert.equal(supportCalls, 1);
+});
+
+test("support discovery caches failures during the retry cooldown", async () => {
+  let supportCalls = 0;
+  const failure = new Error("upstream rejected secret test-secret-key");
+  const gate = createPaymentGate(gateConfig({
+    facilitatorClient: {
+      async getSupported() { supportCalls += 1; throw failure; },
+      async verify() { return { isValid: true }; },
+      async settle() { return { success: true, status: "success", transaction: TX, network: X402_DEFAULTS.network }; },
+    },
+  }));
+
+  await assert.rejects(gate.checkSupport(), (error) => error === failure);
+  await assert.rejects(gate.checkSupport(), (error) => error === failure);
+  assert.equal(supportCalls, 1);
 });
 
 test("operation store expires only unconsumed verification and never evicts recovery state", async () => {
