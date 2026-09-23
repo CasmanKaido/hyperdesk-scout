@@ -83,7 +83,7 @@ These boundaries are the brand: buyers pay for evidence they can audit, not conf
 |---|---|---|
 | 1 | Free tier live on OKX.AI (funding scan, orchestrator) | Done (2026-09-18) |
 | 2 | x402 seller rail and request-bound payment state machine implemented, tested, documented | Done locally; process-local recovery only |
-| 3 | Configure testnet secrets; verify unpaid 402 → paid 200 → settlement receipt with the official OKX buyer flow; record testnet transaction evidence | Blocked on operator secrets (payTo address, USD₮0 testnet asset, facilitator URL) |
+| 3 | Configure testnet secrets; verify unpaid 402 → paid 200 → settlement receipt with the official OKX buyer flow; record testnet transaction evidence | Testnet USD₮0 verified; blocked on operator selection of `payTo` and an authoritative facilitator `/supported` response for `eip155:1952` |
 | 4 | Publish research report as a paid A2MCP service on OKX.AI; keep a free tier for discovery | After phase 3 |
 | 5 | Mainnet (`eip155:196`) pricing review against measured AI/facilitator costs | After testnet evidence |
 | 6 | Subscriptions (`period` scheme) for recurring research; outbound payments to independent specialist agents (LiquidFlux as buyer) | Deferred — requires distinct provider value and its own evidence |
