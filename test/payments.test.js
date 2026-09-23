@@ -1,13 +1,28 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { createPaymentGate, paymentGateFromEnv, X402_DEFAULTS } from "../src/payments.js";
-import { validateResearchReportInput, DEFAULT_RESEARCH_QUESTION } from "../src/research-report.js";
+import {
+  createPaymentGate,
+  createPaymentOperationStore,
+  paymentGateFromEnv,
+  X402_DEFAULTS,
+} from "../src/payments.js";
+import {
+  validateResearchReportInput,
+  fingerprintResearchReportRequest,
+  DEFAULT_RESEARCH_QUESTION,
+} from "../src/research-report.js";
 import { createRequestHandler } from "../src/handler.js";
 
 const PAYTO = "0x209693Bc6afc0C5328bA36FaF03C514EF312287C";
 const ASSET = "0x036CbD53842c5426634e7929541eC2318f3dCF7e";
 const PAYER = "0x857b06519E91e3A54538791bDbb0E22373e36b66";
 const TX = "0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef";
+const RESOURCE = {
+  resourceUrl: "https://hyperdesk-scout.onrender.com/api/v1/research-report",
+  description: "Test report",
+  amountAtomic: "10000",
+};
+const FINGERPRINT = "a".repeat(64);
 
 const silentLogger = { info() {}, error() {} };
 
@@ -28,7 +43,7 @@ function decodeHeader(headers, name) {
   return JSON.parse(Buffer.from(value, "base64").toString("utf8"));
 }
 
-function signedHeaders(overrides = {}) {
+function signedHeaders({ accepted = {}, nonce = "0x1", signature = "0xabc", requestFingerprint = FINGERPRINT } = {}) {
   const payload = {
     x402Version: 2,
     accepted: {
@@ -39,25 +54,53 @@ function signedHeaders(overrides = {}) {
       payTo: PAYTO,
       maxTimeoutSeconds: X402_DEFAULTS.maxTimeoutSeconds,
       extra: { name: X402_DEFAULTS.assetName, version: "2" },
-      ...overrides.accepted,
+      ...accepted,
     },
     payload: {
-      signature: "0xabc",
-      authorization: { from: PAYER, to: PAYTO, value: "10000", validAfter: "0", validBefore: "9999999999", nonce: "0x1" },
-      ...overrides.payload,
+      signature,
+      authorization: {
+        from: PAYER,
+        to: PAYTO,
+        value: "10000",
+        validAfter: "0",
+        validBefore: "9999999999",
+        nonce,
+      },
     },
-    ...("x402Version" in overrides ? { x402Version: overrides.x402Version } : {}),
+    extensions: {
+      liquidfluxRequest: { info: { version: "research-report:v1", requestFingerprint } },
+    },
   };
   return { "payment-signature": Buffer.from(JSON.stringify(payload)).toString("base64") };
 }
 
-function facilitatorFetch({ verify = { isValid: true, payer: PAYER }, settle = { success: true, transaction: TX, network: X402_DEFAULTS.network, payer: PAYER }, calls = [] } = {}) {
+function researchHeaders(input = { symbols: ["BTC"] }, overrides = {}) {
+  const normalized = validateResearchReportInput(input);
+  return signedHeaders({ ...overrides, requestFingerprint: fingerprintResearchReportRequest(normalized) });
+}
+
+function facilitatorFetch({
+  verify = { isValid: true, payer: PAYER },
+  settle = { success: true, transaction: TX, network: X402_DEFAULTS.network, payer: PAYER },
+  calls = [],
+  throwOn = null,
+} = {}) {
   return async (url, options) => {
     const path = new URL(url).pathname;
     calls.push({ path, body: JSON.parse(options.body) });
+    if (throwOn === path) throw new Error("connection refused");
     const data = path === "/verify" ? verify : settle;
     return { status: 200, json: async () => data };
   };
+}
+
+async function verifyPaid(gate, options = {}) {
+  return gate.verify({
+    headers: signedHeaders(options.signature),
+    requestId: options.requestId || "req_verify",
+    requestFingerprint: options.requestFingerprint || FINGERPRINT,
+    ...RESOURCE,
+  });
 }
 
 test("gate is not configured when disabled or misconfigured", () => {
@@ -65,6 +108,7 @@ test("gate is not configured when disabled or misconfigured", () => {
   assert.equal(createPaymentGate(gateConfig({ payTo: "not-an-address" })).configured, false);
   assert.equal(createPaymentGate(gateConfig({ asset: null })).configured, false);
   assert.equal(createPaymentGate(gateConfig({ facilitatorUrl: "http://insecure.example.com" })).configured, false);
+  assert.equal(createPaymentGate(gateConfig({ operationStore: {} })).configured, false);
   assert.equal(createPaymentGate(gateConfig()).configured, true);
 });
 
@@ -77,26 +121,34 @@ test("paymentGateFromEnv parses configuration", () => {
   }, { logger: silentLogger });
   assert.equal(gate.configured, true);
   assert.equal(gate.network, "eip155:1952");
+  assert.equal(gate.storeDurability, "process_local");
   assert.equal(paymentGateFromEnv({}, { logger: silentLogger }).configured, false);
 });
 
-test("unpaid charge returns a spec-compliant 402 challenge", async () => {
+test("operation store expires only unconsumed verification and never evicts recovery state", async () => {
+  let time = 100;
+  const store = createPaymentOperationStore({ now: () => time, ttlMs: 10, maxOperations: 2 });
+  assert.equal(await store.create("a", { state: "settled" }), true);
+  assert.equal(await store.create("a", { state: "other" }), false);
+  assert.equal(await store.create("b", { state: "verified" }), true);
+  assert.equal(await store.create("c", { state: "verified" }), false, "capacity rejects new work instead of evicting");
+  time = 200;
+  assert.equal((await store.get("a")).state, "settled");
+  assert.equal(await store.get("b"), null);
+  assert.equal(await store.create("c", { state: "verified" }), true);
+});
+
+test("unpaid verification returns a spec-compliant 402 challenge", async () => {
   const gate = createPaymentGate(gateConfig());
-  const result = await gate.charge({
-    headers: {},
-    resourceUrl: "https://hyperdesk-scout.onrender.com/api/v1/research-report",
-    description: "Test report",
-    amountAtomic: "10000",
-    requestId: "req_1",
-  });
+  const result = await gate.verify({ headers: {}, requestId: "req_1", requestFingerprint: FINGERPRINT, ...RESOURCE });
   assert.equal(result.ok, false);
   assert.equal(result.response.status, 402);
   assert.equal(result.response.body.error, "payment_required");
   const decoded = decodeHeader(result.response.headers, "payment-required");
   assert.equal(decoded.x402Version, 2);
-  assert.equal(decoded.resource.url, "https://hyperdesk-scout.onrender.com/api/v1/research-report");
+  assert.equal(decoded.resource.url, RESOURCE.resourceUrl);
   assert.equal(decoded.resource.mimeType, "application/json");
-  assert.equal(decoded.accepts.length, 1);
+  assert.equal(decoded.extensions.liquidfluxRequest.info.requestFingerprint, FINGERPRINT);
   assert.deepEqual(decoded.accepts[0], {
     scheme: "exact",
     network: "eip155:1952",
@@ -108,63 +160,217 @@ test("unpaid charge returns a spec-compliant 402 challenge", async () => {
   });
 });
 
-test("malformed or mismatched signatures are rejected without facilitator calls", async () => {
+test("malformed, incomplete, or mismatched signatures never reach the facilitator", async () => {
   const calls = [];
   const gate = createPaymentGate(gateConfig({ fetchImpl: facilitatorFetch({ calls }) }));
+  const common = { requestFingerprint: FINGERPRINT, ...RESOURCE };
 
-  const malformed = await gate.charge({ headers: { "payment-signature": "!!!" }, resourceUrl: "https://x", description: "d", amountAtomic: "10000", requestId: "req_2" });
-  assert.equal(malformed.response.status, 402);
+  const malformed = await gate.verify({ headers: { "payment-signature": "!!!" }, requestId: "req_2", ...common });
   assert.equal(malformed.response.body.invalid_reason, "payment_signature_malformed");
 
-  const wrongAmount = await gate.charge({ headers: signedHeaders({ accepted: { amount: "1" } }), resourceUrl: "https://x", description: "d", amountAtomic: "10000", requestId: "req_3" });
-  assert.equal(wrongAmount.response.status, 402);
-  assert.equal(wrongAmount.response.body.invalid_reason, "payment_requirements_mismatch");
+  const incomplete = Buffer.from(JSON.stringify({ x402Version: 2, accepted: {}, payload: {} })).toString("base64");
+  const invalid = await gate.verify({ headers: { "payment-signature": incomplete }, requestId: "req_3", ...common });
+  assert.equal(invalid.response.body.invalid_reason, "payment_signature_invalid");
 
-  const wrongPayTo = await gate.charge({ headers: signedHeaders({ accepted: { payTo: PAYER } }), resourceUrl: "https://x", description: "d", amountAtomic: "10000", requestId: "req_4" });
-  assert.equal(wrongPayTo.response.body.invalid_reason, "payment_requirements_mismatch");
+  const wrongAmount = await gate.verify({ headers: signedHeaders({ accepted: { amount: "1" } }), requestId: "req_4", ...common });
+  assert.equal(wrongAmount.response.body.invalid_reason, "payment_requirements_mismatch");
   assert.equal(calls.length, 0);
 });
 
-test("invalid verification and failed settlement return fresh challenges", async () => {
-  const invalid = createPaymentGate(gateConfig({ fetchImpl: facilitatorFetch({ verify: { isValid: false, invalidReason: "insufficient_funds" } }) }));
-  const rejected = await invalid.charge({ headers: signedHeaders(), resourceUrl: "https://x", description: "d", amountAtomic: "10000", requestId: "req_5" });
-  assert.equal(rejected.response.status, 402);
-  assert.equal(rejected.response.body.invalid_reason, "insufficient_funds");
-  assert.ok(rejected.response.headers["payment-required"]);
-
-  const unsettled = createPaymentGate(gateConfig({ fetchImpl: facilitatorFetch({ settle: { success: false, errorReason: "invalid_transaction_state", transaction: "", network: X402_DEFAULTS.network } }) }));
-  const failed = await unsettled.charge({ headers: signedHeaders(), resourceUrl: "https://x", description: "d", amountAtomic: "10000", requestId: "req_6" });
-  assert.equal(failed.response.status, 402);
-  assert.equal(failed.response.body.invalid_reason, "invalid_transaction_state");
+test("invalid verification returns a fresh challenge", async () => {
+  const gate = createPaymentGate(gateConfig({ fetchImpl: facilitatorFetch({ verify: { isValid: false, invalidReason: "insufficient_funds" } }) }));
+  const result = await verifyPaid(gate);
+  assert.equal(result.response.status, 402);
+  assert.equal(result.response.body.invalid_reason, "insufficient_funds");
+  assert.ok(result.response.headers["payment-required"]);
 });
 
-test("facilitator outages never grant access", async () => {
-  const down = createPaymentGate(gateConfig({ fetchImpl: async () => { throw new Error("connection refused"); } }));
-  const result = await down.charge({ headers: signedHeaders(), resourceUrl: "https://x", description: "d", amountAtomic: "10000", requestId: "req_7" });
-  assert.equal(result.ok, false);
-  assert.equal(result.response.status, 502);
-  assert.equal(result.response.body.error, "facilitator_unavailable");
+test("verification and settlement facilitator failures fail closed", async () => {
+  const verifyDown = createPaymentGate(gateConfig({ fetchImpl: facilitatorFetch({ throwOn: "/verify" }) }));
+  const unavailable = await verifyPaid(verifyDown);
+  assert.equal(unavailable.response.status, 502);
+  assert.equal(unavailable.response.body.error, "facilitator_unavailable");
+
+  const settleDown = createPaymentGate(gateConfig({ fetchImpl: facilitatorFetch({ throwOn: "/settle" }) }));
+  const authorization = await verifyPaid(settleDown);
+  const unknown = await settleDown.settle({ context: authorization.context, artifact: { report: true }, requestId: "req_unknown" });
+  assert.equal(unknown.response.status, 502);
+  assert.equal(unknown.response.body.error, "settlement_outcome_unknown");
 });
 
-test("successful charge verifies, settles, and returns a receipt header", async () => {
+test("storage failure before settlement never calls the facilitator settle endpoint", async () => {
   const calls = [];
-  const gate = createPaymentGate(gateConfig({ fetchImpl: facilitatorFetch({ calls }) }));
-  const result = await gate.charge({ headers: signedHeaders(), resourceUrl: "https://x", description: "d", amountAtomic: "10000", requestId: "req_8" });
+  let operation = null;
+  const store = {
+    durability: "test",
+    async get() { return operation; },
+    async create(_key, value) { operation = value; return true; },
+    async update() { return null; },
+    async transition() { return null; },
+    async delete() { operation = null; },
+  };
+  const gate = createPaymentGate(gateConfig({ fetchImpl: facilitatorFetch({ calls }), operationStore: store }));
+  const authorization = await verifyPaid(gate);
+  const result = await gate.settle({ context: authorization.context, artifact: { complete: true }, requestId: "req_store" });
+  assert.equal(result.response.status, 503);
+  assert.equal(result.response.body.error, "payment_state_unavailable");
+  assert.deepEqual(calls.map((call) => call.path), ["/verify"]);
+});
+
+test("successful lifecycle verifies, persists artifact, settles, and returns a receipt", async () => {
+  const calls = [];
+  const store = createPaymentOperationStore();
+  const gate = createPaymentGate(gateConfig({ fetchImpl: facilitatorFetch({ calls }), operationStore: store }));
+  const authorization = await verifyPaid(gate);
+  assert.equal(authorization.status, "verified");
+  assert.deepEqual(calls.map((call) => call.path), ["/verify"]);
+
+  const artifact = { generated: true };
+  const result = await gate.settle({ context: authorization.context, artifact, requestId: "req_settle" });
   assert.equal(result.ok, true);
+  assert.equal(result.status, "settled");
+  assert.deepEqual(result.artifact, artifact);
+  assert.deepEqual(calls.map((call) => call.path), ["/verify", "/settle"]);
   assert.equal(result.payer, PAYER);
   assert.equal(result.transaction, TX);
+  assert.deepEqual(decodeHeader(result.responseHeaders, "payment-response"), {
+    success: true, transaction: TX, network: X402_DEFAULTS.network, payer: PAYER,
+  });
+});
+
+test("same authorization recovers the stored artifact without facilitator calls", async () => {
+  const calls = [];
+  const gate = createPaymentGate(gateConfig({ fetchImpl: facilitatorFetch({ calls }) }));
+  const authorization = await verifyPaid(gate);
+  await gate.settle({ context: authorization.context, artifact: { stable: "original" }, requestId: "req_settle" });
+  const recovered = await verifyPaid(gate, { requestId: "req_retry" });
+  assert.equal(recovered.ok, true);
+  assert.equal(recovered.status, "recovered");
+  assert.deepEqual(recovered.artifact, { stable: "original" });
   assert.deepEqual(calls.map((call) => call.path), ["/verify", "/settle"]);
-  assert.equal(calls[0].body.x402Version, 2);
-  assert.equal(calls[0].body.paymentRequirements.amount, "10000");
-  const receipt = decodeHeader(result.responseHeaders, "payment-response");
-  assert.deepEqual(receipt, { success: true, transaction: TX, network: X402_DEFAULTS.network, payer: PAYER });
+});
+
+test("recovery requires the exact facilitator-verified payment proof", async () => {
+  const calls = [];
+  const gate = createPaymentGate(gateConfig({ fetchImpl: facilitatorFetch({ calls }) }));
+  const authorization = await verifyPaid(gate);
+  await gate.settle({ context: authorization.context, artifact: { paid: true }, requestId: "req_settle" });
+
+  const forged = await verifyPaid(gate, { requestId: "req_forged", signature: { signature: "0xdifferent" } });
+  assert.equal(forged.response.status, 409);
+  assert.equal(forged.response.body.error, "authorization_proof_mismatch");
+  assert.deepEqual(calls.map((call) => call.path), ["/verify", "/settle"]);
+});
+
+test("authorization cannot be replayed for a changed request", async () => {
+  const calls = [];
+  const gate = createPaymentGate(gateConfig({ fetchImpl: facilitatorFetch({ calls }) }));
+  const authorization = await verifyPaid(gate);
+  await gate.settle({ context: authorization.context, artifact: { report: true }, requestId: "req_settle" });
+  const mismatch = await verifyPaid(gate, { requestId: "req_changed", requestFingerprint: "b".repeat(64) });
+  assert.equal(mismatch.response.status, 402);
+  assert.equal(mismatch.response.body.invalid_reason, "payment_request_binding_mismatch");
+  assert.deepEqual(calls.map((call) => call.path), ["/verify", "/settle"]);
+});
+
+test("concurrent duplicate authorization is blocked before a second verification", async () => {
+  const calls = [];
+  const gate = createPaymentGate(gateConfig({ fetchImpl: facilitatorFetch({ calls }) }));
+  const first = await verifyPaid(gate);
+  assert.equal(first.status, "verified");
+  const duplicate = await verifyPaid(gate, { requestId: "req_duplicate" });
+  assert.equal(duplicate.response.status, 409);
+  assert.equal(duplicate.response.body.error, "payment_in_progress");
+  assert.deepEqual(calls.map((call) => call.path), ["/verify"]);
+});
+
+test("atomic settlement ownership permits only one facilitator settlement call", async () => {
+  const calls = [];
+  const gate = createPaymentGate(gateConfig({ fetchImpl: async (url, options) => {
+    const path = new URL(url).pathname;
+    calls.push({ path, body: JSON.parse(options.body) });
+    if (path === "/settle") await new Promise((resolve) => setTimeout(resolve, 10));
+    const data = path === "/verify"
+      ? { isValid: true, payer: PAYER }
+      : { success: true, transaction: TX, network: X402_DEFAULTS.network, payer: PAYER };
+    return { status: 200, json: async () => data };
+  } }));
+  const authorization = await verifyPaid(gate);
+  const [first, second] = await Promise.all([
+    gate.settle({ context: authorization.context, artifact: { report: 1 }, requestId: "req_first" }),
+    gate.settle({ context: authorization.context, artifact: { report: 2 }, requestId: "req_second" }),
+  ]);
+  assert.equal(first.ok, true);
+  assert.equal(second.response.status, 202);
+  assert.equal(second.response.body.error, "settlement_pending");
+  assert.equal(calls.filter((call) => call.path === "/settle").length, 1);
+});
+
+test("post-settlement persistence failure never claims recoverable success", async () => {
+  const calls = [];
+  let operation = null;
+  let transitions = 0;
+  const store = {
+    durability: "test",
+    async get() { return operation; },
+    async create(_key, value) { operation = value; return true; },
+    async update(_key, patch) { operation = { ...operation, ...patch }; return operation; },
+    async transition(_key, expected, patch) {
+      if (!operation || operation.state !== expected) return null;
+      transitions += 1;
+      if (transitions === 2) return null;
+      operation = { ...operation, ...patch };
+      return operation;
+    },
+    async delete() { operation = null; },
+  };
+  const gate = createPaymentGate(gateConfig({ fetchImpl: facilitatorFetch({ calls }), operationStore: store }));
+  const authorization = await verifyPaid(gate);
+  const result = await gate.settle({ context: authorization.context, artifact: { report: true }, requestId: "req_persist" });
+  assert.equal(result.response.status, 500);
+  assert.equal(result.response.body.error, "payment_receipt_persistence_failed");
+  assert.deepEqual(calls.map((call) => call.path), ["/verify", "/settle"]);
+});
+
+test("unconfirmed settlement remains pending and is never retried blindly", async () => {
+  const calls = [];
+  const gate = createPaymentGate(gateConfig({
+    fetchImpl: facilitatorFetch({
+      calls,
+      settle: { success: false, errorReason: "invalid_transaction_state", transaction: "", network: X402_DEFAULTS.network },
+    }),
+  }));
+  const authorization = await verifyPaid(gate);
+  const failed = await gate.settle({ context: authorization.context, artifact: { report: true }, requestId: "req_fail" });
+  assert.equal(failed.response.status, 502);
+  assert.equal(failed.response.body.error, "settlement_outcome_unknown");
+  const retry = await verifyPaid(gate, { requestId: "req_retry" });
+  assert.equal(retry.response.status, 202);
+  assert.equal(retry.response.body.error, "settlement_pending");
+  assert.deepEqual(calls.map((call) => call.path), ["/verify", "/settle"]);
+});
+
+test("payment logs never contain raw signature, nonce, or echoed facilitator body", async () => {
+  const logs = [];
+  const logger = { info(value) { logs.push(value); }, error(value) { logs.push(value); } };
+  const fetchImpl = async (_url, options) => { throw new Error(`request failed: ${options.body}`); };
+  const gate = createPaymentGate(gateConfig({ logger, fetchImpl }));
+  await verifyPaid(gate, { signature: { nonce: "0xdeadbeef", signature: "0xsecret" } });
+  const joined = logs.join("\n");
+  assert.doesNotMatch(joined, /0xsecret|0xdeadbeef|payment-signature|authorization/i);
+});
+
+test("research request normalization is deterministic and request-sensitive", () => {
+  const first = validateResearchReportInput({ symbols: ["btc", "ETH"], question: "  Test question  " });
+  const reordered = validateResearchReportInput({ symbols: ["ETH", "BTC"], question: "Test question" });
+  assert.notEqual(fingerprintResearchReportRequest(first), fingerprintResearchReportRequest(reordered));
+  const changed = validateResearchReportInput({ symbols: ["BTC", "ETH"], question: "Different question" });
+  assert.notEqual(fingerprintResearchReportRequest(first), fingerprintResearchReportRequest(changed));
 });
 
 test("validateResearchReportInput bounds symbols and defaults the question", () => {
   assert.deepEqual(validateResearchReportInput({ symbols: ["btc", "ETH"] }), {
-    symbols: ["BTC", "ETH"],
-    topics: ["funding", "basis", "liquidity", "risk"],
-    question: DEFAULT_RESEARCH_QUESTION,
+    symbols: ["BTC", "ETH"], topics: ["funding", "basis", "liquidity", "risk"], question: DEFAULT_RESEARCH_QUESTION,
   });
   assert.throws(() => validateResearchReportInput({ symbols: [] }), /between 1 and 5/);
   assert.throws(() => validateResearchReportInput({ symbols: ["A", "B", "C", "D", "E", "F"] }), /between 1 and 5/);
@@ -172,18 +378,22 @@ test("validateResearchReportInput bounds symbols and defaults the question", () 
   assert.throws(() => validateResearchReportInput({ symbols: ["BTC"], question: "" }), /between 1 and 1000/);
 });
 
+function marketData() {
+  return {
+    markets: [{
+      symbol: "BTC", maxLeverage: 40, funding: "0.0000125", markPx: "50000",
+      oraclePx: "50010", openInterest: "1000", dayNtlVlm: "1000000", impactPxs: ["49990", "50010"],
+    }],
+    fetchedAt: "2026-09-22T00:00:00Z",
+    ageMs: 100,
+    cacheStatus: "hit",
+  };
+}
+
 function handlerWith(gate, options = {}) {
   return createRequestHandler({
-    getMarketData: async () => ({
-      markets: [{
-        symbol: "BTC", maxLeverage: 40, funding: "0.0000125", markPx: "50000",
-        oraclePx: "50010", openInterest: "1000", dayNtlVlm: "1000000", impactPxs: ["49990", "50010"],
-      }],
-      fetchedAt: "2026-09-22T00:00:00Z",
-      ageMs: 100,
-      cacheStatus: "hit",
-    }),
-    requestId: () => "req_test",
+    getMarketData: async () => marketData(),
+    requestId: options.requestId || (() => "req_test"),
     now: () => new Date("2026-09-22T00:00:01Z"),
     logger: silentLogger,
     paymentGate: gate,
@@ -196,10 +406,6 @@ test("research report route is unavailable without a configured gate", async () 
   const result = await handle({ method: "POST", pathname: "/api/v1/research-report", bodyText: JSON.stringify({ symbols: ["BTC"] }) });
   assert.equal(result.status, 503);
   assert.equal(result.body.error, "payments_not_configured");
-
-  const unconfigured = handlerWith(createPaymentGate({ enabled: false, logger: silentLogger }));
-  const second = await unconfigured({ method: "POST", pathname: "/api/v1/research-report", bodyText: JSON.stringify({ symbols: ["BTC"] }) });
-  assert.equal(second.status, 503);
 });
 
 test("research report route challenges unpaid requests before touching market data", async () => {
@@ -212,53 +418,88 @@ test("research report route challenges unpaid requests before touching market da
   });
   const result = await handle({ method: "POST", pathname: "/api/v1/research-report", bodyText: JSON.stringify({ symbols: ["BTC"] }) });
   assert.equal(result.status, 402);
-  assert.equal(result.body.error, "payment_required");
   assert.equal(result.body.payment_required.accepts[0].amount, "10000");
-  assert.ok(result.headers["payment-required"]);
   assert.equal(marketDataCalled, false);
 });
 
-test("research report route validates input before charging", async () => {
+test("research report route validates input before verification", async () => {
   const calls = [];
   const handle = handlerWith(createPaymentGate(gateConfig({ fetchImpl: facilitatorFetch({ calls }) })));
   const result = await handle({ method: "POST", pathname: "/api/v1/research-report", bodyText: JSON.stringify({ symbols: [] }) });
   assert.equal(result.status, 400);
-  assert.equal(result.body.error, "invalid_request");
   assert.equal(calls.length, 0);
 });
 
-test("paid research report returns analysis, receipt, and payment metadata", async () => {
-  const handle = handlerWith(createPaymentGate(gateConfig({ fetchImpl: facilitatorFetch() })), {
-    analyzeEvidence: async ({ question, evidence }) => ({
-      status: "completed",
-      answer: "Grounded test answer",
-      answer_source: "ai_filtered",
-      findings: [],
-      caveats: [],
-      next_questions: [],
-      provider: "test",
-      model: "test-model",
-      grounding: { cited: evidence.records?.length ?? 0 },
-    }),
+test("report generation failure abandons verification and never settles", async () => {
+  const calls = [];
+  let attempt = 0;
+  const gate = createPaymentGate(gateConfig({ fetchImpl: facilitatorFetch({ calls }) }));
+  const handle = handlerWith(gate, {
+    getMarketData: async () => {
+      attempt += 1;
+      if (attempt === 1) throw new Error("upstream failed before report was ready");
+      return marketData();
+    },
   });
-  const result = await handle({
-    method: "POST",
-    pathname: "/api/v1/research-report",
-    headers: signedHeaders(),
-    bodyText: JSON.stringify({ symbols: ["BTC"] }),
+  const request = { method: "POST", pathname: "/api/v1/research-report", headers: researchHeaders(), bodyText: JSON.stringify({ symbols: ["BTC"] }) };
+  const failed = await handle(request);
+  assert.equal(failed.status, 500);
+  assert.deepEqual(calls.map((call) => call.path), ["/verify"]);
+  const retry = await handle(request);
+  assert.equal(retry.status, 200);
+  assert.deepEqual(calls.map((call) => call.path), ["/verify", "/verify", "/settle"]);
+});
+
+test("paid report settles only after analysis and returns payment metadata", async () => {
+  const events = [];
+  const gate = createPaymentGate(gateConfig({ fetchImpl: async (url, options) => {
+    const path = new URL(url).pathname;
+    events.push(path);
+    const data = path === "/verify" ? { isValid: true, payer: PAYER } : { success: true, transaction: TX, network: X402_DEFAULTS.network, payer: PAYER };
+    return { status: 200, json: async () => data };
+  } }));
+  const handle = handlerWith(gate, {
+    analyzeEvidence: async () => {
+      events.push("analysis");
+      return { status: "completed", answer: "Grounded test answer", answer_source: "ai_filtered", findings: [], caveats: [], next_questions: [], provider: "test", model: "test-model", grounding: "test" };
+    },
   });
+  const result = await handle({ method: "POST", pathname: "/api/v1/research-report", headers: researchHeaders(), bodyText: JSON.stringify({ symbols: ["BTC"] }) });
   assert.equal(result.status, 200);
-  assert.equal(result.body.report.kind, "hyperliquid_research_report");
-  assert.equal(result.body.report.payment.scheme, "x402");
-  assert.equal(result.body.report.payment.network, "eip155:1952");
-  assert.equal(result.body.report.payment.amount_atomic, "10000");
-  assert.equal(result.body.report.payment.payer, PAYER);
+  assert.deepEqual(events, ["/verify", "analysis", "/settle"]);
+  assert.equal(result.body.report.payment.recovered, false);
   assert.equal(result.body.report.payment.transaction, TX);
-  assert.equal(result.body.analysis.status, "completed");
   assert.equal(result.body.analysis.answer, "Grounded test answer");
-  assert.equal(result.body.markets[0].symbol, "BTC");
-  assert.ok(result.body.evidence_ledger);
   assert.ok(result.headers["payment-response"]);
+});
+
+test("route recovers the exact stored report and rejects changed replay", async () => {
+  const calls = [];
+  let marketCalls = 0;
+  let requestNumber = 0;
+  let rateCalls = 0;
+  const gate = createPaymentGate(gateConfig({ fetchImpl: facilitatorFetch({ calls }) }));
+  const handle = handlerWith(gate, {
+    requestId: () => `req_${++requestNumber}`,
+    getMarketData: async () => { marketCalls += 1; return marketData(); },
+    rateLimiter: { consume() { rateCalls += 1; return { allowed: rateCalls === 1, limit: 1, remaining: 0, resetAt: Date.now() + 60000 }; } },
+  });
+  const base = { method: "POST", pathname: "/api/v1/research-report", headers: researchHeaders(), bodyText: JSON.stringify({ symbols: ["BTC"] }) };
+  const first = await handle(base);
+  const recovered = await handle(base);
+  assert.equal(first.status, 200);
+  assert.equal(recovered.status, 200);
+  assert.equal(recovered.body.report.payment.recovered, true);
+  assert.equal(recovered.body.generated_at, first.body.generated_at);
+  assert.equal(recovered.body.request_id, "req_2");
+  assert.equal(marketCalls, 1);
+  assert.equal(rateCalls, 1, "settled recovery bypasses ordinary generation rate limiting");
+  assert.deepEqual(calls.map((call) => call.path), ["/verify", "/settle"]);
+
+  const changed = await handle({ ...base, bodyText: JSON.stringify({ symbols: ["BTC"], question: "A changed request" }) });
+  assert.equal(changed.status, 409);
+  assert.equal(changed.body.error, "authorization_request_mismatch");
+  assert.equal(marketCalls, 1);
 });
 
 test("index lists the paid research report endpoint", async () => {

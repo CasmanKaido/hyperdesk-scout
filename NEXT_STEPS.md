@@ -45,19 +45,19 @@ This is the working order from the current `0.8.0` state. Complete each numbered
 
 ## Stage 2 — Harden payment correctness before enabling it
 
-**Why before a live payment:** the current implementation settles before generating the report. If Hyperliquid or the AI fails after settlement, a buyer could pay without receiving the resource.
+**Why before a live payment:** the original implementation settled before generating the report. If Hyperliquid or the AI failed after settlement, a buyer could pay without receiving the resource.
 
-- [ ] Split payment processing into `challenge`, `verify`, and `settle` phases.
-- [ ] For a signed request: verify authorization → generate report → settle → release report.
-- [ ] Never settle when report generation fails.
-- [ ] Add idempotency/recovery for “settled successfully but HTTP response was lost.”
-- [ ] Bind cached paid results to payment nonce/transaction and exact request parameters.
-- [ ] Reject replay with different symbols/question.
-- [ ] Avoid logging raw payment signatures or authorization payloads.
-- [ ] Add tests for upstream failure after verification, settlement failure, duplicate replay, mismatched replay, and lost-response recovery.
-- [ ] Update OpenAPI and `BUSINESS_MODEL.md` to match the final sequence.
+- [x] Split payment processing into `challenge`, `verify`, and `settle` phases.
+- [x] For a signed request: verify authorization → generate report → settle → release report.
+- [x] Never settle when report generation fails.
+- [x] Add idempotency/recovery for “settled successfully but HTTP response was lost.”
+- [x] Bind cached paid results to payment nonce and exact normalized request parameters.
+- [x] Reject replay with different symbols/question.
+- [x] Avoid logging raw payment signatures or authorization payloads.
+- [x] Add tests for upstream/storage failure after verification, settlement failure/ambiguity, duplicate replay, mismatched replay, and lost-response recovery.
+- [x] Update OpenAPI and `BUSINESS_MODEL.md` to match the final sequence.
 
-**Done when:** automated tests prove a buyer is not charged for a report-generation failure and a settled buyer can recover the same report safely.
+**Completed locally 2026-09-23:** automated tests prove report-generation/storage failure does not call settlement, and an exact settled retry recovers the original report without another facilitator call. The default bounded operation store is process-local; durable shared state and facilitator/on-chain reconciliation remain mandatory before production/mainnet, but testnet proof may proceed with this limitation explicitly recorded.
 
 ## Stage 3 — Configure X Layer testnet payments
 

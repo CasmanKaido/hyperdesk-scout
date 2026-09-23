@@ -4,7 +4,7 @@ import { buildFundingScan, validateScanInput, ValidationError } from "./service.
 import { orchestrateMarketNeutral, validateOrchestrationInput } from "./orchestrator.js";
 import { PlannerError } from "./ai-planner.js";
 import { validateMarketOverviewInput } from "./market-overview.js";
-import { assembleEnrichedOverview, validateResearchReportInput } from "./research-report.js";
+import { assembleEnrichedOverview, fingerprintResearchReportRequest, validateResearchReportInput } from "./research-report.js";
 import { VERSION } from "./version.js";
 
 const JSON_HEADERS = {
@@ -180,54 +180,79 @@ export function createRequestHandler({
           });
         }
       } else if (method === "POST" && pathname === "/api/v1/research-report") {
-        const rate = rateLimiter?.consume(clientIp);
-        if (rate && !rate.allowed) {
-          result = json(429, {
+        const input = validateResearchReportInput(parseJsonBody(bodyText));
+        const product = {
+          resourceUrl: `${publicBaseUrl}/api/v1/research-report`,
+          description: "LiquidFlux Hyperliquid research report: 72-hour realized funding, visible order-book evidence, and grounded AI analysis",
+          amountAtomic: researchReportPriceAtomic,
+        };
+        if (!paymentGate || !paymentGate.configured) {
+          result = json(503, {
             request_id: id,
-            error: "rate_limited",
-            message: "Too many requests",
-          }, id, {
-            ...corsHeaders,
-            "retry-after": String(Math.max(1, Math.ceil((rate.resetAt - Date.now()) / 1000))),
-            "x-ratelimit-limit": String(rate.limit),
-            "x-ratelimit-remaining": "0",
-          });
+            error: "payments_not_configured",
+            message: "Paid access is not configured on this deployment",
+          }, id, corsHeaders);
         } else {
-          const input = validateResearchReportInput(parseJsonBody(bodyText));
-          const product = {
-            resourceUrl: `${publicBaseUrl}/api/v1/research-report`,
-            description: "LiquidFlux Hyperliquid research report: 72-hour realized funding, visible order-book evidence, and grounded AI analysis",
-            amountAtomic: researchReportPriceAtomic,
-          };
-          if (!paymentGate || !paymentGate.configured) {
-            result = json(503, {
+          const requestFingerprint = fingerprintResearchReportRequest(input);
+          const finishPayment = (payment) => {
+            if (!payment.ok) return json(payment.response.status, payment.response.body, id, { ...corsHeaders, ...payment.response.headers });
+            return json(200, {
               request_id: id,
-              error: "payments_not_configured",
-              message: "Paid access is not configured on this deployment",
-            }, id, corsHeaders);
-          } else {
-            const charge = await paymentGate.charge({ headers, requestId: id, ...product });
-            if (!charge.ok) {
-              result = json(charge.response.status, charge.response.body, id, { ...corsHeaders, ...charge.response.headers });
-            } else {
-              const overview = await assembleEnrichedOverview({
-                input, getMarketData, enrichMarketEvidence, analyzeEvidence, now,
-              });
-              result = json(200, {
-                request_id: id,
-                report: {
-                  kind: "hyperliquid_research_report",
-                  payment: {
-                    scheme: "x402",
-                    network: paymentGate.network,
-                    asset: paymentGate.assetName,
-                    amount_atomic: researchReportPriceAtomic,
-                    payer: charge.payer,
-                    transaction: charge.transaction,
-                  },
+              report: {
+                kind: "hyperliquid_research_report",
+                payment: {
+                  scheme: "x402",
+                  network: paymentGate.network,
+                  asset: paymentGate.assetName,
+                  amount_atomic: researchReportPriceAtomic,
+                  payer: payment.payer,
+                  transaction: payment.transaction,
+                  recovered: payment.status === "recovered",
                 },
-                ...overview,
-              }, id, { ...corsHeaders, ...charge.responseHeaders });
+              },
+              ...payment.artifact,
+            }, id, { ...corsHeaders, ...payment.responseHeaders });
+          };
+
+          // Exact settled-proof recovery does not consume generation capacity.
+          const recovery = await paymentGate.recover({ headers, requestId: id, requestFingerprint, ...product });
+          if (recovery) {
+            result = finishPayment(recovery);
+          } else {
+            const rate = rateLimiter?.consume(clientIp);
+            if (rate && !rate.allowed) {
+              result = json(429, {
+                request_id: id,
+                error: "rate_limited",
+                message: "Too many requests",
+              }, id, {
+                ...corsHeaders,
+                "retry-after": String(Math.max(1, Math.ceil((rate.resetAt - Date.now()) / 1000))),
+                "x-ratelimit-limit": String(rate.limit),
+                "x-ratelimit-remaining": "0",
+              });
+            } else {
+              const authorization = await paymentGate.verify({
+                headers, requestId: id, requestFingerprint, ...product,
+              });
+              if (!authorization.ok) {
+                result = finishPayment(authorization);
+              } else {
+                let payment = authorization;
+                if (authorization.status === "verified") {
+                  let overview;
+                  try {
+                    overview = await assembleEnrichedOverview({
+                      input, getMarketData, enrichMarketEvidence, analyzeEvidence, now,
+                    });
+                  } catch (error) {
+                    await paymentGate.abandon(authorization.context);
+                    throw error;
+                  }
+                  payment = await paymentGate.settle({ context: authorization.context, artifact: overview, requestId: id });
+                }
+                result = finishPayment(payment);
+              }
             }
           }
         }

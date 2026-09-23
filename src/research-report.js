@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { ValidationError } from "./service.js";
 import { buildMarketOverview } from "./market-overview.js";
 import { buildEvidenceLedger } from "./ai-analyst.js";
@@ -39,6 +40,18 @@ export function validateResearchReportInput(input = {}) {
  * snapshot facts, optional 72h funding/L2-book enrichment, evidence ledger,
  * and grounded AI analysis when a question and analyst are available.
  */
+export function fingerprintResearchReportRequest(input) {
+  const canonical = JSON.stringify({
+    version: "research-report:v1",
+    method: "POST",
+    path: "/api/v1/research-report",
+    symbols: [...input.symbols],
+    topics: [...input.topics],
+    question: input.question,
+  });
+  return createHash("sha256").update(canonical, "utf8").digest("hex");
+}
+
 export async function assembleEnrichedOverview({
   input,
   getMarketData,

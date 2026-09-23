@@ -23,15 +23,20 @@ Implemented in `src/payments.js` as a seller-side gate:
 
 1. Buyer calls `POST /api/v1/research-report` without payment → `HTTP 402` with a base64 `PAYMENT-REQUIRED` header (x402 v2 `PaymentRequired`: scheme `exact`, CAIP-2 network, atomic amount, asset, `payTo`, timeout). The body nests the same payload under `payment_required` for clients that cannot read headers.
 2. Buyer signs an EIP-3009 `transferWithAuthorization` and replays with a base64 `PAYMENT-SIGNATURE` header (`PaymentPayload`).
-3. The server locally rejects malformed payloads and term mismatches (scheme/network/asset/payTo/amount) **before** any facilitator call, then delegates cryptographic verification and settlement to the configured facilitator (`POST /verify`, then `POST /settle`).
-4. On settlement the report is released with a base64 `PAYMENT-RESPONSE` receipt header and `report.payment` metadata (network, asset, amount, payer, transaction hash).
+3. The server locally rejects malformed payloads and term mismatches (scheme/network/asset/payTo/amount), requires the challenge's request-fingerprint extension, derives a non-logged operation identity, and binds the exact verified proof to the exact normalized symbols/question before calling the facilitator.
+4. The facilitator verifies the authorization (`POST /verify`). Only after verification does LiquidFlux generate the complete report and persist the artifact in its operation store.
+5. Report generation or pre-settlement storage failure abandons the operation without calling settlement. Once the artifact is ready, the facilitator settles (`POST /settle`), and only then is the report released with a base64 `PAYMENT-RESPONSE` receipt and `report.payment` metadata.
+6. A retry using the same authorization and exact request recovers the stored settled artifact without another facilitator call; using that authorization with changed symbols or question returns `authorization_request_mismatch`.
 
 Safety properties, enforced by code and covered in `test/payments.test.js`:
 
 - **Fail closed.** Disabled or misconfigured gate → `503 payments_not_configured`, never a free report. Facilitator unreachable → `502`, never access.
-- **Validate before charge.** Request input is validated and rate-limited before payment processing, so buyers are never charged for an invalid request.
-- **Replay protection.** EIP-3009 nonces at the token contract level; settlement through the facilitator rejects reused authorizations.
+- **Validate and build before charge.** Request input is validated and rate-limited before verification; after verification, the full report is generated and persisted before settlement. Report-generation failure never invokes `/settle`.
+- **Request-bound replay protection.** A hash of the authorization domain (`scheme/network/asset/payer/nonce`) and a digest of the complete verified proof are bound to the canonical request fingerprint echoed from the challenge. Changed-request or changed-proof replay is rejected; atomic state transitions permit one settlement owner; settled exact retries return the original artifact.
+- **No sensitive payment logs.** Raw `PAYMENT-SIGNATURE`, signature, authorization, and nonce values are not logged. The raw signed payload is removed from operation state after settlement.
 - **No keys server-side.** The server holds no wallet or signing credentials — only a public receiving address and a facilitator URL.
+
+The default operation store is bounded, process-local memory: unused verified operations expire after 24 hours, while settling/settled bindings are retained and new work is rejected at 1,000 operations rather than evicting replay evidence. It provides same-process lost-client-response recovery for a small testnet proof but is not restart-safe, multi-instance-safe, or production-scalable. Before production/mainnet, replace it with a durable shared transactional store and add facilitator/on-chain reconciliation for the ambiguous case where settlement succeeds but the server dies before persisting the receipt. An ambiguous settlement timeout remains blocked as `settlement_outcome_unknown`; LiquidFlux never blindly retries that authorization.
 
 ### Configuration (operator)
 
@@ -77,7 +82,7 @@ These boundaries are the brand: buyers pay for evidence they can audit, not conf
 | Phase | Milestone | State |
 |---|---|---|
 | 1 | Free tier live on OKX.AI (funding scan, orchestrator) | Done (2026-09-18) |
-| 2 | x402 seller rail implemented, tested, documented | **This change** |
+| 2 | x402 seller rail and request-bound payment state machine implemented, tested, documented | Done locally; process-local recovery only |
 | 3 | Configure testnet secrets; verify unpaid 402 → paid 200 → settlement receipt with the official OKX buyer flow; record testnet transaction evidence | Blocked on operator secrets (payTo address, USD₮0 testnet asset, facilitator URL) |
 | 4 | Publish research report as a paid A2MCP service on OKX.AI; keep a free tier for discovery | After phase 3 |
 | 5 | Mainnet (`eip155:196`) pricing review against measured AI/facilitator costs | After testnet evidence |

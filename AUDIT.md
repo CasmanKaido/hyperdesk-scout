@@ -54,6 +54,20 @@ Render reported `0.8.0` for runtime feature commit `1f9780d`. Direct HTTPS and d
 
 One deployed browser run exposed a known provenance defect: after an explicit strategy message, model-reported `suggested_defaults` labeled objective, market, risk, leverage, notional, and funding threshold as defaults, although the message explicitly supplied all except the threshold. A direct isolated planner call classified only the threshold as defaulted. The UI accurately displayed the API field, so this is not a rendering bug; it confirms that `suggested_defaults` is nondeterministic model output rather than field-origin proof. Deterministic explicit/inherited/interpreted/defaulted provenance remains a P1 requirement and must be fixed before representing defaults as established facts.
 
+## Payment correctness hardening — 2026-09-23 (v0.8.1, local)
+
+The x402 paid-report flow was refactored from `verify → settle → generate` to `verify → generate and persist artifact → settle → release`:
+
+- A valid authorization is identified without storing/logging its raw signature as an idempotency key; a SHA-256 operation identity covers scheme, network, asset, payer, and nonce.
+- The operation is bound to a canonical fingerprint of the normalized report request (version, method, route, sorted symbols/topics, trimmed/defaulted question). The same authorization with different input returns HTTP 409 `authorization_request_mismatch` before generation or facilitator calls.
+- Duplicate in-flight use returns HTTP 409 `payment_in_progress`. An exact retry after settlement returns the original stored artifact and receipt with `report.payment.recovered: true`, without regenerating research or calling `/verify`/`/settle` again.
+- Report-generation failure abandons the verified operation and never calls `/settle`; pre-settlement storage failure also fails closed without settlement. Any unconfirmed response after a settlement attempt is retained as `settlement_outcome_unknown`/`settlement_pending` and is never blindly retried or deleted without reconciliation evidence.
+- Raw payment header, signature, authorization, and nonce values are not logged. The signed payload is removed from stored state after settlement.
+
+Focused payment/handler/OpenAPI validation passed 42/42 tests. Coverage includes malformed/mismatched terms and request binding, exact-proof recovery, verification failure, report-generation failure, pre/post-settlement storage failure, settlement ambiguity, atomic duplicate settlement, changed-request replay, rate-limit-independent lost-client-response recovery, deterministic request normalization, receipt headers, and log redaction.
+
+The default store is bounded process-local memory: unused verified operations expire after 24 hours; settling/settled bindings are retained; capacity rejects new work at 1,000 operations rather than evicting replay evidence. This proves small-scale same-process testnet behavior but not restart-safe, multi-instance, or production-scalable recovery. Production/mainnet still requires a durable shared transactional store and facilitator/on-chain reconciliation for a crash after chain settlement but before receipt persistence. Payments remain disabled in deployment; no live settlement is claimed by this local record.
+
 ## Findings and priorities
 
 ### P0 — Complete and validate the information/strategy split

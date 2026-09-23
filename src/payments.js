@@ -1,18 +1,17 @@
-import { ValidationError } from "./service.js";
+import { createHash } from "node:crypto";
 
 /**
  * x402 v2 seller gate (OKX Agent Payments Protocol compatible).
  *
- * Unpaid requests receive HTTP 402 with a base64 PAYMENT-REQUIRED header whose
- * decoded JSON matches the x402 v2 PaymentRequired schema. Paid requests carry
- * a base64 PAYMENT-SIGNATURE header (PaymentPayload) which is verified and
- * settled through the configured facilitator before the resource is released.
- * Successful responses carry a base64 PAYMENT-RESPONSE settlement receipt.
+ * Lifecycle: challenge -> verify -> build resource -> settle -> release.
+ * The caller must finish building the complete resource before calling settle.
+ * A bounded operation store binds each verified authorization to one normalized
+ * request and preserves the generated artifact before settlement. This permits
+ * duplicate/lost-response recovery while the store remains available.
  *
- * The gate fails closed: when disabled or misconfigured the paid route is
- * unavailable (503) rather than free, and facilitator outages never grant
- * access. No payment credentials exist server-side; settlement is delegated
- * to the facilitator and replay protection comes from EIP-3009 nonces.
+ * The default store is process-local and intentionally identified as such.
+ * Testnet may use it for mechanical proof, but production/mainnet requires a
+ * durable shared store plus reconciliation for ambiguous settlement outcomes.
  */
 
 export class PaymentError extends Error {
@@ -26,13 +25,16 @@ export class PaymentError extends Error {
 
 const ADDRESS_PATTERN = /^0x[0-9a-fA-F]{40}$/;
 const ATOMIC_AMOUNT_PATTERN = /^[0-9]+$/;
+const NONCE_PATTERN = /^0x[0-9a-fA-F]+$/;
 
 export const X402_DEFAULTS = {
-  network: "eip155:1952", // X Layer testnet
+  network: "eip155:1952",
   assetName: "USD₮0",
   assetDecimals: 6,
   maxTimeoutSeconds: 300,
   timeoutMs: 10000,
+  operationTtlMs: 24 * 60 * 60 * 1000,
+  maxOperations: 1000,
 };
 
 function base64Encode(value) {
@@ -47,8 +49,68 @@ function base64DecodeJson(value) {
   }
 }
 
+function hash(parts) {
+  return createHash("sha256").update(parts.join("\u001f"), "utf8").digest("hex");
+}
+
 function validAmount(value) {
   return typeof value === "string" && ATOMIC_AMOUNT_PATTERN.test(value) && value !== "0";
+}
+
+function failure(status, requestId, error, message, headers = {}, extra = {}) {
+  return { ok: false, response: { status, headers, body: { request_id: requestId, error, message, ...extra } } };
+}
+
+/**
+ * Bounded process-local store. A custom store may implement the same methods:
+ * get(key), create(key, operation), update(key, patch), delete(key).
+ */
+export function createPaymentOperationStore({
+  now = () => Date.now(),
+  ttlMs = X402_DEFAULTS.operationTtlMs,
+  maxOperations = X402_DEFAULTS.maxOperations,
+} = {}) {
+  const operations = new Map();
+
+  function prune() {
+    const cutoff = now() - ttlMs;
+    // Never forget settling or settled authorization bindings. Once capacity is
+    // reached, reject new work rather than evict replay/recovery state.
+    for (const [key, value] of operations) {
+      if (value.state === "verified" && value.updatedAt < cutoff) operations.delete(key);
+    }
+  }
+
+  return {
+    durability: "process_local",
+    async get(key) {
+      prune();
+      return operations.get(key) || null;
+    },
+    async create(key, operation) {
+      prune();
+      if (operations.has(key) || operations.size >= maxOperations) return false;
+      operations.set(key, { ...operation, updatedAt: now() });
+      return true;
+    },
+    async update(key, patch) {
+      const current = operations.get(key);
+      if (!current) return null;
+      const next = { ...current, ...patch, updatedAt: now() };
+      operations.set(key, next);
+      return next;
+    },
+    async transition(key, expectedState, patch) {
+      const current = operations.get(key);
+      if (!current || current.state !== expectedState) return null;
+      const next = { ...current, ...patch, updatedAt: now() };
+      operations.set(key, next);
+      return next;
+    },
+    async delete(key) {
+      operations.delete(key);
+    },
+  };
 }
 
 export function createPaymentGate({
@@ -63,6 +125,7 @@ export function createPaymentGate({
   fetchImpl = globalThis.fetch,
   logger = console,
   timeoutMs = X402_DEFAULTS.timeoutMs,
+  operationStore = createPaymentOperationStore(),
 } = {}) {
   const problems = [];
   if (!enabled) problems.push("disabled");
@@ -71,6 +134,9 @@ export function createPaymentGate({
   if (enabled && (typeof facilitatorUrl !== "string" || !/^https:\/\//.test(facilitatorUrl))) problems.push("invalid_facilitator_url");
   if (enabled && (!Number.isInteger(assetDecimals) || assetDecimals < 0 || assetDecimals > 36)) problems.push("invalid_asset_decimals");
   if (enabled && (!Number.isInteger(maxTimeoutSeconds) || maxTimeoutSeconds < 1)) problems.push("invalid_max_timeout");
+  for (const method of ["get", "create", "update", "transition", "delete"]) {
+    if (enabled && typeof operationStore?.[method] !== "function") problems.push("invalid_operation_store");
+  }
   const configured = problems.length === 0;
   const facilitatorBase = configured ? facilitatorUrl.replace(/\/+$/, "") : null;
 
@@ -87,25 +153,34 @@ export function createPaymentGate({
     };
   }
 
-  function paymentRequiredPayload({ resourceUrl, description, amountAtomic, error }) {
+  function paymentRequiredPayload({ resourceUrl, description, amountAtomic, requestFingerprint, error }) {
     return {
       x402Version: 2,
       ...(error ? { error } : {}),
-      resource: {
-        url: resourceUrl,
-        description,
-        mimeType: "application/json",
-      },
+      resource: { url: resourceUrl, description, mimeType: "application/json" },
       accepts: [paymentRequirements(amountAtomic)],
-      extensions: {},
+      extensions: {
+        liquidfluxRequest: {
+          info: { version: "research-report:v1", requestFingerprint },
+          schema: {
+            type: "object",
+            required: ["version", "requestFingerprint"],
+            properties: {
+              version: { const: "research-report:v1" },
+              requestFingerprint: { type: "string", pattern: "^[0-9a-f]{64}$" },
+            },
+          },
+        },
+      },
     };
   }
 
-  function challengeResponse({ resourceUrl, description, amountAtomic, requestId, error, invalidReason }) {
+  function challengeResponse({ resourceUrl, description, amountAtomic, requestId, requestFingerprint, error, invalidReason }) {
     const payload = paymentRequiredPayload({
       resourceUrl,
       description,
       amountAtomic,
+      requestFingerprint,
       error: error || "PAYMENT-SIGNATURE header is required",
     });
     return {
@@ -127,11 +202,16 @@ export function createPaymentGate({
     if (decoded === null || typeof decoded !== "object" || Array.isArray(decoded)) {
       return { payload: null, error: "payment_signature_malformed" };
     }
+    const authorization = decoded.payload?.authorization;
     if (decoded.x402Version !== 2 || typeof decoded.accepted !== "object" || decoded.accepted === null
-      || typeof decoded.payload !== "object" || decoded.payload === null) {
+      || typeof decoded.payload !== "object" || decoded.payload === null
+      || typeof decoded.payload.signature !== "string" || decoded.payload.signature.length < 3
+      || typeof authorization !== "object" || authorization === null
+      || typeof authorization.from !== "string" || !ADDRESS_PATTERN.test(authorization.from)
+      || typeof authorization.nonce !== "string" || !NONCE_PATTERN.test(authorization.nonce)) {
       return { payload: null, error: "payment_signature_invalid" };
     }
-    return { payload: decoded, error: null };
+    return { payload: decoded, proofDigest: hash([String(raw)]), error: null };
   }
 
   function matchesRequirements(payload, requirements) {
@@ -141,6 +221,22 @@ export function createPaymentGate({
       && typeof accepted.asset === "string" && accepted.asset.toLowerCase() === requirements.asset.toLowerCase()
       && typeof accepted.payTo === "string" && accepted.payTo.toLowerCase() === requirements.payTo.toLowerCase()
       && accepted.amount === requirements.amount;
+  }
+
+  function matchesRequestBinding(payload, requestFingerprint) {
+    const info = payload.extensions?.liquidfluxRequest?.info;
+    return info?.version === "research-report:v1" && info.requestFingerprint === requestFingerprint;
+  }
+
+  function operationKey(payload, requirements) {
+    const authorization = payload.payload.authorization;
+    return hash([
+      requirements.scheme,
+      requirements.network,
+      requirements.asset.toLowerCase(),
+      authorization.from.toLowerCase(),
+      authorization.nonce.toLowerCase(),
+    ]);
   }
 
   async function postFacilitator(path, body) {
@@ -160,86 +256,213 @@ export function createPaymentGate({
     }
   }
 
-  async function charge({ headers = {}, resourceUrl, description, amountAtomic, requestId }) {
+  function receiptHeaders(receipt) {
+    return { "payment-response": base64Encode(receipt) };
+  }
+
+  async function verify({ headers = {}, resourceUrl, description, amountAtomic, requestId, requestFingerprint }) {
     if (!configured) {
       logger.error?.(JSON.stringify({ event: "payment_gate_not_configured", problems }));
-      return {
-        ok: false,
-        response: {
-          status: 503,
-          headers: {},
-          body: {
-            request_id: requestId,
-            error: "payments_not_configured",
-            message: "Paid access is not configured on this deployment",
-          },
-        },
-      };
+      return failure(503, requestId, "payments_not_configured", "Paid access is not configured on this deployment");
+    }
+    if (typeof requestFingerprint !== "string" || !/^[0-9a-f]{64}$/.test(requestFingerprint)) {
+      return failure(500, requestId, "invalid_payment_binding", "The paid request could not be bound safely");
     }
 
     const requirements = paymentRequirements(amountAtomic);
     const challenge = (error, invalidReason) => challengeResponse({
-      resourceUrl, description, amountAtomic, requestId, error, invalidReason,
+      resourceUrl, description, amountAtomic, requestId, requestFingerprint, error, invalidReason,
     });
-
-    const { payload, error } = extractPaymentPayload(headers);
-    if (!payload) {
-      return { ok: false, response: error ? challenge(undefined, error) : challenge() };
-    }
+    const { payload, proofDigest, error } = extractPaymentPayload(headers);
+    if (!payload) return { ok: false, response: error ? challenge(undefined, error) : challenge() };
     if (!matchesRequirements(payload, requirements)) {
       return { ok: false, response: challenge("Payment does not match the required terms", "payment_requirements_mismatch") };
     }
-
-    let verify;
-    try {
-      verify = await postFacilitator("/verify", { x402Version: 2, paymentPayload: payload, paymentRequirements: requirements });
-    } catch (cause) {
-      logger.error?.(JSON.stringify({ event: "payment_facilitator_unreachable", stage: "verify", requestId, message: cause?.message }));
-      return {
-        ok: false,
-        response: {
-          status: 502,
-          headers: {},
-          body: { request_id: requestId, error: "facilitator_unavailable", message: "Payment verification service is unavailable" },
-        },
-      };
+    if (!matchesRequestBinding(payload, requestFingerprint)) {
+      return { ok: false, response: challenge("Payment does not match the requested report", "payment_request_binding_mismatch") };
     }
-    if (verify.status !== 200 || !verify.data || verify.data.isValid !== true) {
-      const reason = typeof verify.data?.invalidReason === "string" ? verify.data.invalidReason : "verification_failed";
+
+    const key = operationKey(payload, requirements);
+    const existing = await operationStore.get(key);
+    if (existing) {
+      // Recovery is bearer access to a paid artifact: require the exact proof
+      // that the facilitator verified, not merely public payer/nonce fields.
+      if (existing.proofDigest !== proofDigest) {
+        return failure(409, requestId, "authorization_proof_mismatch", "This payment authorization does not match the stored operation");
+      }
+      if (existing.requestFingerprint !== requestFingerprint) {
+        return failure(409, requestId, "authorization_request_mismatch", "This payment authorization is already bound to a different request");
+      }
+      if (existing.state === "settled") {
+        logger.info?.(JSON.stringify({ event: "payment_result_recovered", requestId, operation: key.slice(0, 12), transaction: existing.receipt.transaction }));
+        return {
+          ok: true,
+          status: "recovered",
+          artifact: existing.artifact,
+          payer: existing.receipt.payer,
+          transaction: existing.receipt.transaction,
+          responseHeaders: receiptHeaders(existing.receipt),
+        };
+      }
+      if (existing.state === "settling") {
+        return failure(202, requestId, "settlement_pending", "Payment settlement is pending reconciliation", { "retry-after": "5" }, { retryable: true });
+      }
+      return failure(409, requestId, "payment_in_progress", "This payment authorization is already being processed", {}, { retryable: true });
+    }
+
+    let verification;
+    try {
+      verification = await postFacilitator("/verify", { x402Version: 2, paymentPayload: payload, paymentRequirements: requirements });
+    } catch (cause) {
+      logger.error?.(JSON.stringify({ event: "payment_facilitator_unreachable", stage: "verify", requestId, errorType: cause?.name || "Error" }));
+      return failure(502, requestId, "facilitator_unavailable", "Payment verification service is unavailable");
+    }
+    if (verification.status !== 200 || !verification.data || verification.data.isValid !== true) {
+      const reason = typeof verification.data?.invalidReason === "string" ? verification.data.invalidReason : "verification_failed";
       return { ok: false, response: challenge("Payment verification failed", reason) };
     }
 
-    let settle;
-    try {
-      settle = await postFacilitator("/settle", { x402Version: 2, paymentPayload: payload, paymentRequirements: requirements });
-    } catch (cause) {
-      logger.error?.(JSON.stringify({ event: "payment_facilitator_unreachable", stage: "settle", requestId, message: cause?.message }));
+    const operation = {
+      state: "verified",
+      requestFingerprint,
+      proofDigest,
+      payload,
+      requirements,
+      resourceUrl,
+      description,
+      payer: verification.data.payer || payload.payload.authorization.from,
+      artifact: null,
+      receipt: null,
+    };
+    if (!await operationStore.create(key, operation)) {
+      const concurrent = await operationStore.get(key);
+      if (concurrent) return failure(409, requestId, "payment_in_progress", "This payment authorization is already being processed", {}, { retryable: true });
+      return failure(503, requestId, "payment_state_capacity_reached", "Payment recovery storage is at capacity; no settlement was attempted");
+    }
+    return { ok: true, status: "verified", context: { key, requestFingerprint } };
+  }
+
+  async function recover({ headers = {}, amountAtomic, requestId, requestFingerprint }) {
+    if (!configured) return null;
+    const { payload, proofDigest } = extractPaymentPayload(headers);
+    if (!payload) return null;
+    const requirements = paymentRequirements(amountAtomic);
+    if (!matchesRequirements(payload, requirements)) return null;
+    const key = operationKey(payload, requirements);
+    const existing = await operationStore.get(key);
+    if (!existing) return null;
+    if (existing.proofDigest !== proofDigest) {
+      return failure(409, requestId, "authorization_proof_mismatch", "This payment authorization does not match the stored operation");
+    }
+    if (!matchesRequestBinding(payload, requestFingerprint) || existing.requestFingerprint !== requestFingerprint) {
+      return failure(409, requestId, "authorization_request_mismatch", "This payment authorization is already bound to a different request");
+    }
+    if (existing.state === "settled") {
+      logger.info?.(JSON.stringify({ event: "payment_result_recovered", requestId, operation: key.slice(0, 12), transaction: existing.receipt.transaction }));
       return {
-        ok: false,
-        response: {
-          status: 502,
-          headers: {},
-          body: { request_id: requestId, error: "facilitator_unavailable", message: "Payment settlement service is unavailable" },
-        },
+        ok: true,
+        status: "recovered",
+        artifact: existing.artifact,
+        payer: existing.receipt.payer,
+        transaction: existing.receipt.transaction,
+        responseHeaders: receiptHeaders(existing.receipt),
       };
     }
-    if (settle.status !== 200 || !settle.data || settle.data.success !== true) {
-      const reason = typeof settle.data?.errorReason === "string" ? settle.data.errorReason : "settlement_failed";
-      return { ok: false, response: challenge("Payment settlement failed", reason) };
+    if (existing.state === "settling") {
+      return failure(202, requestId, "settlement_pending", "Payment settlement is pending reconciliation", { "retry-after": "5" }, { retryable: true });
+    }
+    return failure(409, requestId, "payment_in_progress", "This payment authorization is already being processed", {}, { retryable: true });
+  }
+
+  async function abandon(context) {
+    const operation = await operationStore.get(context?.key);
+    if (operation?.state === "verified" && operation.requestFingerprint === context.requestFingerprint) {
+      await operationStore.delete(context.key);
+    }
+  }
+
+  async function settle({ context, artifact, requestId }) {
+    const operation = await operationStore.get(context?.key);
+    if (!operation || operation.requestFingerprint !== context?.requestFingerprint) {
+      return failure(409, requestId, "payment_context_invalid", "Payment verification context is missing or expired");
+    }
+    if (operation.state === "settled") {
+      return {
+        ok: true,
+        status: "recovered",
+        artifact: operation.artifact,
+        payer: operation.receipt.payer,
+        transaction: operation.receipt.transaction,
+        responseHeaders: receiptHeaders(operation.receipt),
+      };
+    }
+    if (operation.state !== "verified") {
+      return failure(409, requestId, "payment_in_progress", "This payment authorization is already being processed", {}, { retryable: true });
+    }
+
+    // Atomically acquire settlement ownership and persist the complete artifact.
+    // Exactly one caller may transition verified -> settling.
+    const persisted = await operationStore.transition(context.key, "verified", { state: "settling", artifact });
+    if (!persisted) {
+      const current = await operationStore.get(context.key);
+      if (current?.state === "settled") {
+        return {
+          ok: true,
+          status: "recovered",
+          artifact: current.artifact,
+          payer: current.receipt.payer,
+          transaction: current.receipt.transaction,
+          responseHeaders: receiptHeaders(current.receipt),
+        };
+      }
+      if (current?.state === "settling") {
+        return failure(202, requestId, "settlement_pending", "Payment settlement is pending reconciliation", { "retry-after": "5" }, { retryable: true });
+      }
+      return failure(503, requestId, "payment_state_unavailable", "Payment state could not be persisted; no settlement was attempted");
+    }
+    let settlement;
+    try {
+      settlement = await postFacilitator("/settle", {
+        x402Version: 2,
+        paymentPayload: operation.payload,
+        paymentRequirements: operation.requirements,
+      });
+    } catch (cause) {
+      // The outcome may be ambiguous; retain settling state and artifact. Never
+      // blindly retry a potentially consumed EIP-3009 authorization.
+      logger.error?.(JSON.stringify({ event: "payment_settlement_unknown", requestId, operation: context.key.slice(0, 12), errorType: cause?.name || "Error" }));
+      return failure(502, requestId, "settlement_outcome_unknown", "Payment settlement outcome is unknown and requires reconciliation", {}, { retryable: true });
+    }
+    if (settlement.status !== 200 || !settlement.data || settlement.data.success !== true) {
+      // Any response after a settlement attempt may be ambiguous (including a
+      // proxy 500 or nonce-used response). Preserve artifact/state; never retry
+      // or delete the authorization without reconciliation evidence.
+      logger.error?.(JSON.stringify({ event: "payment_settlement_unconfirmed", requestId, operation: context.key.slice(0, 12), facilitatorStatus: settlement.status }));
+      return failure(502, requestId, "settlement_outcome_unknown", "Payment settlement was not confirmed and requires reconciliation", {}, { retryable: true });
     }
 
     const receipt = {
       success: true,
-      transaction: settle.data.transaction,
-      network: settle.data.network || network,
-      payer: settle.data.payer || verify.data.payer || null,
+      transaction: settlement.data.transaction,
+      network: settlement.data.network || network,
+      payer: settlement.data.payer || operation.payer || null,
     };
-    logger.info?.(JSON.stringify({ event: "payment_settled", requestId, network: receipt.network, transaction: receipt.transaction }));
+    // Remove the raw signed payload after settlement; only recovery material remains.
+    const recorded = await operationStore.transition(context.key, "settling", {
+      state: "settled", artifact, receipt, payload: null, requirements: null, resourceUrl: null, description: null,
+    });
+    if (!recorded) {
+      logger.error?.(JSON.stringify({ event: "payment_receipt_persistence_failed", requestId, operation: context.key.slice(0, 12), network: receipt.network, transaction: receipt.transaction }));
+      return failure(500, requestId, "payment_receipt_persistence_failed", "Payment settled but the recoverable receipt could not be persisted; operator reconciliation is required");
+    }
+    logger.info?.(JSON.stringify({ event: "payment_settled", requestId, operation: context.key.slice(0, 12), network: receipt.network, transaction: receipt.transaction }));
     return {
       ok: true,
+      status: "settled",
+      artifact,
       payer: receipt.payer,
       transaction: receipt.transaction,
-      responseHeaders: { "payment-response": base64Encode(receipt) },
+      responseHeaders: receiptHeaders(receipt),
     };
   }
 
@@ -248,8 +471,12 @@ export function createPaymentGate({
     network,
     assetName,
     assetDecimals,
+    storeDurability: operationStore?.durability || "custom",
     requirements: configured ? paymentRequirements : null,
-    charge,
+    recover,
+    verify,
+    settle,
+    abandon,
   };
 }
 
@@ -270,10 +497,4 @@ export function paymentGateFromEnv(env = {}, deps = {}) {
     maxTimeoutSeconds: integerFromEnv(env.X402_MAX_TIMEOUT_SECONDS, X402_DEFAULTS.maxTimeoutSeconds),
     ...deps,
   });
-}
-
-export function validatePaidSymbols(input) {
-  if (!Array.isArray(input.symbols) || input.symbols.length < 1 || input.symbols.length > 5) {
-    throw new ValidationError("symbols must contain between 1 and 5 items");
-  }
 }
