@@ -2101,3 +2101,89 @@ body {
 .plan-state, .loading-state, .error-state, #overview-state, #result-state { background: #ffffffbd; border-radius: var(--radius-lg); padding-inline: 1.25rem; backdrop-filter: blur(12px); }
 .app-footer { background: transparent; }
 @media print { body { background: white; } }
+
+/* Liquid glass experiment: CSS fallback stays usable if the external video is unavailable. */
+:root {
+  color-scheme: dark;
+  --color-bg: #0b151b;
+  --color-surface: #1b2a32;
+  --color-surface-strong: #283b43;
+  --color-ink: #f7fafb;
+  --color-ink-soft: #d5e0e2;
+  --color-muted: #afbec3;
+  --color-line: #ffffff38;
+  --color-line-strong: #ffffff70;
+  --color-primary: #8ed5cf;
+  --color-primary-dark: #a8e8e1;
+  --color-primary-soft: #264748;
+  --color-warning-soft: #503e25;
+  --color-warning-ink: #ffddaa;
+  --color-danger-soft: #482a30;
+  --color-danger: #ffb6ba;
+  --font-ui: Geist, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+html, body { background: #0b151b; }
+body { position: relative; isolation: isolate; background-image: radial-gradient(ellipse at 74% 34%, #395359 0%, #152931 42%, #091218 85%); color: var(--color-ink); }
+.site-video { position: fixed; inset: 0; z-index: -2; width: 100%; height: 100%; object-fit: cover; pointer-events: none; }
+body::before { content: ''; position: fixed; inset: 0; z-index: -1; pointer-events: none; background: linear-gradient(90deg, #071016d9 0%, #0b1721aa 55%, #071016a6 100%), linear-gradient(0deg, #071016d6 0%, transparent 55%); }
+.liquid-glass, .intro-nav, .intro-outline, .starter-prompts button, .chat-composer, .message-user, .plan-state, .loading-state, .error-state, #overview-state, #result-state, .chat-settings[open] {
+  position: relative; overflow: hidden; background: #ffffff0d; border: 0; box-shadow: inset 0 1px 1px #ffffff2b; backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+}
+.liquid-glass::before, .intro-nav::before, .intro-outline::before, .starter-prompts button::before, .chat-composer::before, .message-user::before, .plan-state::before, .loading-state::before, .error-state::before, #overview-state::before, #result-state::before {
+  content: ''; position: absolute; inset: 0; border-radius: inherit; padding: 1.4px;
+  background: linear-gradient(180deg, #ffffff91 0%, #ffffff3d 20%, transparent 40%, transparent 60%, #ffffff3d 80%, #ffffff91 100%);
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor; mask-composite: exclude; pointer-events: none;
+}
+.intro { height: 100svh; min-height: 560px; color: #fff; }
+.intro-stage { position: relative; min-height: 560px; height: 100svh; background: transparent; }
+.intro-chrome { padding: max(20px, env(safe-area-inset-top)) clamp(20px, 3vw, 48px); }
+.intro-mark { color: #fff; }
+.intro-nav { display: flex; align-items: center; gap: .2rem; border-radius: 14px; padding: .4rem; }
+.intro-nav a { display: inline-flex; align-items: center; min-height: 36px; padding: 0 .85rem; color: #ffffffbb; font-size: .88rem; text-decoration: none; border-radius: 8px; }
+.intro-nav a:hover, .intro-nav .is-current { color: #fff; background: #ffffff29; }
+.intro-pill { background: #fff; color: #101719; font-weight: 600; }
+.intro-pill:hover { background: #e7efef; color: #101719; }
+.intro-panel { align-items: flex-start; justify-content: flex-end; text-align: left; padding: 140px clamp(24px, 5vw, 78px) clamp(76px, 11vh, 120px); }
+.intro-panel-first { opacity: 1 !important; transform: none !important; pointer-events: auto !important; }
+.intro-panel h1 { max-width: 14ch; font-size: clamp(3rem, 6vw, 6rem); font-weight: 500; line-height: 1.04; letter-spacing: -.05em; }
+.intro-eyebrow { color: #ffffffbc; }
+.intro-sub { max-width: 48ch; color: #ffffffc7; font-size: clamp(.95rem, 1.1vw, 1.1rem); }
+.intro-actions { display: flex; flex-wrap: wrap; align-items: center; gap: .8rem; margin-top: 1.75rem; }
+.intro-panel-cta { margin-top: 0; }
+.intro-outline { color: #fff; background: #ffffff10; }
+.intro-outline:hover { color: #fff; background: #ffffff24; }
+.intro-bottom { color: #ffffffad; }
+.intro-chrome-note { display: none; }
+.app-header { position: relative; z-index: 2; background: #ffffff10; border: 0; backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); }
+.chat-workspace { position: relative; z-index: 1; }
+.chat-welcome h1 { color: #fff; font-weight: 500; font-size: clamp(2.4rem, 4vw, 3.8rem); }
+.chat-welcome > p { color: #d8e4e6; }
+.starter-prompts button { color: #f4fbfb; border-radius: 999px; padding-inline: 1rem; }
+.starter-prompts button:hover { background: #ffffff25; color: #fff; }
+.composer-dock { background: linear-gradient(transparent, #0b1720e8 20%, #0b1720f5); }
+.chat-composer { border-radius: 22px; background: #dcebed18; box-shadow: 0 14px 44px #0004, inset 0 1px 1px #ffffff2b; }
+.chat-composer:focus-within { box-shadow: 0 0 0 2px #a8e8e1, 0 14px 44px #0004; }
+.chat-composer textarea { color: #fff; background: transparent; }
+.chat-composer textarea::placeholder { color: #d6e3e8ad; }
+.planner-action, .primary-action { background: #f4f9f9; color: #101719; border-color: transparent; border-radius: 999px; }
+.planner-action:hover, .primary-action:hover { background: #dcebea; color: #101719; }
+.message-user { background: #ffffff1a; border-radius: 16px; }
+.plan-state, .loading-state, .error-state, #overview-state, #result-state { padding: 1.25rem; background: #162932b8; border-radius: 18px; }
+.plan-heading, .ai-plan-context, .result-hero { background: transparent; }
+input[type="text"], input[type="number"], textarea { background: #10232bc7; color: #fff; border-color: #ffffff66; }
+.segmented-control span, .budget-summary, .objective-block { background: #ffffff16; color: #fff; }
+.chat-settings[open] { padding: .8rem; border-radius: 14px; }
+.app-footer { position: relative; z-index: 1; color: #d4e1e3; }
+:focus-visible { outline-color: #a8e8e1; }
+@media (max-width: 720px) {
+  .intro-nav { display: none; }
+  .intro { min-height: 620px; }
+  .intro-stage { min-height: 620px; }
+  .intro-panel { padding: 115px 22px 90px; }
+  .intro-panel h1 { font-size: clamp(2.8rem, 10vw, 4.4rem); }
+  .intro-sub { max-width: 36ch; }
+  .intro-bottom span:first-child { display: none; }
+}
+@media (prefers-reduced-motion: reduce) { .site-video { display: none; } }
+@media print { body { background: #fff; color: #111; } .site-video { display: none; } }
