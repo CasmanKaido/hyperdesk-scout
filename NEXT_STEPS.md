@@ -1,6 +1,6 @@
 # LiquidFlux — Ordered Execution Checklist
 
-This is the working order from the current `0.8.11` state. Complete each numbered stage before starting the next unless it is explicitly marked parallel. Do not claim a stage is complete without its listed evidence.
+This is the working order from the current `0.8.12` state. Complete each numbered stage before starting the next unless it is explicitly marked parallel. Do not claim a stage is complete without its listed evidence.
 
 ## Current baseline
 
@@ -15,7 +15,8 @@ This is the working order from the current `0.8.11` state. Complete each numbere
 - [x] x402 v2 paid research endpoint implemented and locally tested
 - [x] Paid endpoint enabled in production
 - [x] Live testnet payment completed
-- [x] Paid research service published on OKX.AI
+- [x] Direct paid research endpoint proven with two testnet payments
+- [ ] Two-service free OKX.AI listing reapproved after paid-service removal
 - [ ] Independent external specialist invoked
 - [ ] Trade execution (intentionally out of current scope)
 
@@ -111,7 +112,7 @@ Use the official OKX buyer/payment flow; do not manually construct signatures.
 - [ ] Invoke and pay through the OKX.AI marketplace flow—not direct `curl`. v0.8.9 fixed parameter collection, and a fresh BTC probe reached the payment challenge, but the marketplace path rejected the endpoint's X Layer testnet USD₮0 asset before authorization. Mainnet/token alignment is deferred.
 - [ ] Record service ID, invocation evidence, payment receipt, and delivered result in `OKX_AI.md`.
 
-**Publication completed 2026-09-24:** the service is present in the live three-service catalog and exact marketplace search. Marketplace routing and BTC parameter collection reach the endpoint, but the invocation path rejects the endpoint's X Layer testnet USD₮0 asset before authorization. End-to-end marketplace purchase remains open; direct official payment and delivery are proven separately.
+**Current status 2026-09-24:** the paid service was initially published and routed to parameter collection, but OKX later rejected the Agent because marketplace payments require X Layer mainnet (`eip155:196`) rather than the endpoint's X Layer testnet (`eip155:1952`). The paid catalog entry was removed in transaction `0xa6ae5b11d9b463b689b3f4d64f389e8b8f41b8ab26673f099cd53d5c008c8ed1`; Agent `13784` was resubmitted with only the two free services and is under review. Direct official testnet payment and delivery remain proven separately.
 
 ## Stage 6 — Build the adversarial AI evaluation suite
 
@@ -202,4 +203,4 @@ This stage may run in parallel with Stages 6–8 after payment proof.
 - Native mobile application
 - Decorative dashboard expansion
 
-These features add risk without proving the current product. The submission-day action is to package the proven scope: production v0.8.11 with live natural information-fetch confirmation and visible paid-report disclosure, public OKX.AI listing/routing, two direct official payment receipts, settlement reconciliation, and explicit marketplace testnet-asset limitation. Mainnet/token alignment and marketplace-native paid delivery are post-submission work. Credential rotation in Stage 0 remains an unresolved security requirement.
+These features add risk without proving the current product. The submission-day action is to package the proven scope: production v0.8.12 with live natural information-fetch confirmation and honest direct-paid-report disclosure, two historically proven free OKX.AI invocations, a two-service Agent resubmission under review, two direct official payment receipts, settlement reconciliation, and explicit marketplace mainnet requirement. Mainnet/token alignment and marketplace-native paid delivery are post-submission work. Credential rotation in Stage 0 remains an unresolved security requirement.

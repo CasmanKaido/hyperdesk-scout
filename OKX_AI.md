@@ -6,9 +6,10 @@
 - **Agent ID:** `13784`
 - **Role:** Agent Service Provider
 - **Network:** X Layer
-- **Registered services:** Hyperliquid Funding Specialist, Market-Neutral Orchestrator, and Hyperliquid Research Report
+- **Marketplace-submitted services:** Hyperliquid Funding Specialist and Market-Neutral Orchestrator
+- **Separate direct service:** Hyperliquid Research Report
 - **Service type:** A2MCP
-- **Fees:** Funding Specialist and Market-Neutral Orchestrator are free; Hyperliquid Research Report is listed at 0.01 USDT per call and challenges for 0.01 USD₮0 on X Layer testnet
+- **Fees:** Both marketplace-submitted services are free; the direct Hyperliquid Research Report challenges for 0.01 USD₮0 on X Layer testnet
 - **Funding endpoint:** https://hyperdesk-scout.onrender.com/api/v1/funding-scan
 - **Orchestrator endpoint:** https://hyperdesk-scout.onrender.com/api/v1/orchestrate
 - **Paid research endpoint:** https://hyperdesk-scout.onrender.com/api/v1/research-report
@@ -60,17 +61,17 @@ The runtime provider can be changed later without recreating Agent ID `13784`.
 
 ## Marketplace review
 
-LiquidFlux was submitted for OKX.AI marketplace listing review in English on 2026-09-18 and has been approved.
+LiquidFlux was originally approved after its 2026-09-18 submission. A later review rejected the Agent because the paid report challenged on X Layer testnet (`eip155:1952`) while OKX.AI requires X Layer mainnet (`eip155:196`) for marketplace payment. The paid service was removed from the marketplace catalog in transaction `0xa6ae5b11d9b463b689b3f4d64f389e8b8f41b8ab26673f099cd53d5c008c8ed1`, and LiquidFlux was resubmitted in English with only the two free services.
 
 Current marketplace state:
 
-- **Agent status:** Active
-- **Approval:** Listed — eligible for task recommendations
+- **Agent status:** Not listed while review is pending
+- **Approval:** Resubmitted; under review
 - **Category:** Finance
-- **Registered services:** 3
+- **Submitted services:** 2
 - **Funding Specialist endpoint:** https://hyperdesk-scout.onrender.com/api/v1/funding-scan
 - **Market-Neutral Orchestrator endpoint:** https://hyperdesk-scout.onrender.com/api/v1/orchestrate
-- **Hyperliquid Research Report endpoint:** https://hyperdesk-scout.onrender.com/api/v1/research-report
+- **Direct paid endpoint, not in current marketplace submission:** https://hyperdesk-scout.onrender.com/api/v1/research-report
 
 ## Buyer-side test identity
 
@@ -147,4 +148,4 @@ The business model and seller rail are documented in [`BUSINESS_MODEL.md`](BUSIN
 
 The official listing validator returned no findings, the deployed endpoint returned its expected HTTP 402 challenge before publication, the service appeared as the third service in LiquidFlux's live catalog, and an exact marketplace service search returned it publicly. The two existing free services were preserved.
 
-The marketplace record displays 0.01 USDT using marketplace token `0x779ded0c9e1022225f8e0630b35a9b54be713736`, while the endpoint challenge currently requests 0.01 USD₮0 on X Layer testnet using `0x9e29b3aada05bf2d2c827af80bd28dc0b9b4fb0c`. A buyer-side marketplace probe on 2026-09-24 proved discovery, A2MCP routing, parameter collection, and delivery of `symbols=BTC` to the endpoint. It then stopped before authorization because the endpoint's testnet USD₮0 asset is unsupported by the marketplace invocation path. No marketplace payment or report delivery is claimed. Two direct official payment flows remain the settlement evidence; mainnet/token alignment is deferred rather than rushed for submission.
+The marketplace record displayed 0.01 USDT using marketplace token `0x779ded0c9e1022225f8e0630b35a9b54be713736`, while the endpoint challenges for 0.01 USD₮0 on X Layer testnet using `0x9e29b3aada05bf2d2c827af80bd28dc0b9b4fb0c`. A buyer-side marketplace probe on 2026-09-24 proved discovery, A2MCP routing, parameter collection, and delivery of `symbols=BTC` to the endpoint, then stopped before authorization because the testnet asset was unsupported. OKX later rejected the Agent listing because marketplace payment requires X Layer mainnet. The paid marketplace entry was removed and the two free services were resubmitted; the paid endpoint remains direct-only. Two direct official payment flows remain the settlement evidence, and no marketplace payment or report delivery is claimed.

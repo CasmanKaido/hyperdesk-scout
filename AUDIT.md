@@ -164,6 +164,14 @@ Static-asset tests assert the paid label, report name, price, wallet boundary, a
 
 After commit `708a5ef` was pushed, Render reported v0.8.11. A direct deployed-page check returned the complete paid-service disclosure and corrected free-workflow copy. The production Chrome smoke passed desktop and emulated mobile layout checks, executed the natural “check it” information confirmation into BTC evidence, and completed strategy review/orchestration without runtime exceptions. This proves the disclosure is deployed and the existing product journey still works; it does not change the documented marketplace-native payment limitation.
 
+## OKX.AI review rejection and fast recovery — 2026-09-24
+
+A fresh owner-profile check found that LiquidFlux Agent `13784` was no longer publicly listed. Direct `service-match` by Agent ID still returned the three attached services, but searches by ASP name `LiquidFlux`, exact service name `Hyperliquid Research Report`, and keyword `Hyperliquid` returned no matches. The owner record provided the definitive current state: listing rejected because the paid endpoint challenged on X Layer testnet (`eip155:1952`) while OKX.AI requires marketplace payment on X Layer mainnet (`eip155:196`). This supersedes the earlier same-day discoverability record; the later review decision explains why public search stopped returning LiquidFlux.
+
+To restore the free Agent listing without a rushed mainnet migration, the operator explicitly confirmed removal of only the paid marketplace service. The first update attempt was blocked before execution by an outdated default A2A runtime. Running the v0.2.16 runtime doctor through the user-owned npm prefix passed all eight checks. The confirmed delete-only update then succeeded in transaction `0xa6ae5b11d9b463b689b3f4d64f389e8b8f41b8ab26673f099cd53d5c008c8ed1`. The direct `/api/v1/research-report` endpoint, payment configuration, prior receipts, and the two free services were not changed.
+
+LiquidFlux was then resubmitted in English with only Hyperliquid Funding Specialist and Market-Neutral Orchestrator. The submission was accepted for review (`approvalStatus: 2`); the Agent remains not listed until approval completes. The direct paid testnet endpoint remains separate and retains two successful official payment proofs. No mainnet migration, new payment, or marketplace-native paid-delivery claim was made.
+
 ## Findings and priorities
 
 ### P0 — Complete and validate the information/strategy split

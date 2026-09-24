@@ -17,7 +17,10 @@ test("loads the dashboard assets with strict security headers", () => {
   assert.match(html, /class="paid-service-badge">Paid agent service<\/span>/);
   assert.match(html, /Hyperliquid Research Report/);
   assert.match(html, /0\.01 USD₮0/);
+  assert.match(html, /Direct paid API/);
+  assert.match(html, /Two testnet payments proven/);
   assert.match(html, /No browser wallet connection is required/);
+  assert.match(html, /Marketplace distribution requires X Layer mainnet/);
   assert.match(html, /Free first-party analysis · no paid service selected/);
   assert.equal(getStaticAsset(assets, "POST", "/"), null);
   assert.equal(getStaticAsset(assets, "GET", "/missing.css"), null);
