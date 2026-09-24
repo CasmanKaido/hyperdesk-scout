@@ -1026,3 +1026,41 @@ for (const starter of document.querySelectorAll("[data-prompt]")) {
 showView("empty");
 syncControls();
 checkHealth();
+
+// The introduction uses the supplied cue structure while leaving normal dashboard scrolling intact.
+(function initIntro() {
+  const intro = document.querySelector('.intro');
+  if (!intro || typeof window.addEventListener !== 'function' || typeof window.matchMedia !== 'function') return;
+  const stage = intro.querySelector('.intro-stage');
+  const panels = [...intro.querySelectorAll('[data-intro-panel]')];
+  const cues = [[0, 0, .15, .23], [.35, .43, .57, .65], [.77, .85, 1.10, 1.20]];
+  const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+  const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
+  const smooth = value => value * value * (3 - 2 * value);
+  const ramp = (progress, start, end) => end <= start ? Number(progress >= end) : smooth(clamp((progress - start) / (end - start), 0, 1));
+  let ticking = false;
+  function paint() {
+    ticking = false;
+    if (reducedMotion.matches) return;
+    const distance = intro.offsetHeight - window.innerHeight;
+    const progress = distance > 0 ? clamp((window.scrollY - intro.offsetTop) / distance, 0, 1) : 0;
+    stage.style.setProperty('--intro-progress', progress);
+    stage.style.setProperty('--intro-rotate', `${progress * 165}deg`);
+    stage.style.setProperty('--intro-scale', `${1 + progress * .27}`);
+    panels.forEach((panel, index) => {
+      const [inStart, inEnd, outStart, outEnd] = cues[index];
+      const enter = ramp(progress, inStart, inEnd);
+      const leave = ramp(progress, outStart, outEnd);
+      const opacity = enter * (1 - leave);
+      panel.style.opacity = opacity;
+      panel.style.transform = `translateY(${(1 - enter) * 22 - leave * 22}px)`;
+      panel.classList.toggle('is-active', opacity > .6);
+      panel.setAttribute('aria-hidden', opacity > .6 ? 'false' : 'true');
+    });
+  }
+  function schedulePaint() { if (!ticking) { ticking = true; requestAnimationFrame(paint); } }
+  window.addEventListener('scroll', schedulePaint, { passive: true });
+  window.addEventListener('resize', schedulePaint);
+  reducedMotion.addEventListener('change', schedulePaint);
+  paint();
+})();
