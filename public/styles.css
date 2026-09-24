@@ -2141,3 +2141,10 @@ body { background-image: none; color: #0a1b33; }
 @media (max-width: 370px) { .epoch-copy { padding-inline: 22px; } .epoch-nav > a:not(.epoch-nav-logo):not(.epoch-nav-cta) { padding-inline: 8px; } .epoch-nav-cta { padding-inline: 12px; } }
 @media (prefers-reduced-motion: reduce) { .epoch-copy, .epoch-nav, .epoch-marquee-track { animation: none; } }
 @media print { .epoch-hero, .epoch-marquee { display: none; } }
+/* Icons are self-contained: no third-party SVG requests or broken-image placeholders. */
+.epoch-logo-card svg { position: relative; z-index: 1; width: 36px; height: 36px; flex: none; }
+.epoch-logo-card:hover img { filter: none; }
+.epoch-logo-card .epoch-layer-logo { width: 90px; height: 52px; flex: none; object-fit: cover; transform: scale(1.15); border-radius: 8px; }
+.epoch-logo-card:has(.epoch-layer-logo) { background: #0c0c0c; }
+.epoch-logo-card:has(.epoch-layer-logo) .epoch-logo-name { display: none; }
+.epoch-logo-card:has(.epoch-layer-logo) .epoch-logo-glow { display: none; }
