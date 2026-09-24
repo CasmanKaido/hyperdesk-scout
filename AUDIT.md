@@ -120,6 +120,12 @@ v0.8.7 adds bounded facilitator settlement reconciliation. Immediate confirmed s
 
 Focused payment/handler/OpenAPI validation passed 56/56 tests, the full local suite passed 159/159 tests, syntax/JSON checks passed, and project diagnostics were clean. The default operation store remains bounded process-local memory: reconciliation cannot survive a restart and is not safe across multiple instances. A durable shared transactional store remains required before production/mainnet claims.
 
+After commit `6264f5c` was pushed, Render reported v0.8.7 and `GET /health/payments` remained `supported` with payments enabled and 2 matching x402 v2 `exact` kinds among 9 advertised kinds (probe request `b3c55682-fec6-48f7-ac11-168d7f51dca1`). A completely fresh official CLI quote for `symbols=BTC` presented 0.01 USD₮0 (10,000 atomic units) on `eip155:1952`, token `0x9e29b3aada05bf2d2c827af80bd28dc0b9b4fb0c`, and recipient `0x49d948895262dbaa485dde3d5785d7d3d3165508`. The operator explicitly confirmed those terms before signing.
+
+The official payment flow then completed successfully. Transaction: `0x07f6fc456ac7f05e62eecb1c7330aa028229133d25efcfce2658a0cf7b840715`; delivered report request: `545b7b70-bbb7-4d19-bc47-bdd9df17e48c`; generated at `2026-09-24T07:02:11.431Z`. The decoded receipt reported `status: success`, payer `0x49d948895262dbaa485dde3d5785d7d3d3165508`, and X Layer testnet, while the report payment metadata recorded 10,000 atomic USD₮0 and the same transaction. The delivered report had `report.payment.recovered: true`, demonstrating that the persisted report was released through the exact-retry reconciliation path rather than regenerated or resettled. It included fresh Hyperliquid evidence, complete 72/72 hourly funding coverage, bounded 20-level-per-side L2 evidence, and a citation-filtered Groq analysis. The CLI's decoded receipt amount field was empty even though the server's bound payment metadata and challenge recorded 10,000 atomic units; this display limitation does not change the confirmed transaction/status evidence.
+
+A post-payment read-only funding check still reported 10 USD₮0, as expected for this self-payment test where payer and recipient are the same address. This proves the live `402 → confirmation → authorization → settlement/reconciliation → 200 report` mechanics, but it does not prove independent merchant revenue transfer, repeat-payment reliability, mainnet durability, or multi-instance safety.
+
 ## Findings and priorities
 
 ### P0 — Complete and validate the information/strategy split

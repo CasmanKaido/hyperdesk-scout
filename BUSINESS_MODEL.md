@@ -1,6 +1,6 @@
 # LiquidFlux Agent Business Model
 
-Status: implemented seller rail (x402 v2, X Layer testnet) — **enabled on the current production deployment** after authenticated facilitator support verification; still disabled by default in code until operator secrets and `X402_ENABLED=true` are configured. This document is the source of truth for what is sold, to whom, at what price, and why the model is credible.
+Status: implemented and live-proven seller rail (x402 v2, X Layer testnet) — **enabled on the current production deployment** after authenticated facilitator support verification; still disabled by default in code until operator secrets and `X402_ENABLED=true` are configured. This document is the source of truth for what is sold, to whom, at what price, and why the model is credible.
 
 ## What LiquidFlux is
 
@@ -38,6 +38,10 @@ Safety properties, enforced by code and covered in `test/payments.test.js`:
 - **No wallet keys server-side.** The server holds no seed phrase, private key, or buyer signing credential. It does hold least-privilege OKX Developer API credentials solely to authenticate facilitator `/supported`, `/verify`, and `/settle` requests; those values stay in deployment secrets and are never logged.
 
 The default operation store is bounded, process-local memory: unused verified operations expire after 24 hours, while settling/failed/settled bindings are retained and new work is rejected at 1,000 operations rather than evicting replay evidence. It provides same-process lost-client-response and transaction-hash reconciliation for a small testnet proof but is not restart-safe, multi-instance-safe, or production-scalable. Before production/mainnet, replace it with a durable shared transactional store so authorization ownership and reconciliation survive restarts and coordinate across instances. A settlement exception or malformed timeout without a transaction hash remains blocked as `settlement_outcome_unknown`; LiquidFlux never blindly retries that authorization.
+
+### Live testnet proof — 2026-09-24
+
+Production v0.8.7 completed a fresh official buyer flow for a BTC report: 0.01 USD₮0 (10,000 atomic units) on X Layer testnet, transaction `0x07f6fc456ac7f05e62eecb1c7330aa028229133d25efcfce2658a0cf7b840715`, delivered report request `545b7b70-bbb7-4d19-bc47-bdd9df17e48c`. The decoded receipt reported success, and the delivered artifact carried the same transaction with `recovered: true`, proving the exact-retry settlement reconciliation path released the stored report without another settlement or report generation. The payer and recipient were the same wallet, so this is mechanical protocol proof rather than evidence of third-party revenue. Repeat reliability, independent-buyer economics, durable storage, and mainnet behavior remain unproven.
 
 ### Configuration (operator)
 
@@ -89,7 +93,7 @@ These boundaries are the brand: buyers pay for evidence they can audit, not conf
 |---|---|---|
 | 1 | Free tier live on OKX.AI (funding scan, orchestrator) | Done (2026-09-18) |
 | 2 | x402 seller rail, request-bound state machine, and bounded transaction-hash reconciliation implemented, tested, documented | Done locally; process-local durability only |
-| 3 | Configure testnet secrets; verify unpaid 402 → paid 200 → settlement receipt with the official OKX buyer flow; record testnet transaction evidence | Gate enabled; authenticated facilitator support confirmed; buyer funded with 10 USD₮0; one pre-funding attempt failed closed without a transaction; fresh post-v0.8.7 proof remains |
+| 3 | Configure testnet secrets; verify unpaid 402 → paid 200 → settlement receipt with the official OKX buyer flow; record testnet transaction evidence | First live proof complete on v0.8.7; transaction and delivered report recorded; repeat reliability and independent-buyer transfer remain |
 | 4 | Publish research report as a paid A2MCP service on OKX.AI; keep a free tier for discovery | After phase 3 |
 | 5 | Mainnet (`eip155:196`) pricing review against measured AI/facilitator costs | After testnet evidence |
 | 6 | Subscriptions (`period` scheme) for recurring research; outbound payments to independent specialist agents (LiquidFlux as buyer) | Deferred — requires distinct provider value and its own evidence |

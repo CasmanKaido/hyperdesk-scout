@@ -12,7 +12,7 @@ This is the working order from the current `0.8.7` state. Complete each numbered
 - [x] Two free services distributed through OKX.AI
 - [x] x402 v2 paid research endpoint implemented and locally tested
 - [x] Paid endpoint enabled in production
-- [ ] Live testnet payment completed
+- [x] Live testnet payment completed
 - [ ] Paid research service published on OKX.AI
 - [ ] Independent external specialist invoked
 - [ ] Trade execution (intentionally out of current scope)
@@ -87,17 +87,17 @@ Required operator values:
 
 Use the official OKX buyer/payment flow; do not manually construct signatures.
 
-- [x] Quote compatibility with a valid scalar `symbols=BTC` request is implemented and deployed in v0.8.6; create a completely fresh quote after v0.8.7 is live.
-- [ ] Verify the confirmation card shows the correct network, token, amount, and recipient.
-- [ ] Explicitly confirm the payment.
-- [ ] Complete testnet verification and settlement.
-- [ ] Confirm the replay returns `HTTP 200` and the requested research report.
-- [ ] Decode and verify the `PAYMENT-RESPONSE` receipt.
-- [ ] Record transaction hash, request ID, timestamp, revision, and sanitized result.
+- [x] Quote the v0.8.7 endpoint with a fresh valid `symbols=BTC` request.
+- [x] Verify the confirmation card shows the correct network, token, amount, recipient, request parameter, and balance status.
+- [x] Explicitly confirm the payment.
+- [x] Complete testnet verification and settlement.
+- [x] Confirm the exact retry/reconciliation path returns `HTTP 200` and the requested research report without regeneration or another settlement.
+- [x] Decode and verify the `PAYMENT-RESPONSE` receipt.
+- [x] Record transaction hash, request ID, timestamp, revision, and sanitized result in `AUDIT.md`.
 - [ ] Repeat once to demonstrate reliability and distinct nonces.
 - [ ] Test an invalid/mismatched payment and confirm access remains blocked.
 
-**Done when:** there is reproducible evidence of `402 → confirmation → settlement → 200 report` on X Layer testnet.
+**First proof completed 2026-09-24:** production v0.8.7 completed `402 → confirmation → settlement/reconciliation → 200 BTC report` through the official CLI. Transaction `0x07f6fc456ac7f05e62eecb1c7330aa028229133d25efcfce2658a0cf7b840715`; report request `545b7b70-bbb7-4d19-bc47-bdd9df17e48c`. Payer and recipient were the same funded wallet, so this proves mechanics rather than independent merchant revenue. Repeat reliability and negative-path checks remain open.
 
 ## Stage 5 — Publish the paid service on OKX.AI
 
@@ -200,4 +200,4 @@ This stage may run in parallel with Stages 6–8 after payment proof.
 - Native mobile application
 - Decorative dashboard expansion
 
-These features add risk without proving the current product. The immediate launch-path action is to deploy and verify v0.8.7, create a completely fresh BTC quote, show the mandatory payment confirmation card, and proceed only after a new explicit `yes`. Credential rotation in Stage 0 remains an unresolved security requirement.
+These features add risk without proving the current product. The next launch-path actions are to repeat the paid flow once with a distinct nonce, test a mismatched payment rejection, then publish the paid service on OKX.AI. Credential rotation in Stage 0 remains an unresolved security requirement.
