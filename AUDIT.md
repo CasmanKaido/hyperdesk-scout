@@ -144,6 +144,8 @@ Publication and discovery are proven, but marketplace-native purchase is not. Th
 
 The first buyer-side A2MCP probe reached the endpoint but stopped safely on HTTP 400 because an empty request produced the generic array-bound message `symbols must contain between 1 and 5 items`; no payment was prepared. The installed OKX invoker recognizes a standard missing-parameter response and can then use the validated service description to collect typed input. v0.8.9 therefore distinguishes an absent `symbols` field as `missing required parameter: symbols` while preserving the existing 1–5 bound for present arrays. Focused tests passed 57/57, the full suite passed 160/160, syntax/JSON checks passed, and project diagnostics were clean.
 
+After v0.8.9 deployed, a fresh marketplace selection and probe successfully entered parameter collection, accepted `symbols=BTC`, applied the documented default question, and reached the endpoint's payment challenge. The A2MCP invoker then blocked before authorization because the endpoint's X Layer testnet USD₮0 asset is not supported by that marketplace invocation path. No payment, receipt, transaction, or report resulted. This establishes the final boundary for submission: marketplace publication, discovery, routing, and parameter collection are live; two official direct payment flows are proven; marketplace-native paid delivery is not. A rushed mainnet/token migration was deliberately not attempted.
+
 ## Findings and priorities
 
 ### P0 — Complete and validate the information/strategy split

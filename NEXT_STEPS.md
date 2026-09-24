@@ -106,10 +106,10 @@ Use the official OKX buyer/payment flow; do not manually construct signatures.
 - [x] Register the paid endpoint as an A2MCP service under LiquidFlux Agent `13784` (service `e10c7cee-41fd-4c6c-a11a-37b0e780b43b`; transaction `0x58ba919edabb37737b3d185ba0a5f54bb4f7e251e350ac7a129de38c427099ac`).
 - [x] Validate the listing with the official validator; no findings.
 - [ ] Discover it from the buyer identity in a clean session. General marketplace discovery from the current account succeeded.
-- [ ] Invoke and pay through the OKX.AI marketplace flow—not direct `curl`. Initial empty-input probe reached LiquidFlux but exposed missing-parameter interoperability; v0.8.9 fixes the response for a fresh retry.
+- [ ] Invoke and pay through the OKX.AI marketplace flow—not direct `curl`. v0.8.9 fixed parameter collection, and a fresh BTC probe reached the payment challenge, but the marketplace path rejected the endpoint's X Layer testnet USD₮0 asset before authorization. Mainnet/token alignment is deferred.
 - [ ] Record service ID, invocation evidence, payment receipt, and delivered result in `OKX_AI.md`.
 
-**Publication completed 2026-09-24:** the service is present in the live three-service catalog and exact marketplace search. End-to-end marketplace purchase remains open. The listing displays 0.01 USDT, while the endpoint requests 0.01 USD₮0 on X Layer testnet; the buyer-side invocation must establish the actual handoff and rule out an unintended second fee before this stage is complete.
+**Publication completed 2026-09-24:** the service is present in the live three-service catalog and exact marketplace search. Marketplace routing and BTC parameter collection reach the endpoint, but the invocation path rejects the endpoint's X Layer testnet USD₮0 asset before authorization. End-to-end marketplace purchase remains open; direct official payment and delivery are proven separately.
 
 ## Stage 6 — Build the adversarial AI evaluation suite
 
@@ -200,4 +200,4 @@ This stage may run in parallel with Stages 6–8 after payment proof.
 - Native mobile application
 - Decorative dashboard expansion
 
-These features add risk without proving the current product. The next launch-path action is a buyer-side OKX.AI invocation of the published paid service to verify discovery, payment handoff, and delivered output without assuming the marketplace fee and endpoint challenge are a single charge. Production v0.8.8 is deployed and verified; the direct payment checklist is closed. Credential rotation in Stage 0 remains an unresolved security requirement.
+These features add risk without proving the current product. The submission-day action is to package the proven scope: production v0.8.9, public OKX.AI listing/routing, two direct official payment receipts, settlement reconciliation, and explicit marketplace testnet-asset limitation. Mainnet/token alignment and marketplace-native paid delivery are post-submission work. Credential rotation in Stage 0 remains an unresolved security requirement.
