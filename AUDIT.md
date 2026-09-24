@@ -102,7 +102,9 @@ After commit `bbe6c96` was pushed, Render completed the rebuilt container and `G
 
 Because the Render plan has no shell access, LiquidFlux now exposes `GET /health/payments` as a temporary operational fallback. It can initialize the authenticated official facilitator client while `X402_ENABLED=false`, caches successful `/supported` responses for five minutes, and applies a one-minute cooldown after failed checks so a public caller cannot repeatedly hammer the authenticated OKX route. It returns only the expected x402 version/scheme/network, support boolean, aggregate match counts, and whether payments are enabled. It never returns credential presence details, API values, authentication headers, signers, raw facilitator data, or upstream error text. A failed authenticated request returns a generic sanitized 502 and logs only the error type.
 
-Focused payment/handler/OpenAPI validation passed 47/47 tests, the full suite passed 150/150, recursive JavaScript syntax and JSON checks passed, project diagnostics were clean, and the changed diff contained no production credentials. These are local implementation results; facilitator support for `eip155:1952` remains unproven until the deployed probe succeeds.
+Focused payment/handler/OpenAPI validation passed 47/47 tests, the full suite passed 150/150, recursive JavaScript syntax and JSON checks passed, project diagnostics were clean, and the changed diff contained no production credentials.
+
+After commit `78d2f53` was pushed, Render reported version `0.8.5`. The first deployed probe returned HTTP 503 `facilitator_support_not_configured`; after the operator corrected the Render credential configuration, `GET /health/payments` returned `status: supported`, `payments_enabled: false`, and confirmed x402 v2 `exact` on `eip155:1952`, with 2 matching kinds among 9 advertised kinds. Request ID: `3e6d2114-e8de-465a-80f9-ebaa454b88f0`. This proves authenticated facilitator advertisement of the intended kind while the paid route remains disabled; it does not prove buyer authorization, token funding, verification, settlement, or report delivery.
 
 ## Findings and priorities
 

@@ -66,16 +66,16 @@ Required operator values:
 - [x] Choose and verify the LiquidFlux receiving EVM address: `0x49d948895262dbaa485dde3d5785d7d3d3165508` (`xlayer_test`, chain `1952`). Reverified with `onchainos wallet addresses` and explicitly approved by the operator on 2026-09-23.
 - [x] Confirm the X Layer testnet USD₮0 contract and decimals: `0x9e29b3aada05bf2d2c827af80bd28dc0b9b4fb0c`, 6 decimals. The official OKX CLI token registry identifies it as testnet USDT; both official RPCs report `USD₮0`, and the EIP-1967 implementation exposes EIP-3009 authorization methods.
 - [x] Integrate the official pinned `@okxweb3/x402-core@0.1.0` `OKXFacilitatorClient` with synchronous settlement, bounded timeouts, sanitized failures, a read-only `npm run check:x402-support` command, and a cached sanitized `GET /health/payments` fallback for deployments without shell access.
-- [ ] Confirm a compatible facilitator URL supporting x402 v2 `exact` on `eip155:1952`. The SDK's keyless default `https://web3.okx.com/facilitator` is not live; the official credentialed route is `https://web3.okx.com/api/v6/pay/x402/*`, but its `/supported` response cannot be checked without an API key, secret, and passphrase from the official Onchain OS Developer Portal (`https://web3.okx.com/onchainos/dev-portal`), and the published EVM SDK currently documents `eip155:196` rather than testnet.
+- [x] Confirm a compatible facilitator supporting x402 v2 `exact` on `eip155:1952`. The authenticated official `https://web3.okx.com/api/v6/pay/x402/supported` route advertised 2 matching kinds among 9 total kinds through the sanitized production probe on 2026-09-24 (request `3e6d2114-e8de-465a-80f9-ebaa454b88f0`). The keyless `https://web3.okx.com/facilitator` path remains invalid.
 - [x] Confirm the official OKX buyer preserves LiquidFlux request binding in `PAYMENT-SIGNATURE` (binding moved into the selected `accepts[].extra` entry; unknown top-level extensions are not echoed).
 - [ ] Fund the buyer test wallet with test USD₮0 if required.
 - [ ] Configure Render secrets:
   - [ ] `X402_PAYTO_ADDRESS` = the verified receiver above
   - [ ] `X402_ASSET_ADDRESS`
   - [ ] `X402_FACILITATOR_URL=https://web3.okx.com`
-  - [ ] `OKX_API_KEY`
-  - [ ] `OKX_SECRET_KEY`
-  - [ ] `OKX_API_PASSPHRASE`
+  - [x] `OKX_API_KEY` (presence proven by authenticated support response; value remains secret)
+  - [x] `OKX_SECRET_KEY` (presence proven by authenticated support response; value remains secret)
+  - [x] `OKX_API_PASSPHRASE` (presence proven by authenticated support response; value remains secret)
   - [ ] `X402_ENABLED=true` only after `npm run check:x402-support` confirms the intended kind
 - [ ] Keep the initial price at `10000` atomic units (0.01 USD₮0) for the proof.
 
