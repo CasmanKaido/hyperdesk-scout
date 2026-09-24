@@ -1,6 +1,6 @@
 # LiquidFlux — Ordered Execution Checklist
 
-This is the working order from the current `0.8.8` state. Complete each numbered stage before starting the next unless it is explicitly marked parallel. Do not claim a stage is complete without its listed evidence.
+This is the working order from the current `0.8.9` state. Complete each numbered stage before starting the next unless it is explicitly marked parallel. Do not claim a stage is complete without its listed evidence.
 
 ## Current baseline
 
@@ -106,7 +106,7 @@ Use the official OKX buyer/payment flow; do not manually construct signatures.
 - [x] Register the paid endpoint as an A2MCP service under LiquidFlux Agent `13784` (service `e10c7cee-41fd-4c6c-a11a-37b0e780b43b`; transaction `0x58ba919edabb37737b3d185ba0a5f54bb4f7e251e350ac7a129de38c427099ac`).
 - [x] Validate the listing with the official validator; no findings.
 - [ ] Discover it from the buyer identity in a clean session. General marketplace discovery from the current account succeeded.
-- [ ] Invoke and pay through the OKX.AI marketplace flow—not direct `curl`.
+- [ ] Invoke and pay through the OKX.AI marketplace flow—not direct `curl`. Initial empty-input probe reached LiquidFlux but exposed missing-parameter interoperability; v0.8.9 fixes the response for a fresh retry.
 - [ ] Record service ID, invocation evidence, payment receipt, and delivered result in `OKX_AI.md`.
 
 **Publication completed 2026-09-24:** the service is present in the live three-service catalog and exact marketplace search. End-to-end marketplace purchase remains open. The listing displays 0.01 USDT, while the endpoint requests 0.01 USD₮0 on X Layer testnet; the buyer-side invocation must establish the actual handoff and rule out an unintended second fee before this stage is complete.

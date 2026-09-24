@@ -684,6 +684,7 @@ test("validateResearchReportInput bounds symbols and defaults the question", () 
     fingerprintResearchReportRequest(validateResearchReportInput({ symbols: "BTC" })),
     fingerprintResearchReportRequest(validateResearchReportInput({ symbols: ["BTC"] })),
   );
+  assert.throws(() => validateResearchReportInput({}), /missing required parameter: symbols/);
   assert.throws(() => validateResearchReportInput({ symbols: [] }), /between 1 and 5/);
   assert.throws(() => validateResearchReportInput({ symbols: ["A", "B", "C", "D", "E", "F"] }), /between 1 and 5/);
   assert.throws(() => validateResearchReportInput({ symbols: ["BTC"], leverage: 2 }), /Unknown request field/);

@@ -142,6 +142,8 @@ The update succeeded in transaction `0x58ba919edabb37737b3d185ba0a5f54bb4f7e251e
 
 Publication and discovery are proven, but marketplace-native purchase is not. The marketplace record identifies a 0.01 USDT fee token at `0x779ded0c9e1022225f8e0630b35a9b54be713736`, while the endpoint challenge requests 0.01 USD₮0 on X Layer testnet at `0x9e29b3aada05bf2d2c827af80bd28dc0b9b4fb0c`. A buyer-side marketplace invocation is required to determine whether this is one payment handoff or two distinct charges; no seamless-payment or no-double-charge claim is made yet.
 
+The first buyer-side A2MCP probe reached the endpoint but stopped safely on HTTP 400 because an empty request produced the generic array-bound message `symbols must contain between 1 and 5 items`; no payment was prepared. The installed OKX invoker recognizes a standard missing-parameter response and can then use the validated service description to collect typed input. v0.8.9 therefore distinguishes an absent `symbols` field as `missing required parameter: symbols` while preserving the existing 1–5 bound for present arrays. Focused tests passed 57/57, the full suite passed 160/160, syntax/JSON checks passed, and project diagnostics were clean.
+
 ## Findings and priorities
 
 ### P0 — Complete and validate the information/strategy split
