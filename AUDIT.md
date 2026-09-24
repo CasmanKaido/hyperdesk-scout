@@ -172,6 +172,8 @@ To restore the free Agent listing without a rushed mainnet migration, the operat
 
 LiquidFlux was then resubmitted in English with only Hyperliquid Funding Specialist and Market-Neutral Orchestrator. The submission was accepted for review (`approvalStatus: 2`); the Agent remains not listed until approval completes. The direct paid testnet endpoint remains separate and retains two successful official payment proofs. No mainnet migration, new payment, or marketplace-native paid-delivery claim was made.
 
+After commit `5576764` was pushed, Render reported v0.8.12 with the corrected direct-paid API disclosure integrated on top of the concurrently selected frontend. The production smoke was updated to enter the below-fold chat workspace through the new landing experience before asserting composer visibility. Desktop and emulated mobile then passed without horizontal overflow or runtime exceptions; the desktop journey executed “check it” into BTC evidence and completed strategy review/orchestration.
+
 ## Findings and priorities
 
 ### P0 — Complete and validate the information/strategy split

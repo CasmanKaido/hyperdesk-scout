@@ -84,6 +84,8 @@ try {
     assert.equal(await evaluate("document.documentElement.scrollWidth <= innerWidth"), true, `${name} has horizontal overflow`);
     assert.equal(await evaluate('document.querySelector("#objective-message") !== null'), true, `${name} composer exists`);
     assert.equal(await evaluate('document.querySelector("#chat-form button[type=submit]") !== null'), true, `${name} submit exists`);
+    await evaluate('document.querySelector("#main-content").scrollIntoView({ block: "start", behavior: "instant" })');
+    await waitFor('document.querySelector("#chat-form").getBoundingClientRect().bottom <= innerHeight');
     const composerClear = await evaluate(`(() => {
       const form = document.querySelector("#chat-form");
       const rect = form.getBoundingClientRect();
