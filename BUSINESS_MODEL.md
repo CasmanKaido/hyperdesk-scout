@@ -75,7 +75,7 @@ A 0.01 USD₮0 test price proves the rail; production pricing should target a cl
 
 ## Distribution
 
-1. **OKX.AI marketplace** (primary): Agent ID `13784`, approved and listed. Two free A2MCP services live today; the research report becomes the first paid A2MCP service once the gate is configured. The marketplace invoke flow handles the 402 challenge natively and hands payment to the OKX Agent Payments Protocol — no custom buyer UX needed.
+1. **OKX.AI marketplace** (primary): Agent ID `13784`, approved and listed. Two free A2MCP services and the paid Hyperliquid Research Report are now discoverable. The paid listing advertises 0.01 USDT, while the endpoint challenge requests 0.01 USD₮0 on X Layer testnet; buyer-side marketplace invocation must verify the payment handoff and rule out a separate or duplicate fee before claiming seamless native payment.
 2. **Direct API**: any x402-capable client (including `onchainos payment quote`) can probe, confirm, and pay the endpoint.
 3. **Public web workspace**: free chat-first demo that funnels toward the API and marketplace listings.
 
@@ -94,7 +94,7 @@ These boundaries are the brand: buyers pay for evidence they can audit, not conf
 | 1 | Free tier live on OKX.AI (funding scan, orchestrator) | Done (2026-09-18) |
 | 2 | x402 seller rail, complete-artifact precondition, request-bound state machine, and bounded transaction-hash reconciliation implemented, tested, documented | Done locally; process-local durability only |
 | 3 | Configure testnet secrets; verify unpaid 402 → paid 200 → settlement receipt with the official OKX buyer flow; record testnet transaction evidence | First live proof complete on v0.8.7; transaction and delivered report recorded; repeat reliability and independent-buyer transfer remain |
-| 4 | Publish research report as a paid A2MCP service on OKX.AI; keep a free tier for discovery | After phase 3 |
+| 4 | Publish research report as a paid A2MCP service on OKX.AI; keep a free tier for discovery | Published and discoverable; buyer-side marketplace payment/delivery proof remains |
 | 5 | Mainnet (`eip155:196`) pricing review against measured AI/facilitator costs | After testnet evidence |
 | 6 | Subscriptions (`period` scheme) for recurring research; outbound payments to independent specialist agents (LiquidFlux as buyer) | Deferred — requires distinct provider value and its own evidence |
 

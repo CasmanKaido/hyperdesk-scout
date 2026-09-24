@@ -13,7 +13,7 @@ This is the working order from the current `0.8.8` state. Complete each numbered
 - [x] x402 v2 paid research endpoint implemented and locally tested
 - [x] Paid endpoint enabled in production
 - [x] Live testnet payment completed
-- [ ] Paid research service published on OKX.AI
+- [x] Paid research service published on OKX.AI
 - [ ] Independent external specialist invoked
 - [ ] Trade execution (intentionally out of current scope)
 
@@ -101,15 +101,15 @@ Use the official OKX buyer/payment flow; do not manually construct signatures.
 
 ## Stage 5 — Publish the paid service on OKX.AI
 
-- [ ] Define accurate marketplace copy for “Hyperliquid Research Report.”
-- [ ] State 1–5 symbols, optional question, price, evidence included, and no execution.
-- [ ] Register the paid endpoint as an A2MCP service under LiquidFlux Agent `13784`.
-- [ ] Validate the listing with the official validator.
-- [ ] Discover it from the buyer identity in a clean session.
+- [x] Define accurate marketplace copy for “Hyperliquid Research Report.”
+- [x] State 1–5 symbols, optional question, price, evidence included, and no execution.
+- [x] Register the paid endpoint as an A2MCP service under LiquidFlux Agent `13784` (service `e10c7cee-41fd-4c6c-a11a-37b0e780b43b`; transaction `0x58ba919edabb37737b3d185ba0a5f54bb4f7e251e350ac7a129de38c427099ac`).
+- [x] Validate the listing with the official validator; no findings.
+- [ ] Discover it from the buyer identity in a clean session. General marketplace discovery from the current account succeeded.
 - [ ] Invoke and pay through the OKX.AI marketplace flow—not direct `curl`.
 - [ ] Record service ID, invocation evidence, payment receipt, and delivered result in `OKX_AI.md`.
 
-**Done when:** another agent can discover, pay for, and receive the report through OKX.AI.
+**Publication completed 2026-09-24:** the service is present in the live three-service catalog and exact marketplace search. End-to-end marketplace purchase remains open. The listing displays 0.01 USDT, while the endpoint requests 0.01 USD₮0 on X Layer testnet; the buyer-side invocation must establish the actual handoff and rule out an unintended second fee before this stage is complete.
 
 ## Stage 6 — Build the adversarial AI evaluation suite
 
@@ -200,4 +200,4 @@ This stage may run in parallel with Stages 6–8 after payment proof.
 - Native mobile application
 - Decorative dashboard expansion
 
-These features add risk without proving the current product. The next launch-path action is to publish the paid service on OKX.AI. Production v0.8.8 is deployed and verified; the complete live payment and negative-path checklist is closed. Credential rotation in Stage 0 remains an unresolved security requirement.
+These features add risk without proving the current product. The next launch-path action is a buyer-side OKX.AI invocation of the published paid service to verify discovery, payment handoff, and delivered output without assuming the marketplace fee and endpoint challenge are a single charge. Production v0.8.8 is deployed and verified; the direct payment checklist is closed. Credential rotation in Stage 0 remains an unresolved security requirement.

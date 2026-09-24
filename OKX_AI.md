@@ -6,7 +6,7 @@
 - **Agent ID:** `13784`
 - **Role:** Agent Service Provider
 - **Network:** X Layer
-- **Registered services:** Hyperliquid Funding Specialist and Market-Neutral Orchestrator
+- **Registered services:** Hyperliquid Funding Specialist, Market-Neutral Orchestrator, and Hyperliquid Research Report
 - **Service type:** A2MCP
 - **Fee:** Free
 - **Funding endpoint:** https://hyperdesk-scout.onrender.com/api/v1/funding-scan
@@ -66,9 +66,10 @@ Current marketplace state:
 - **Agent status:** Active
 - **Approval:** Listed — eligible for task recommendations
 - **Category:** Finance
-- **Registered services:** 2
+- **Registered services:** 3
 - **Funding Specialist endpoint:** https://hyperdesk-scout.onrender.com/api/v1/funding-scan
 - **Market-Neutral Orchestrator endpoint:** https://hyperdesk-scout.onrender.com/api/v1/orchestrate
+- **Hyperliquid Research Report endpoint:** https://hyperdesk-scout.onrender.com/api/v1/research-report
 
 ## Buyer-side test identity
 
@@ -127,13 +128,22 @@ The synchronous result preserved the complete workflow plan, trace, provenance, 
 
 Next steps are preserving visual evidence and later publishing or integrating additional independent specialist services. Additional services must provide distinct evidence and must not be added merely to inflate the service count.
 
-## Paid service: Hyperliquid Research Report (pending configuration)
+## Paid service: Hyperliquid Research Report
 
-The business model and seller rail are documented in [`BUSINESS_MODEL.md`](BUSINESS_MODEL.md). `POST /api/v1/research-report` is the first paid service: x402 v2 (`exact` scheme) on X Layer testnet (`eip155:1952`), 0.01 USD₮0 per report. The marketplace A2MCP invoke flow handles the endpoint's `HTTP 402` challenge natively and hands settlement to the OKX Agent Payments Protocol, so no custom buyer UX is required.
+The business model and seller rail are documented in [`BUSINESS_MODEL.md`](BUSINESS_MODEL.md). `POST /api/v1/research-report` is LiquidFlux's first paid service: x402 v2 on X Layer testnet (`eip155:1952`), with a 0.01 USD₮0 endpoint challenge per complete report. Two direct official buyer tests completed with distinct transactions, settlement reconciliation, and delivered reports; v0.8.8 additionally prevents settlement when grounded AI synthesis is unavailable.
 
-Publication checklist (none of this is claimed before it happens):
+### Marketplace publication — 2026-09-24
 
-1. Configure `X402_ENABLED`, `X402_PAYTO_ADDRESS`, `X402_ASSET_ADDRESS`, and `X402_FACILITATOR_URL` as deployment secrets.
-2. Verify unpaid `HTTP 402` → paid replay `HTTP 200` → settlement receipt with the official OKX buyer flow on testnet; record the transaction hash.
-3. Publish the research report as a paid A2MCP service with accurate pricing copy; keep the two free services for discovery.
-4. Only then update this section with dated, verifiable payment evidence.
+- **Provider:** LiquidFlux Agent `13784`
+- **Marketplace service:** Hyperliquid Research Report
+- **Service ID:** `e10c7cee-41fd-4c6c-a11a-37b0e780b43b`
+- **Service type:** A2MCP
+- **Marketplace fee:** 0.01 USDT per call
+- **Endpoint:** https://hyperdesk-scout.onrender.com/api/v1/research-report
+- **Method:** `POST`
+- **Parameters:** `symbols` is required (one symbol or 1–5 symbols); `question` is optional
+- **Update transaction:** `0x58ba919edabb37737b3d185ba0a5f54bb4f7e251e350ac7a129de38c427099ac`
+
+The official listing validator returned no findings, the deployed endpoint returned its expected HTTP 402 challenge before publication, the service appeared as the third service in LiquidFlux's live catalog, and an exact marketplace service search returned it publicly. The two existing free services were preserved.
+
+The marketplace record displays 0.01 USDT using marketplace token `0x779ded0c9e1022225f8e0630b35a9b54be713736`, while the endpoint challenge currently requests 0.01 USD₮0 on X Layer testnet using `0x9e29b3aada05bf2d2c827af80bd28dc0b9b4fb0c`. Therefore publication and discovery are proven, but marketplace-native paid invocation is not yet claimed. The next required proof is a buyer-side marketplace invocation confirming whether the marketplace hands off only the endpoint's payment or introduces a separate fee/token step; no double-charge assumption should be made before that test.

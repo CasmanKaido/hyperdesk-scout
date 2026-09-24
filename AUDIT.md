@@ -134,6 +134,14 @@ After commit `79c6ae4` was pushed, Render reported v0.8.8. The sanitized product
 
 A separate explicitly confirmed negative-path test created a fresh authorization bound to `symbols=BTC` and intentionally replayed it with `symbols=ETH`. Production rejected the request locally with HTTP 402, `invalid_reason: payment_request_binding_mismatch`, and request `157e1394-3319-4358-b06f-09f35fe6c351`. The official CLI returned no decoded receipt and `txHash: null`; no report was released. The CLI labeled the non-terminal HTTP 402 wrapper as `status: pending`, but the server result was a definitive fresh payment challenge, not a settlement-pending operation. That authorization will not be retried or reused. This live check proves changed-request binding rejection before settlement.
 
+## OKX.AI paid-service publication — 2026-09-24
+
+The official listing validator passed a new A2MCP service definition with no findings, and the deployed endpoint returned its expected HTTP 402 challenge before publication. Updating LiquidFlux Agent `13784` initially failed before execution because the selected `okx-a2a` CLI was outdated. The official doctor upgraded the runtime from `0.2.15` to `0.2.16`; running the new binary directly produced `ready: true` with all eight checks passing. A fresh explicit confirmation was obtained before retrying the marketplace update.
+
+The update succeeded in transaction `0x58ba919edabb37737b3d185ba0a5f54bb4f7e251e350ac7a129de38c427099ac`. Read-only verification returned a third catalog entry, Hyperliquid Research Report, service ID `e10c7cee-41fd-4c6c-a11a-37b0e780b43b`, A2MCP endpoint `https://hyperdesk-scout.onrender.com/api/v1/research-report`, and 0.01 USDT marketplace fee. An exact marketplace search by Agent ID and service name returned the service publicly; the two pre-existing free services remained unchanged.
+
+Publication and discovery are proven, but marketplace-native purchase is not. The marketplace record identifies a 0.01 USDT fee token at `0x779ded0c9e1022225f8e0630b35a9b54be713736`, while the endpoint challenge requests 0.01 USD₮0 on X Layer testnet at `0x9e29b3aada05bf2d2c827af80bd28dc0b9b4fb0c`. A buyer-side marketplace invocation is required to determine whether this is one payment handoff or two distinct charges; no seamless-payment or no-double-charge claim is made yet.
+
 ## Findings and priorities
 
 ### P0 — Complete and validate the information/strategy split

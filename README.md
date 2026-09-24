@@ -16,13 +16,13 @@ LiquidFlux is a read-only Hyperliquid information and strategy-analysis service 
 - **OpenAPI:** https://hyperdesk-scout.onrender.com/openapi.json
 - **Conversational planner:** `POST https://hyperdesk-scout.onrender.com/api/v1/plan` — provider-backed intent/planning endpoint; intent/planning endpoint
 - **Orchestrator:** `POST https://hyperdesk-scout.onrender.com/api/v1/orchestrate`
-- **OKX.AI ASP:** LiquidFlux, Agent ID `13784` — Funding Specialist and Market-Neutral Orchestrator published as free A2MCP services
+- **OKX.AI ASP:** LiquidFlux, Agent ID `13784` — two free A2MCP services plus the paid Hyperliquid Research Report are published and discoverable
 
 ## Product direction
 
 Existing marketplace products already expose individual Hyperliquid analytics, risk, and execution capabilities. LiquidFlux is therefore evolving from a standalone scanner into the orchestration layer that selects specialist stages, combines their evidence, reports conflicts, and stops at an explicit execution-approval boundary.
 
-[`OKX_AI.md`](OKX_AI.md) records free Funding Specialist and Market-Neutral Orchestrator A2MCP publication and buyer-side invocations on 2026-09-18. These records support distribution of LiquidFlux's own services, not third-party specialist hiring or a new production verification. In code, the orchestrator calls local modules directly; it does not invoke them through OKX.AI. [`STRATEGY.md`](STRATEGY.md) contains the broader direction, including future A2A/payment ideas; [`AUDIT.md`](AUDIT.md) distinguishes these from implemented behavior.
+[`OKX_AI.md`](OKX_AI.md) records free Funding Specialist and Market-Neutral Orchestrator A2MCP publication and buyer-side invocations on 2026-09-18, plus publication of the paid Hyperliquid Research Report on 2026-09-24. The paid listing is discoverable, but buyer-side marketplace payment and delivery remain to be verified. These records support distribution of LiquidFlux's own services, not third-party specialist hiring. In code, the orchestrator calls local modules directly; it does not invoke them through OKX.AI. [`STRATEGY.md`](STRATEGY.md) contains the broader direction, including future A2A/payment ideas; [`AUDIT.md`](AUDIT.md) distinguishes these from implemented behavior.
 
 ![LiquidFlux analysis workspace](assets/screenshots/dashboard-result.png)
 
