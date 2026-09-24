@@ -130,6 +130,8 @@ A second fresh quote and explicit confirmation produced a distinct successful tr
 
 v0.8.8 fixes that defect at the pre-settlement boundary. The paid route now requires `analysis.status: completed`; otherwise it abandons the verified operation, returns retryable HTTP 503 `report_generation_unavailable`, and never calls facilitator settlement. The same unconsumed authorization may retry while valid because the abandoned verified state is removed. Free market overview behavior remains unchanged and may still return explicit safe AI-unavailable states. Automated coverage proves the outage path calls verification but not settlement, then succeeds on a later completed-analysis retry. Focused payment/handler/OpenAPI tests passed 57/57, the full suite passed 160/160, syntax/JSON checks passed, and project diagnostics were clean.
 
+After commit `79c6ae4` was pushed, Render reported v0.8.8. The sanitized production payment probe remained enabled and supported with 2 matching kinds among 9 advertised kinds (request `3d4532d4-e084-47ce-87c8-cf5d08c6414c`), and the deployed OpenAPI contract described the complete-analysis precondition and no-settlement 503 outcome. No third payment was authorized for this deployment verification.
+
 ## Findings and priorities
 
 ### P0 — Complete and validate the information/strategy split

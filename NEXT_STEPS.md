@@ -200,4 +200,4 @@ This stage may run in parallel with Stages 6–8 after payment proof.
 - Native mobile application
 - Decorative dashboard expansion
 
-These features add risk without proving the current product. The next launch-path actions are to deploy and verify v0.8.8, test a mismatched payment rejection through a fresh confirmed authorization, then publish the paid service on OKX.AI. Credential rotation in Stage 0 remains an unresolved security requirement.
+These features add risk without proving the current product. The next launch-path actions are to test a mismatched payment rejection through a fresh confirmed authorization, then publish the paid service on OKX.AI. Production v0.8.8 is deployed and verified. Credential rotation in Stage 0 remains an unresolved security requirement.
