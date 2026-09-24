@@ -1,6 +1,6 @@
 # LiquidFlux — Ordered Execution Checklist
 
-This is the working order from the current `0.8.7` state. Complete each numbered stage before starting the next unless it is explicitly marked parallel. Do not claim a stage is complete without its listed evidence.
+This is the working order from the current `0.8.8` state. Complete each numbered stage before starting the next unless it is explicitly marked parallel. Do not claim a stage is complete without its listed evidence.
 
 ## Current baseline
 
@@ -49,7 +49,7 @@ This is the working order from the current `0.8.7` state. Complete each numbered
 
 - [x] Split payment processing into `challenge`, `verify`, and `settle` phases.
 - [x] For a signed request: verify authorization → generate report → settle → release report.
-- [x] Never settle when report generation fails.
+- [x] Never settle when evidence generation or the promised grounded AI analysis fails/unavailable.
 - [x] Add idempotency/recovery for “settled successfully but HTTP response was lost.”
 - [x] Bind cached paid results to payment nonce and exact normalized request parameters.
 - [x] Reject replay with different symbols/question.
@@ -94,10 +94,10 @@ Use the official OKX buyer/payment flow; do not manually construct signatures.
 - [x] Confirm the exact retry/reconciliation path returns `HTTP 200` and the requested research report without regeneration or another settlement.
 - [x] Decode and verify the `PAYMENT-RESPONSE` receipt.
 - [x] Record transaction hash, request ID, timestamp, revision, and sanitized result in `AUDIT.md`.
-- [ ] Repeat once to demonstrate reliability and distinct nonces.
+- [x] Repeat once to demonstrate reliability and a distinct authorization/transaction.
 - [ ] Test an invalid/mismatched payment and confirm access remains blocked.
 
-**First proof completed 2026-09-24:** production v0.8.7 completed `402 → confirmation → settlement/reconciliation → 200 BTC report` through the official CLI. Transaction `0x07f6fc456ac7f05e62eecb1c7330aa028229133d25efcfce2658a0cf7b840715`; report request `545b7b70-bbb7-4d19-bc47-bdd9df17e48c`. Payer and recipient were the same funded wallet, so this proves mechanics rather than independent merchant revenue. Repeat reliability and negative-path checks remain open.
+**Two payment proofs completed 2026-09-24:** production v0.8.7 completed `402 → confirmation → settlement/reconciliation → 200 BTC report` twice through the official CLI with distinct transactions: `0x07f6fc456ac7f05e62eecb1c7330aa028229133d25efcfce2658a0cf7b840715` (grounded AI report) and `0xac3d8a1cae087dd398b62a4bac34930eb1c352501543e5979529429a5cd45996` (AI providers unavailable). The second proves repeat payment reliability but exposed that a degraded evidence-only artifact was charged. v0.8.8 now blocks settlement unless grounded AI analysis completes. Payer and recipient were the same funded wallet, so these prove mechanics rather than independent merchant revenue. The live mismatched-payment check remains open.
 
 ## Stage 5 — Publish the paid service on OKX.AI
 
@@ -200,4 +200,4 @@ This stage may run in parallel with Stages 6–8 after payment proof.
 - Native mobile application
 - Decorative dashboard expansion
 
-These features add risk without proving the current product. The next launch-path actions are to repeat the paid flow once with a distinct nonce, test a mismatched payment rejection, then publish the paid service on OKX.AI. Credential rotation in Stage 0 remains an unresolved security requirement.
+These features add risk without proving the current product. The next launch-path actions are to deploy and verify v0.8.8, test a mismatched payment rejection through a fresh confirmed authorization, then publish the paid service on OKX.AI. Credential rotation in Stage 0 remains an unresolved security requirement.

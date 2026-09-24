@@ -144,7 +144,7 @@
       "post": {
         "operationId": "getResearchReport",
         "summary": "Paid Hyperliquid research report via the OKX Agent Payments Protocol (x402)",
-        "description": "x402-gated deep research for 1-5 symbols: snapshot facts, 72-hour realized funding, visible L2-book evidence, and grounded AI analysis. Unpaid requests receive HTTP 402 with a base64 PAYMENT-REQUIRED header. A signed request is bound to its normalized symbols/question, verified, fully generated and stored, then settled and released with a PAYMENT-RESPONSE receipt. Generation/storage failure never settles. Exact settled retries recover the original report; changed-request replay is rejected. The default recovery store is process-local and not suitable for production/mainnet durability. Never executes trades.",
+        "description": "x402-gated deep research for 1-5 symbols: snapshot facts, 72-hour realized funding, visible L2-book evidence, and grounded AI analysis. Unpaid requests receive HTTP 402 with a base64 PAYMENT-REQUIRED header. A signed request is bound to its normalized symbols/question, verified, fully generated and stored, then settled and released with a PAYMENT-RESPONSE receipt. Evidence, grounded AI analysis, or storage failure never settles. Exact settled retries recover the original report; changed-request replay is rejected. The default recovery store is process-local and not suitable for production/mainnet durability. Never executes trades.",
         "requestBody": {
           "required": true,
           "content": {
@@ -175,7 +175,7 @@
           "409": {"$ref": "#/components/responses/PaymentConflict"},
           "429": {"$ref": "#/components/responses/RateLimited"},
           "502": {"$ref": "#/components/responses/UpstreamError"},
-          "503": {"$ref": "#/components/responses/PaymentsNotConfigured"},
+          "503": {"$ref": "#/components/responses/PaidReportUnavailable"},
           "504": {"$ref": "#/components/responses/UpstreamError"}
         }
       }
@@ -262,6 +262,14 @@
       },
       "PaymentsNotConfigured": {
         "description": "Paid access is not configured on this deployment",
+        "content": {
+          "application/json": {
+            "schema": {"$ref": "#/components/schemas/ErrorResponse"}
+          }
+        }
+      },
+      "PaidReportUnavailable": {
+        "description": "Paid access is not configured, or the complete report could not be generated; payment is not settled",
         "content": {
           "application/json": {
             "schema": {"$ref": "#/components/schemas/ErrorResponse"}

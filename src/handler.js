@@ -279,9 +279,20 @@ export function createRequestHandler({
                     await paymentGate.abandon(authorization.context);
                     throw error;
                   }
-                  payment = await paymentGate.settle({ context: authorization.context, artifact: overview, requestId: id });
+                  if (overview.analysis?.status !== "completed") {
+                    await paymentGate.abandon(authorization.context);
+                    result = json(503, {
+                      request_id: id,
+                      error: "report_generation_unavailable",
+                      message: "Grounded AI analysis is unavailable; payment was not settled",
+                      retryable: true,
+                    }, id, corsHeaders);
+                    payment = null;
+                  } else {
+                    payment = await paymentGate.settle({ context: authorization.context, artifact: overview, requestId: id });
+                  }
                 }
-                result = finishPayment(payment);
+                if (payment) result = finishPayment(payment);
               }
             }
           }

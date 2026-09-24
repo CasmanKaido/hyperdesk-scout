@@ -709,6 +709,17 @@ function handlerWith(gate, options = {}) {
     now: () => new Date("2026-09-22T00:00:01Z"),
     logger: silentLogger,
     paymentGate: gate,
+    analyzeEvidence: async () => ({
+      status: "completed",
+      answer: "Grounded test answer",
+      answer_source: "ai_filtered",
+      findings: [],
+      caveats: [],
+      next_questions: [],
+      provider: "test",
+      model: "test-model",
+      grounding: "test",
+    }),
     ...options,
   });
 }
@@ -759,6 +770,32 @@ test("report generation failure abandons verification and never settles", async 
   assert.deepEqual(calls.map((call) => call.path), ["/verify"]);
   const retry = await handle(request);
   assert.equal(retry.status, 200);
+  assert.deepEqual(calls.map((call) => call.path), ["/verify", "/verify", "/settle"]);
+});
+
+test("unavailable paid analysis abandons authorization and never settles", async () => {
+  const calls = [];
+  let analysisAttempts = 0;
+  const gate = createPaymentGate(gateConfig({ fetchImpl: facilitatorFetch({ calls }) }));
+  const handle = handlerWith(gate, {
+    analyzeEvidence: async () => {
+      analysisAttempts += 1;
+      return analysisAttempts === 1
+        ? { status: "unavailable", reason: "providers_failed" }
+        : { status: "completed", answer: "Grounded retry", answer_source: "ai_filtered", findings: [], caveats: [], next_questions: [], provider: "test", model: "test-model", grounding: "test" };
+    },
+  });
+  const request = { method: "POST", pathname: "/api/v1/research-report", headers: researchHeaders(), bodyText: JSON.stringify({ symbols: ["BTC"] }) };
+
+  const unavailable = await handle(request);
+  assert.equal(unavailable.status, 503);
+  assert.equal(unavailable.body.error, "report_generation_unavailable");
+  assert.equal(unavailable.body.retryable, true);
+  assert.deepEqual(calls.map((call) => call.path), ["/verify"]);
+
+  const retry = await handle(request);
+  assert.equal(retry.status, 200);
+  assert.equal(retry.body.analysis.answer, "Grounded retry");
   assert.deepEqual(calls.map((call) => call.path), ["/verify", "/verify", "/settle"]);
 });
 
