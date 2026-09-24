@@ -582,6 +582,35 @@ function populateConstraints(plan) {
   validateSymbols();
 }
 
+function confirmsPendingInformation(message) {
+  const normalized = message
+    .trim()
+    .toLowerCase()
+    .replace(/[.!?]+$/g, "")
+    .replace(/\s+/g, " ");
+
+  return [
+    "yes",
+    "yes please",
+    "y",
+    "ok",
+    "okay",
+    "okay do that",
+    "do that",
+    "do it",
+    "go ahead",
+    "sure",
+    "confirm",
+    "check it",
+    "check that",
+    "please check",
+    "fetch it",
+    "fetch that",
+    "get it",
+    "show me",
+  ].includes(normalized);
+}
+
 async function generateAIPlan() {
   if (busy) return;
   const message = objectiveInput.value.trim();
@@ -591,7 +620,7 @@ async function generateAIPlan() {
     return;
   }
 
-  if (pendingInfo && /^(yes|y|ok|okay|confirm|sure|go ahead)[.!]?$/i.test(message)) {
+  if (pendingInfo && confirmsPendingInformation(message)) {
     appendMessage("user", message);
     rememberTurn("user", message);
     objectiveInput.value = "";
@@ -667,7 +696,7 @@ async function generateAIPlan() {
       infoQuery.textContent = `Fetch ${pendingInfo.topics.map(sentence).join(", ")} for ${pendingInfo.symbols.join(", ")}?`;
       infoConfirmation.hidden = false;
       conversationLog.append(infoConfirmation);
-      setPlannerStatus("Confirm with the free fetch button or reply yes. Other messages replace this pending request.", "success");
+      setPlannerStatus("Fetch with the free button or reply naturally—for example, “check it” or “go ahead.” Other messages replace this pending request.", "success");
     } else if (data.intent === "result_explanation") {
       setPlannerStatus("Answer grounded in the latest displayed analysis evidence.", "success");
     } else {

@@ -146,6 +146,14 @@ The first buyer-side A2MCP probe reached the endpoint but stopped safely on HTTP
 
 After v0.8.9 deployed, a fresh marketplace selection and probe successfully entered parameter collection, accepted `symbols=BTC`, applied the documented default question, and reached the endpoint's payment challenge. The A2MCP invoker then blocked before authorization because the endpoint's X Layer testnet USD₮0 asset is not supported by that marketplace invocation path. No payment, receipt, transaction, or report resulted. This establishes the final boundary for submission: marketplace publication, discovery, routing, and parameter collection are live; two official direct payment flows are proven; marketplace-native paid delivery is not. A rushed mainnet/token migration was deliberately not attempted.
 
+## Natural information confirmation dispatch — 2026-09-24 (v0.8.10, local)
+
+The browser previously recognized only a narrow exact set of information-fetch confirmations. Natural replies such as “okay do that” and “check it” fell through to the AI planner, which could return another `market_information` proposal and make LiquidFlux repeatedly promise to fetch rather than execute the already pending free request.
+
+v0.8.10 adds a deterministic normalized allowlist for natural confirmations, active only while an exact information request is pending. Replies including “okay do that,” “check it,” “do it,” “go ahead,” and “yes please,” with casing or terminal punctuation variations, now call `/api/v1/market-overview` directly without another planner call. Unrelated replies still invalidate the stale action and go to `/api/v1/plan`; the explicit free-fetch button and existing retry/busy behavior are unchanged. This intentionally avoids a broad keyword regex that could mistake a new question for consent.
+
+Focused browser-flow tests passed 7/7, the full suite passed 161/161, recursive JavaScript syntax and JSON checks passed, and diagnostics for the changed frontend/test files were clean. Production deployment and an exact live browser journey remain separate verification steps.
+
 ## Findings and priorities
 
 ### P0 — Complete and validate the information/strategy split

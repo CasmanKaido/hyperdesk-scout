@@ -90,10 +90,32 @@ test('information confirms the exact query without AI and preserves evidence for
   assert.equal(app.run('latestAIPlan'), null);
 });
 
+test('natural confirmation phrases execute the pending information request', async () => {
+  const phrases = [
+    'okay do that',
+    'check it',
+    'do it',
+    'go ahead',
+    'yes please',
+    'Check it.',
+    'OKAY DO THAT!',
+  ];
+
+  for (const phrase of phrases) {
+    const app = setup();
+    await app.send('BTC funding', information);
+    app.responses.push(overview);
+    await app.send(phrase);
+    assert.deepEqual(app.calls.map(call => call.url), ['/api/v1/plan', '/api/v1/market-overview'], phrase);
+    assert.deepEqual(app.calls[1].body, { symbols: ['BTC'], topics: ['funding'], question: 'BTC funding' }, phrase);
+  }
+});
+
 test('other messages clear stale information actions while retaining scope in history', async () => {
   const app = setup();
   await app.send('BTC', information);
   await app.send('risk', { intent: 'clarification', reply: 'Which risk fact?' });
+  assert.equal(app.calls[1].url, '/api/v1/plan');
   assert.equal(app.run('pendingInfo'), null);
   assert.equal(app.get('#info-confirmation').hidden, true);
   assert.match(app.calls[1].body.conversation[1].content, /symbols=\["BTC"\]; topics=\["funding"\]/);
