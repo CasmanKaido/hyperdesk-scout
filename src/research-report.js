@@ -18,10 +18,13 @@ export function validateResearchReportInput(input = {}) {
   for (const field of Object.keys(input)) {
     if (!["symbols", "question"].includes(field)) throw new ValidationError(`Unknown request field: ${field}`);
   }
-  if (!Array.isArray(input.symbols) || input.symbols.length < 1 || input.symbols.length > 5) {
+  // The official payment quote CLI serializes --param symbols=BTC as a scalar.
+  // Normalize that single-symbol transport shape before binding and validation.
+  const rawSymbols = typeof input.symbols === "string" ? [input.symbols] : input.symbols;
+  if (!Array.isArray(rawSymbols) || rawSymbols.length < 1 || rawSymbols.length > 5) {
     throw new ValidationError("symbols must contain between 1 and 5 items");
   }
-  const symbols = input.symbols.map((symbol) => {
+  const symbols = rawSymbols.map((symbol) => {
     if (typeof symbol !== "string" || !/^[A-Za-z0-9:_-]{1,30}$/.test(symbol)) {
       throw new ValidationError("Each symbol must be a valid Hyperliquid market name");
     }

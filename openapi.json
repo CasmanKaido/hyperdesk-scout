@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "LiquidFlux API",
-    "version": "0.8.5",
+    "version": "0.8.6",
     "description": "AI-assisted objective planning with approval-gated, deterministic Hyperliquid funding, liquidity, and risk intelligence. AI interprets constraints but does not calculate market evidence, spend funds, or execute trades."
   },
   "servers": [
@@ -365,10 +365,16 @@
         "required": ["symbols"],
         "properties": {
           "symbols": {
-            "type": "array",
-            "minItems": 1,
-            "maxItems": 5,
-            "items": {"type": "string", "pattern": "^[A-Za-z0-9:_-]{1,30}$"}
+            "description": "One market symbol, or an array of 1-5 symbols. The scalar form supports payment clients that serialize a single --param value.",
+            "oneOf": [
+              {"type": "string", "pattern": "^[A-Za-z0-9:_-]{1,30}$"},
+              {
+                "type": "array",
+                "minItems": 1,
+                "maxItems": 5,
+                "items": {"type": "string", "pattern": "^[A-Za-z0-9:_-]{1,30}$"}
+              }
+            ]
           },
           "question": {"type": "string", "minLength": 1, "maxLength": 1000, "description": "Optional analysis question; a default research prompt is used when omitted"}
         }

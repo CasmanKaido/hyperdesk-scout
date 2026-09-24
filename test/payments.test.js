@@ -475,6 +475,13 @@ test("validateResearchReportInput bounds symbols and defaults the question", () 
   assert.deepEqual(validateResearchReportInput({ symbols: ["btc", "ETH"] }), {
     symbols: ["BTC", "ETH"], topics: ["funding", "basis", "liquidity", "risk"], question: DEFAULT_RESEARCH_QUESTION,
   });
+  assert.deepEqual(validateResearchReportInput({ symbols: "btc" }), {
+    symbols: ["BTC"], topics: ["funding", "basis", "liquidity", "risk"], question: DEFAULT_RESEARCH_QUESTION,
+  });
+  assert.equal(
+    fingerprintResearchReportRequest(validateResearchReportInput({ symbols: "BTC" })),
+    fingerprintResearchReportRequest(validateResearchReportInput({ symbols: ["BTC"] })),
+  );
   assert.throws(() => validateResearchReportInput({ symbols: [] }), /between 1 and 5/);
   assert.throws(() => validateResearchReportInput({ symbols: ["A", "B", "C", "D", "E", "F"] }), /between 1 and 5/);
   assert.throws(() => validateResearchReportInput({ symbols: ["BTC"], leverage: 2 }), /Unknown request field/);
