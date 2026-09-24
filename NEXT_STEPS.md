@@ -69,17 +69,17 @@ Required operator values:
 - [x] Confirm a compatible facilitator supporting x402 v2 `exact` on `eip155:1952`. The authenticated official `https://web3.okx.com/api/v6/pay/x402/supported` route advertised 2 matching kinds among 9 total kinds through the sanitized production probe on 2026-09-24 (request `3e6d2114-e8de-465a-80f9-ebaa454b88f0`). The keyless `https://web3.okx.com/facilitator` path remains invalid.
 - [x] Confirm the official OKX buyer preserves LiquidFlux request binding in `PAYMENT-SIGNATURE` (binding moved into the selected `accepts[].extra` entry; unknown top-level extensions are not echoed).
 - [ ] Fund the buyer test wallet with test USD₮0 if required.
-- [ ] Configure Render secrets:
-  - [ ] `X402_PAYTO_ADDRESS` = the verified receiver above
-  - [ ] `X402_ASSET_ADDRESS`
-  - [ ] `X402_FACILITATOR_URL=https://web3.okx.com`
+- [x] Configure Render secrets:
+  - [x] `X402_PAYTO_ADDRESS` = the verified receiver above
+  - [x] `X402_ASSET_ADDRESS`
+  - [x] `X402_FACILITATOR_URL=https://web3.okx.com`
   - [x] `OKX_API_KEY` (presence proven by authenticated support response; value remains secret)
   - [x] `OKX_SECRET_KEY` (presence proven by authenticated support response; value remains secret)
   - [x] `OKX_API_PASSPHRASE` (presence proven by authenticated support response; value remains secret)
-  - [ ] `X402_ENABLED=true` only after `npm run check:x402-support` confirms the intended kind
-- [ ] Keep the initial price at `10000` atomic units (0.01 USD₮0) for the proof.
+  - [x] `X402_ENABLED=true` only after the sanitized production probe confirmed the intended kind
+- [x] Keep the initial price at `10000` atomic units (0.01 USD₮0) for the proof.
 
-**Done when:** `/api/v1/research-report` returns a valid live `HTTP 402` challenge with the intended network, token, amount, and recipient.
+**Completed 2026-09-24:** `/api/v1/research-report` returned a valid live `HTTP 402` challenge with the intended network, token, amount, recipient, timeout, and request binding (request `c964e0b5-ce4b-4bce-b629-1608f4688855`). No payment was authorized or executed.
 
 ## Stage 4 — Prove the complete paid flow
 
