@@ -97,7 +97,7 @@ try {
     if (name === "desktop") {
       await evaluate('document.querySelector("[data-prompt]").click(); document.querySelector("#chat-form").requestSubmit()');
       await waitFor('!document.querySelector("#info-confirmation").hidden && !document.querySelector("#fetch-overview").disabled');
-      await evaluate('document.querySelector("#objective-message").value = "yes"; document.querySelector("#chat-form").requestSubmit()');
+      await evaluate('document.querySelector("#objective-message").value = "check it"; document.querySelector("#chat-form").requestSubmit()');
       await waitFor('!document.querySelector("#overview-state").hidden');
       assert.equal(await evaluate('document.querySelector("#overview-state").textContent.includes("BTC")'), true, "live overview contains BTC evidence");
 

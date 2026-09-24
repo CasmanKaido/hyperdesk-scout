@@ -201,4 +201,4 @@ This stage may run in parallel with Stages 6–8 after payment proof.
 - Native mobile application
 - Decorative dashboard expansion
 
-These features add risk without proving the current product. The submission-day action is to deploy and verify v0.8.10, then package the proven scope: natural information-fetch confirmations, public OKX.AI listing/routing, two direct official payment receipts, settlement reconciliation, and explicit marketplace testnet-asset limitation. Mainnet/token alignment and marketplace-native paid delivery are post-submission work. Credential rotation in Stage 0 remains an unresolved security requirement.
+These features add risk without proving the current product. The submission-day action is to package the proven scope: production v0.8.10 with live natural information-fetch confirmation, public OKX.AI listing/routing, two direct official payment receipts, settlement reconciliation, and explicit marketplace testnet-asset limitation. Mainnet/token alignment and marketplace-native paid delivery are post-submission work. Credential rotation in Stage 0 remains an unresolved security requirement.
