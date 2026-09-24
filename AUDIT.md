@@ -132,6 +132,8 @@ v0.8.8 fixes that defect at the pre-settlement boundary. The paid route now requ
 
 After commit `79c6ae4` was pushed, Render reported v0.8.8. The sanitized production payment probe remained enabled and supported with 2 matching kinds among 9 advertised kinds (request `3d4532d4-e084-47ce-87c8-cf5d08c6414c`), and the deployed OpenAPI contract described the complete-analysis precondition and no-settlement 503 outcome. No third payment was authorized for this deployment verification.
 
+A separate explicitly confirmed negative-path test created a fresh authorization bound to `symbols=BTC` and intentionally replayed it with `symbols=ETH`. Production rejected the request locally with HTTP 402, `invalid_reason: payment_request_binding_mismatch`, and request `157e1394-3319-4358-b06f-09f35fe6c351`. The official CLI returned no decoded receipt and `txHash: null`; no report was released. The CLI labeled the non-terminal HTTP 402 wrapper as `status: pending`, but the server result was a definitive fresh payment challenge, not a settlement-pending operation. That authorization will not be retried or reused. This live check proves changed-request binding rejection before settlement.
+
 ## Findings and priorities
 
 ### P0 — Complete and validate the information/strategy split

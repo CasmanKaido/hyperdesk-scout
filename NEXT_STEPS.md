@@ -95,9 +95,9 @@ Use the official OKX buyer/payment flow; do not manually construct signatures.
 - [x] Decode and verify the `PAYMENT-RESPONSE` receipt.
 - [x] Record transaction hash, request ID, timestamp, revision, and sanitized result in `AUDIT.md`.
 - [x] Repeat once to demonstrate reliability and a distinct authorization/transaction.
-- [ ] Test an invalid/mismatched payment and confirm access remains blocked.
+- [x] Test an invalid/mismatched payment and confirm access remains blocked.
 
-**Two payment proofs completed 2026-09-24:** production v0.8.7 completed `402 → confirmation → settlement/reconciliation → 200 BTC report` twice through the official CLI with distinct transactions: `0x07f6fc456ac7f05e62eecb1c7330aa028229133d25efcfce2658a0cf7b840715` (grounded AI report) and `0xac3d8a1cae087dd398b62a4bac34930eb1c352501543e5979529429a5cd45996` (AI providers unavailable). The second proves repeat payment reliability but exposed that a degraded evidence-only artifact was charged. v0.8.8 now blocks settlement unless grounded AI analysis completes. Payer and recipient were the same funded wallet, so these prove mechanics rather than independent merchant revenue. The live mismatched-payment check remains open.
+**Stage completed 2026-09-24:** production completed `402 → confirmation → settlement/reconciliation → 200 BTC report` twice through the official CLI with distinct transactions: `0x07f6fc456ac7f05e62eecb1c7330aa028229133d25efcfce2658a0cf7b840715` (grounded AI report) and `0xac3d8a1cae087dd398b62a4bac34930eb1c352501543e5979529429a5cd45996` (AI providers unavailable). The second proved repeat payment reliability but exposed that a degraded evidence-only artifact was charged; deployed v0.8.8 now blocks settlement unless grounded AI analysis completes. A fresh BTC-bound authorization replayed with ETH was rejected as `payment_request_binding_mismatch` with no receipt or transaction hash. Payer and recipient were the same funded wallet, so these prove mechanics rather than independent merchant revenue.
 
 ## Stage 5 — Publish the paid service on OKX.AI
 
@@ -200,4 +200,4 @@ This stage may run in parallel with Stages 6–8 after payment proof.
 - Native mobile application
 - Decorative dashboard expansion
 
-These features add risk without proving the current product. The next launch-path actions are to test a mismatched payment rejection through a fresh confirmed authorization, then publish the paid service on OKX.AI. Production v0.8.8 is deployed and verified. Credential rotation in Stage 0 remains an unresolved security requirement.
+These features add risk without proving the current product. The next launch-path action is to publish the paid service on OKX.AI. Production v0.8.8 is deployed and verified; the complete live payment and negative-path checklist is closed. Credential rotation in Stage 0 remains an unresolved security requirement.
