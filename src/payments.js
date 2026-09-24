@@ -12,7 +12,7 @@ import { OKXFacilitatorClient } from "@okxweb3/x402-core";
  *
  * The default store is process-local and intentionally identified as such.
  * Testnet may use it for mechanical proof, but production/mainnet requires a
- * durable shared store plus reconciliation for ambiguous settlement outcomes.
+ * durable shared store so reconciliation survives restarts and multiple instances.
  */
 
 export class PaymentError extends Error {
@@ -34,6 +34,8 @@ export const X402_DEFAULTS = {
   assetDecimals: 6,
   maxTimeoutSeconds: 300,
   timeoutMs: 10000,
+  settlementPollAttempts: 5,
+  settlementPollIntervalMs: 1000,
   operationTtlMs: 24 * 60 * 60 * 1000,
   maxOperations: 1000,
   facilitatorUrl: "https://web3.okx.com",
@@ -131,6 +133,8 @@ export function createPaymentGate({
   fetchImpl = null,
   logger = console,
   timeoutMs = X402_DEFAULTS.timeoutMs,
+  settlementPollAttempts = X402_DEFAULTS.settlementPollAttempts,
+  settlementPollIntervalMs = X402_DEFAULTS.settlementPollIntervalMs,
   operationStore = createPaymentOperationStore(),
 } = {}) {
   const problems = [];
@@ -146,6 +150,8 @@ export function createPaymentGate({
   if (enabled && fetchImpl !== null && typeof fetchImpl !== "function") problems.push("invalid_facilitator_transport");
   if (enabled && (!Number.isInteger(assetDecimals) || assetDecimals < 0 || assetDecimals > 36)) problems.push("invalid_asset_decimals");
   if (enabled && (!Number.isInteger(maxTimeoutSeconds) || maxTimeoutSeconds < 1)) problems.push("invalid_max_timeout");
+  if (enabled && (!Number.isInteger(settlementPollAttempts) || settlementPollAttempts < 1)) problems.push("invalid_settlement_poll_attempts");
+  if (enabled && (!Number.isInteger(settlementPollIntervalMs) || settlementPollIntervalMs < 0)) problems.push("invalid_settlement_poll_interval");
   for (const method of ["get", "create", "update", "transition", "delete"]) {
     if (enabled && typeof operationStore?.[method] !== "function") problems.push("invalid_operation_store");
   }
@@ -377,6 +383,137 @@ export function createPaymentGate({
     return { "payment-response": base64Encode(receipt) };
   }
 
+  function settlementTransaction(result) {
+    const value = result?.transaction || result?.txHash;
+    return typeof value === "string" && value.trim() !== "" ? value : null;
+  }
+
+  function sanitizedSettlement(result, fallback = {}) {
+    return {
+      status: typeof result?.status === "string" ? result.status : fallback.status || "unknown",
+      transaction: settlementTransaction(result) || fallback.transaction || null,
+      network: typeof result?.network === "string" ? result.network : fallback.network || network,
+      payer: typeof result?.payer === "string" ? result.payer : fallback.payer || null,
+    };
+  }
+
+  function pendingSettlement(requestId) {
+    return failure(202, requestId, "settlement_pending", "Payment settlement is pending reconciliation", { "retry-after": "5" }, { retryable: true });
+  }
+
+  function failedSettlement(requestId) {
+    return failure(402, requestId, "settlement_failed", "Payment settlement was definitively rejected", {}, { retryable: false });
+  }
+
+  async function recordSettlementFailure(key, operation, requestId, settlement) {
+    const recorded = await operationStore.transition(key, "settling", {
+      state: "failed",
+      settlement: { ...settlement, status: "failed" },
+      payload: null,
+      requirements: null,
+      resourceUrl: null,
+      description: null,
+    });
+    if (!recorded) {
+      const current = await operationStore.get(key);
+      if (current?.state === "settled" || current?.state === "failed") return resolveExisting(key, current, requestId);
+      logger.error?.(JSON.stringify({ event: "payment_failure_persistence_failed", requestId, operation: key.slice(0, 12) }));
+      return failure(500, requestId, "payment_failure_persistence_failed", "Settlement failed but its terminal state could not be persisted; operator reconciliation is required");
+    }
+    logger.error?.(JSON.stringify({ event: "payment_settlement_failed", requestId, operation: key.slice(0, 12), network: settlement.network, transaction: settlement.transaction }));
+    return failedSettlement(requestId);
+  }
+
+  async function recordSettlementSuccess(key, operation, requestId, settlement, status = "settled") {
+    const receipt = {
+      success: true,
+      transaction: settlement.transaction,
+      network: settlement.network || network,
+      payer: settlement.payer || operation.payer || null,
+    };
+    const recorded = await operationStore.transition(key, "settling", {
+      state: "settled",
+      artifact: operation.artifact,
+      receipt,
+      settlement: null,
+      payload: null,
+      requirements: null,
+      resourceUrl: null,
+      description: null,
+    });
+    if (!recorded) {
+      const current = await operationStore.get(key);
+      if (current?.state === "settled" || current?.state === "failed") return resolveExisting(key, current, requestId);
+      logger.error?.(JSON.stringify({ event: "payment_receipt_persistence_failed", requestId, operation: key.slice(0, 12), network: receipt.network, transaction: receipt.transaction }));
+      return failure(500, requestId, "payment_receipt_persistence_failed", "Payment settled but the recoverable receipt could not be persisted; operator reconciliation is required");
+    }
+    logger.info?.(JSON.stringify({ event: "payment_settled", requestId, operation: key.slice(0, 12), network: receipt.network, transaction: receipt.transaction }));
+    return {
+      ok: true,
+      status,
+      artifact: operation.artifact,
+      payer: receipt.payer,
+      transaction: receipt.transaction,
+      responseHeaders: receiptHeaders(receipt),
+    };
+  }
+
+  async function reconcileSettlement(key, operation, requestId) {
+    const transaction = operation.settlement?.transaction;
+    if (!transaction || typeof activeFacilitator?.getSettleStatus !== "function") return pendingSettlement(requestId);
+
+    for (let attempt = 0; attempt < settlementPollAttempts; attempt += 1) {
+      let result;
+      try {
+        result = await withTimeout(activeFacilitator.getSettleStatus(transaction));
+      } catch (cause) {
+        logger.error?.(JSON.stringify({ event: "payment_settlement_status_unavailable", requestId, operation: key.slice(0, 12), errorType: cause?.name || "Error" }));
+        if (attempt + 1 < settlementPollAttempts && settlementPollIntervalMs > 0) {
+          await new Promise((resolve) => setTimeout(resolve, settlementPollIntervalMs));
+        }
+        continue;
+      }
+
+      const status = typeof result?.status === "string" ? result.status.toLowerCase() : "unknown";
+      const settlement = sanitizedSettlement(result, operation.settlement);
+      if (result?.success !== true) return recordSettlementFailure(key, operation, requestId, settlement);
+      if (status === "success") return recordSettlementSuccess(key, operation, requestId, settlement, "recovered");
+      if (status === "failed") return recordSettlementFailure(key, operation, requestId, settlement);
+      let updated;
+      try {
+        updated = await operationStore.update(key, { settlement });
+      } catch (cause) {
+        logger.error?.(JSON.stringify({ event: "payment_settlement_state_persistence_failed", requestId, operation: key.slice(0, 12), errorType: cause?.name || "Error" }));
+        return failure(500, requestId, "payment_settlement_state_persistence_failed", "Settlement reconciliation state could not be persisted; operator reconciliation is required");
+      }
+      if (!updated) {
+        logger.error?.(JSON.stringify({ event: "payment_settlement_state_persistence_failed", requestId, operation: key.slice(0, 12) }));
+        return failure(500, requestId, "payment_settlement_state_persistence_failed", "Settlement reconciliation state could not be persisted; operator reconciliation is required");
+      }
+      if (attempt + 1 < settlementPollAttempts && settlementPollIntervalMs > 0) {
+        await new Promise((resolve) => setTimeout(resolve, settlementPollIntervalMs));
+      }
+    }
+    return pendingSettlement(requestId);
+  }
+
+  async function resolveExisting(key, existing, requestId) {
+    if (existing.state === "settled") {
+      logger.info?.(JSON.stringify({ event: "payment_result_recovered", requestId, operation: key.slice(0, 12), transaction: existing.receipt.transaction }));
+      return {
+        ok: true,
+        status: "recovered",
+        artifact: existing.artifact,
+        payer: existing.receipt.payer,
+        transaction: existing.receipt.transaction,
+        responseHeaders: receiptHeaders(existing.receipt),
+      };
+    }
+    if (existing.state === "settling") return reconcileSettlement(key, existing, requestId);
+    if (existing.state === "failed") return failedSettlement(requestId);
+    return failure(409, requestId, "payment_in_progress", "This payment authorization is already being processed", {}, { retryable: true });
+  }
+
   async function verify({ headers = {}, resourceUrl, description, amountAtomic, requestId, requestFingerprint }) {
     if (!configured) {
       logger.error?.(JSON.stringify({ event: "payment_gate_not_configured", problems }));
@@ -410,21 +547,7 @@ export function createPaymentGate({
       if (existing.requestFingerprint !== requestFingerprint) {
         return failure(409, requestId, "authorization_request_mismatch", "This payment authorization is already bound to a different request");
       }
-      if (existing.state === "settled") {
-        logger.info?.(JSON.stringify({ event: "payment_result_recovered", requestId, operation: key.slice(0, 12), transaction: existing.receipt.transaction }));
-        return {
-          ok: true,
-          status: "recovered",
-          artifact: existing.artifact,
-          payer: existing.receipt.payer,
-          transaction: existing.receipt.transaction,
-          responseHeaders: receiptHeaders(existing.receipt),
-        };
-      }
-      if (existing.state === "settling") {
-        return failure(202, requestId, "settlement_pending", "Payment settlement is pending reconciliation", { "retry-after": "5" }, { retryable: true });
-      }
-      return failure(409, requestId, "payment_in_progress", "This payment authorization is already being processed", {}, { retryable: true });
+      return resolveExisting(key, existing, requestId);
     }
 
     let verification;
@@ -474,21 +597,7 @@ export function createPaymentGate({
     if (!matchesRequestBinding(payload, requestFingerprint) || existing.requestFingerprint !== requestFingerprint) {
       return failure(409, requestId, "authorization_request_mismatch", "This payment authorization is already bound to a different request");
     }
-    if (existing.state === "settled") {
-      logger.info?.(JSON.stringify({ event: "payment_result_recovered", requestId, operation: key.slice(0, 12), transaction: existing.receipt.transaction }));
-      return {
-        ok: true,
-        status: "recovered",
-        artifact: existing.artifact,
-        payer: existing.receipt.payer,
-        transaction: existing.receipt.transaction,
-        responseHeaders: receiptHeaders(existing.receipt),
-      };
-    }
-    if (existing.state === "settling") {
-      return failure(202, requestId, "settlement_pending", "Payment settlement is pending reconciliation", { "retry-after": "5" }, { retryable: true });
-    }
-    return failure(409, requestId, "payment_in_progress", "This payment authorization is already being processed", {}, { retryable: true });
+    return resolveExisting(key, existing, requestId);
   }
 
   async function abandon(context) {
@@ -532,9 +641,7 @@ export function createPaymentGate({
           responseHeaders: receiptHeaders(current.receipt),
         };
       }
-      if (current?.state === "settling") {
-        return failure(202, requestId, "settlement_pending", "Payment settlement is pending reconciliation", { "retry-after": "5" }, { retryable: true });
-      }
+      if (current?.state === "settling") return pendingSettlement(requestId);
       return failure(503, requestId, "payment_state_unavailable", "Payment state could not be persisted; no settlement was attempted");
     }
     let settlement;
@@ -546,37 +653,31 @@ export function createPaymentGate({
       logger.error?.(JSON.stringify({ event: "payment_settlement_unknown", requestId, operation: context.key.slice(0, 12), errorType: cause?.name || "Error" }));
       return failure(502, requestId, "settlement_outcome_unknown", "Payment settlement outcome is unknown and requires reconciliation", {}, { retryable: true });
     }
-    if (!settlement || settlement.success !== true || (settlement.status && settlement.status !== "success")) {
-      // Any response after a settlement attempt may be ambiguous (including a
-      // proxy 500 or nonce-used response). Preserve artifact/state; never retry
-      // or delete the authorization without reconciliation evidence.
-      logger.error?.(JSON.stringify({ event: "payment_settlement_unconfirmed", requestId, operation: context.key.slice(0, 12), facilitatorStatus: settlement?.status || "unconfirmed" }));
-      return failure(502, requestId, "settlement_outcome_unknown", "Payment settlement was not confirmed and requires reconciliation", {}, { retryable: true });
+    const status = typeof settlement?.status === "string" ? settlement.status.toLowerCase() : null;
+    if (settlement?.success === true && (status === "success" || status === null)) {
+      return recordSettlementSuccess(context.key, persisted, requestId, sanitizedSettlement(settlement), "settled");
     }
 
-    const receipt = {
-      success: true,
-      transaction: settlement.transaction,
-      network: settlement.network || network,
-      payer: settlement.payer || operation.payer || null,
-    };
-    // Remove the raw signed payload after settlement; only recovery material remains.
-    const recorded = await operationStore.transition(context.key, "settling", {
-      state: "settled", artifact, receipt, payload: null, requirements: null, resourceUrl: null, description: null,
-    });
-    if (!recorded) {
-      logger.error?.(JSON.stringify({ event: "payment_receipt_persistence_failed", requestId, operation: context.key.slice(0, 12), network: receipt.network, transaction: receipt.transaction }));
-      return failure(500, requestId, "payment_receipt_persistence_failed", "Payment settled but the recoverable receipt could not be persisted; operator reconciliation is required");
+    const transaction = settlementTransaction(settlement);
+    if (status === "pending" || (status === "timeout" && transaction)) {
+      const sanitized = sanitizedSettlement(settlement);
+      const stored = await operationStore.update(context.key, { settlement: sanitized });
+      if (!stored) {
+        logger.error?.(JSON.stringify({ event: "payment_settlement_state_persistence_failed", requestId, operation: context.key.slice(0, 12), facilitatorStatus: status }));
+        return failure(500, requestId, "payment_settlement_state_persistence_failed", "Settlement started but its reconciliation state could not be persisted; operator reconciliation is required");
+      }
+      if (status === "timeout") return reconcileSettlement(context.key, stored, requestId);
+      return pendingSettlement(requestId);
     }
-    logger.info?.(JSON.stringify({ event: "payment_settled", requestId, operation: context.key.slice(0, 12), network: receipt.network, transaction: receipt.transaction }));
-    return {
-      ok: true,
-      status: "settled",
-      artifact,
-      payer: receipt.payer,
-      transaction: receipt.transaction,
-      responseHeaders: receiptHeaders(receipt),
-    };
+
+    if (settlement?.success === false && status !== "timeout" && !transaction) {
+      return recordSettlementFailure(context.key, persisted, requestId, sanitizedSettlement(settlement, { status: "failed" }));
+    }
+
+    // A thrown call or malformed timeout without a transaction hash is
+    // ambiguous. Preserve the settling state and never resubmit authorization.
+    logger.error?.(JSON.stringify({ event: "payment_settlement_unconfirmed", requestId, operation: context.key.slice(0, 12), facilitatorStatus: status || "unconfirmed" }));
+    return failure(502, requestId, "settlement_outcome_unknown", "Payment settlement was not confirmed and requires reconciliation", {}, { retryable: true });
   }
 
   return {
@@ -615,6 +716,8 @@ export function paymentGateFromEnv(env = {}, deps = {}) {
     facilitatorSecretKey: env.OKX_SECRET_KEY || null,
     facilitatorPassphrase: env.OKX_API_PASSPHRASE || null,
     maxTimeoutSeconds: integerFromEnv(env.X402_MAX_TIMEOUT_SECONDS, X402_DEFAULTS.maxTimeoutSeconds),
+    settlementPollAttempts: integerFromEnv(env.X402_SETTLEMENT_POLL_ATTEMPTS, X402_DEFAULTS.settlementPollAttempts),
+    settlementPollIntervalMs: integerFromEnv(env.X402_SETTLEMENT_POLL_INTERVAL_MS, X402_DEFAULTS.settlementPollIntervalMs),
     ...deps,
   });
 }

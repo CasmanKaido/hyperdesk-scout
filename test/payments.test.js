@@ -101,6 +101,27 @@ function facilitatorFetch({
   };
 }
 
+function facilitatorClient({ settle, statuses = [], calls = [], statusError = null } = {}) {
+  let statusIndex = 0;
+  return {
+    async verify() {
+      calls.push("verify");
+      return { isValid: true, payer: PAYER };
+    },
+    async settle() {
+      calls.push("settle");
+      return settle ?? { success: true, status: "success", transaction: TX, network: X402_DEFAULTS.network, payer: PAYER };
+    },
+    async getSettleStatus(transaction) {
+      calls.push(`status:${transaction}`);
+      if (statusError) throw statusError;
+      const result = statuses[Math.min(statusIndex, statuses.length - 1)];
+      statusIndex += 1;
+      return result ?? { success: true, status: "pending", transaction };
+    },
+  };
+}
+
 async function verifyPaid(gate, options = {}) {
   return gate.verify({
     headers: signedHeaders(options.signature),
@@ -420,47 +441,228 @@ test("post-settlement persistence failure never claims recoverable success", asy
   assert.deepEqual(calls.map((call) => call.path), ["/verify", "/settle"]);
 });
 
-test("unconfirmed settlement remains pending and is never retried blindly", async () => {
+test("definitive settlement failure is terminal and is never retried blindly", async () => {
   const calls = [];
-  const gate = createPaymentGate(gateConfig({
-    fetchImpl: facilitatorFetch({
-      calls,
-      settle: { success: false, errorReason: "invalid_transaction_state", transaction: "", network: X402_DEFAULTS.network },
-    }),
-  }));
+  const client = facilitatorClient({
+    calls,
+    settle: { success: false, errorReason: "invalid_transaction_state", transaction: "", network: X402_DEFAULTS.network },
+  });
+  const gate = createPaymentGate(gateConfig({ facilitatorClient: client, settlementPollIntervalMs: 0 }));
   const authorization = await verifyPaid(gate);
   const failed = await gate.settle({ context: authorization.context, artifact: { report: true }, requestId: "req_fail" });
-  assert.equal(failed.response.status, 502);
-  assert.equal(failed.response.body.error, "settlement_outcome_unknown");
+  assert.equal(failed.response.status, 402);
+  assert.equal(failed.response.body.error, "settlement_failed");
+  assert.equal(failed.response.body.retryable, false);
   const retry = await verifyPaid(gate, { requestId: "req_retry" });
-  assert.equal(retry.response.status, 202);
-  assert.equal(retry.response.body.error, "settlement_pending");
-  assert.deepEqual(calls.map((call) => call.path), ["/verify", "/settle"]);
+  assert.equal(retry.response.status, 402);
+  assert.equal(retry.response.body.error, "settlement_failed");
+  assert.deepEqual(calls, ["verify", "settle"]);
 });
 
-test("asynchronous pending settlement is never treated as paid access", async () => {
+test("pending settlement persists its hash and reconciles on exact retry without resettling", async () => {
   const calls = [];
-  const gate = createPaymentGate(gateConfig({
-    fetchImpl: facilitatorFetch({
-      calls,
-      settle: { success: true, status: "pending", transaction: TX, network: X402_DEFAULTS.network, payer: PAYER },
-    }),
-  }));
+  const store = createPaymentOperationStore();
+  const client = facilitatorClient({
+    calls,
+    settle: { success: true, status: "pending", transaction: TX, network: X402_DEFAULTS.network, payer: PAYER },
+    statuses: [{ success: true, status: "success", transaction: TX, network: X402_DEFAULTS.network, payer: PAYER }],
+  });
+  const gate = createPaymentGate(gateConfig({ facilitatorClient: client, operationStore: store, settlementPollIntervalMs: 0 }));
   const authorization = await verifyPaid(gate);
   const pending = await gate.settle({ context: authorization.context, artifact: { report: true }, requestId: "req_pending" });
-  assert.equal(pending.response.status, 502);
-  assert.equal(pending.response.body.error, "settlement_outcome_unknown");
-  assert.deepEqual(calls.map((call) => call.path), ["/verify", "/settle"]);
+  assert.equal(pending.response.status, 202);
+  assert.equal(pending.response.body.error, "settlement_pending");
+  const stored = await store.get(authorization.context.key);
+  assert.deepEqual(stored.settlement, { status: "pending", transaction: TX, network: X402_DEFAULTS.network, payer: PAYER });
+
+  const recovered = await verifyPaid(gate, { requestId: "req_retry" });
+  assert.equal(recovered.ok, true);
+  assert.equal(recovered.status, "recovered");
+  assert.deepEqual(recovered.artifact, { report: true });
+  assert.deepEqual(calls, ["verify", "settle", `status:${TX}`]);
 });
 
-test("payment logs never contain raw signature, nonce, or echoed facilitator body", async () => {
+test("timeout with a transaction hash polls and releases only after confirmed success", async () => {
+  const calls = [];
+  const client = facilitatorClient({
+    calls,
+    settle: { success: false, status: "timeout", txHash: TX, network: X402_DEFAULTS.network, payer: PAYER },
+    statuses: [
+      { success: true, status: "pending", transaction: TX },
+      { success: true, status: "success", transaction: TX, network: X402_DEFAULTS.network, payer: PAYER },
+    ],
+  });
+  const gate = createPaymentGate(gateConfig({ facilitatorClient: client, settlementPollAttempts: 2, settlementPollIntervalMs: 0 }));
+  const authorization = await verifyPaid(gate);
+  const result = await gate.settle({ context: authorization.context, artifact: { report: true }, requestId: "req_timeout" });
+  assert.equal(result.ok, true);
+  assert.equal(result.status, "recovered");
+  assert.equal(result.transaction, TX);
+  assert.deepEqual(calls, ["verify", "settle", `status:${TX}`, `status:${TX}`]);
+});
+
+test("timeout remains pending when bounded status polling remains pending", async () => {
+  const calls = [];
+  const client = facilitatorClient({
+    calls,
+    settle: { success: false, status: "timeout", transaction: TX, network: X402_DEFAULTS.network },
+    statuses: [{ success: true, status: "pending", transaction: TX }],
+  });
+  const gate = createPaymentGate(gateConfig({ facilitatorClient: client, settlementPollAttempts: 2, settlementPollIntervalMs: 0 }));
+  const authorization = await verifyPaid(gate);
+  const result = await gate.settle({ context: authorization.context, artifact: { report: true }, requestId: "req_timeout" });
+  assert.equal(result.response.status, 202);
+  assert.equal(result.response.body.error, "settlement_pending");
+  assert.deepEqual(calls, ["verify", "settle", `status:${TX}`, `status:${TX}`]);
+});
+
+test("status API failure keeps a timed-out settlement withheld and retryable", async () => {
+  const calls = [];
+  const client = facilitatorClient({
+    calls,
+    settle: { success: false, status: "timeout", transaction: TX },
+    statusError: new Error("upstream body with secret-signature"),
+  });
+  const gate = createPaymentGate(gateConfig({ facilitatorClient: client, settlementPollAttempts: 2, settlementPollIntervalMs: 0 }));
+  const authorization = await verifyPaid(gate);
+  const result = await gate.settle({ context: authorization.context, artifact: { report: true }, requestId: "req_poll_down" });
+  assert.equal(result.response.status, 202);
+  assert.equal(result.response.body.error, "settlement_pending");
+  assert.equal(result.response.body.retryable, true);
+  assert.deepEqual(calls, ["verify", "settle", `status:${TX}`, `status:${TX}`]);
+});
+
+test("status lookup definitive failure records terminal settlement failure", async () => {
+  const calls = [];
+  const client = facilitatorClient({
+    calls,
+    settle: { success: false, status: "timeout", transaction: TX },
+    statuses: [{ success: false, status: "failed", transaction: TX }],
+  });
+  const gate = createPaymentGate(gateConfig({ facilitatorClient: client, settlementPollIntervalMs: 0 }));
+  const authorization = await verifyPaid(gate);
+  const result = await gate.settle({ context: authorization.context, artifact: { report: true }, requestId: "req_chain_fail" });
+  assert.equal(result.response.status, 402);
+  assert.equal(result.response.body.error, "settlement_failed");
+  const retry = await verifyPaid(gate, { requestId: "req_chain_fail_retry" });
+  assert.equal(retry.response.body.error, "settlement_failed");
+  assert.deepEqual(calls, ["verify", "settle", `status:${TX}`]);
+});
+
+test("contradictory status success without a successful response never releases the artifact", async () => {
+  const calls = [];
+  const client = facilitatorClient({
+    calls,
+    settle: { success: false, status: "timeout", transaction: TX },
+    statuses: [{ success: false, status: "success", transaction: TX }],
+  });
+  const gate = createPaymentGate(gateConfig({ facilitatorClient: client, settlementPollIntervalMs: 0 }));
+  const authorization = await verifyPaid(gate);
+  const result = await gate.settle({ context: authorization.context, artifact: { report: true }, requestId: "req_contradictory" });
+  assert.equal(result.response.status, 402);
+  assert.equal(result.response.body.error, "settlement_failed");
+  assert.deepEqual(calls, ["verify", "settle", `status:${TX}`]);
+});
+
+test("concurrent exact retries return the reconciled receipt without a false persistence error", async () => {
+  let releaseStatuses;
+  let statusCalls = 0;
+  let settleCalls = 0;
+  const statusesReady = new Promise((resolve) => { releaseStatuses = resolve; });
+  const client = {
+    async verify() { return { isValid: true, payer: PAYER }; },
+    async settle() {
+      settleCalls += 1;
+      return { success: true, status: "pending", transaction: TX, network: X402_DEFAULTS.network, payer: PAYER };
+    },
+    async getSettleStatus() {
+      statusCalls += 1;
+      if (statusCalls === 2) releaseStatuses();
+      await statusesReady;
+      return { success: true, status: "success", transaction: TX, network: X402_DEFAULTS.network, payer: PAYER };
+    },
+  };
+  const gate = createPaymentGate(gateConfig({ facilitatorClient: client, settlementPollIntervalMs: 0 }));
+  const authorization = await verifyPaid(gate);
+  const pending = await gate.settle({ context: authorization.context, artifact: { report: true }, requestId: "req_pending" });
+  assert.equal(pending.response.status, 202);
+
+  const [first, second] = await Promise.all([
+    verifyPaid(gate, { requestId: "req_retry_1" }),
+    verifyPaid(gate, { requestId: "req_retry_2" }),
+  ]);
+  assert.equal(first.ok, true);
+  assert.equal(second.ok, true);
+  assert.equal(first.transaction, TX);
+  assert.equal(second.transaction, TX);
+  assert.equal(settleCalls, 1);
+  assert.equal(statusCalls, 2);
+});
+
+test("pending reconciliation fails closed when updated state cannot be persisted", async () => {
+  const baseStore = createPaymentOperationStore();
+  let updates = 0;
+  const store = {
+    durability: "test",
+    get: (...args) => baseStore.get(...args),
+    create: (...args) => baseStore.create(...args),
+    transition: (...args) => baseStore.transition(...args),
+    delete: (...args) => baseStore.delete(...args),
+    async update(...args) {
+      updates += 1;
+      return updates === 1 ? baseStore.update(...args) : null;
+    },
+  };
+  const client = facilitatorClient({
+    settle: { success: false, status: "timeout", transaction: TX },
+    statuses: [{ success: true, status: "pending", transaction: TX }],
+  });
+  const gate = createPaymentGate(gateConfig({
+    facilitatorClient: client,
+    operationStore: store,
+    settlementPollAttempts: 1,
+    settlementPollIntervalMs: 0,
+  }));
+  const authorization = await verifyPaid(gate);
+  const result = await gate.settle({ context: authorization.context, artifact: { report: true }, requestId: "req_store_fail" });
+  assert.equal(result.response.status, 500);
+  assert.equal(result.response.body.error, "payment_settlement_state_persistence_failed");
+});
+
+test("timeout without a transaction hash remains ambiguous and fails closed", async () => {
+  const calls = [];
+  const client = facilitatorClient({ calls, settle: { success: false, status: "timeout", transaction: "" } });
+  const gate = createPaymentGate(gateConfig({ facilitatorClient: client, settlementPollIntervalMs: 0 }));
+  const authorization = await verifyPaid(gate);
+  const result = await gate.settle({ context: authorization.context, artifact: { report: true }, requestId: "req_no_hash" });
+  assert.equal(result.response.status, 502);
+  assert.equal(result.response.body.error, "settlement_outcome_unknown");
+  const retry = await verifyPaid(gate, { requestId: "req_no_hash_retry" });
+  assert.equal(retry.response.status, 202);
+  assert.deepEqual(calls, ["verify", "settle"]);
+});
+
+test("payment logs never contain signatures, nonce, authorization, credentials, or upstream bodies", async () => {
   const logs = [];
   const logger = { info(value) { logs.push(value); }, error(value) { logs.push(value); } };
-  const fetchImpl = async (_url, options) => { throw new Error(`request failed: ${options.body}`); };
-  const gate = createPaymentGate(gateConfig({ logger, fetchImpl }));
-  await verifyPaid(gate, { signature: { nonce: "0xdeadbeef", signature: "0xsecret" } });
+  const fetchImpl = async (_url, options) => { throw new Error(`request failed with test-api-key: ${options.body}`); };
+  const verifyGate = createPaymentGate(gateConfig({ logger, fetchImpl }));
+  await verifyPaid(verifyGate, { signature: { nonce: "0xdeadbeef", signature: "0xsecret" } });
+
+  const statusGate = createPaymentGate(gateConfig({
+    logger,
+    settlementPollAttempts: 1,
+    settlementPollIntervalMs: 0,
+    facilitatorClient: facilitatorClient({
+      settle: { success: false, status: "timeout", transaction: TX },
+      statusError: new Error("upstream test-secret-key body 0xprivate"),
+    }),
+  }));
+  const authorization = await verifyPaid(statusGate);
+  await statusGate.settle({ context: authorization.context, artifact: { report: true }, requestId: "req_redacted" });
+
   const joined = logs.join("\n");
-  assert.doesNotMatch(joined, /0xsecret|0xdeadbeef|payment-signature|authorization/i);
+  assert.doesNotMatch(joined, /0xsecret|0xdeadbeef|payment-signature|authorization|test-api-key|test-secret-key|0xprivate/i);
 });
 
 test("research request normalization is deterministic and request-sensitive", () => {
@@ -581,6 +783,33 @@ test("paid report settles only after analysis and returns payment metadata", asy
   assert.equal(result.body.report.payment.transaction, TX);
   assert.equal(result.body.analysis.answer, "Grounded test answer");
   assert.ok(result.headers["payment-response"]);
+});
+
+test("route returns 200 only after a pending settlement is reconciled as successful", async () => {
+  const calls = [];
+  let marketCalls = 0;
+  const gate = createPaymentGate(gateConfig({
+    facilitatorClient: facilitatorClient({
+      calls,
+      settle: { success: true, status: "pending", transaction: TX, network: X402_DEFAULTS.network, payer: PAYER },
+      statuses: [{ success: true, status: "success", transaction: TX, network: X402_DEFAULTS.network, payer: PAYER }],
+    }),
+    settlementPollIntervalMs: 0,
+  }));
+  const handle = handlerWith(gate, {
+    getMarketData: async () => { marketCalls += 1; return marketData(); },
+  });
+  const request = { method: "POST", pathname: "/api/v1/research-report", headers: researchHeaders(), bodyText: JSON.stringify({ symbols: ["BTC"] }) };
+
+  const pending = await handle(request);
+  assert.equal(pending.status, 202);
+  assert.equal(pending.body.error, "settlement_pending");
+  const recovered = await handle(request);
+  assert.equal(recovered.status, 200);
+  assert.equal(recovered.body.report.payment.recovered, true);
+  assert.equal(recovered.body.report.payment.transaction, TX);
+  assert.equal(marketCalls, 1);
+  assert.deepEqual(calls, ["verify", "settle", `status:${TX}`]);
 });
 
 test("route recovers the exact stored report and rejects changed replay", async () => {

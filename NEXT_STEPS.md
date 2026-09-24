@@ -1,6 +1,6 @@
 # LiquidFlux — Ordered Execution Checklist
 
-This is the working order from the current `0.8.0` state. Complete each numbered stage before starting the next unless it is explicitly marked parallel. Do not claim a stage is complete without its listed evidence.
+This is the working order from the current `0.8.7` state. Complete each numbered stage before starting the next unless it is explicitly marked parallel. Do not claim a stage is complete without its listed evidence.
 
 ## Current baseline
 
@@ -11,7 +11,7 @@ This is the working order from the current `0.8.0` state. Complete each numbered
 - [x] First-party Funding, Liquidity, Risk, and Synthesis specialists
 - [x] Two free services distributed through OKX.AI
 - [x] x402 v2 paid research endpoint implemented and locally tested
-- [ ] Paid endpoint enabled in production
+- [x] Paid endpoint enabled in production
 - [ ] Live testnet payment completed
 - [ ] Paid research service published on OKX.AI
 - [ ] Independent external specialist invoked
@@ -55,9 +55,11 @@ This is the working order from the current `0.8.0` state. Complete each numbered
 - [x] Reject replay with different symbols/question.
 - [x] Avoid logging raw payment signatures or authorization payloads.
 - [x] Add tests for upstream/storage failure after verification, settlement failure/ambiguity, duplicate replay, mismatched replay, and lost-response recovery.
+- [x] Reconcile facilitator `pending`/`timeout` results by stored transaction hash without resubmitting settlement; release only after confirmed success.
+- [x] Distinguish definitive `settlement_failed` from ambiguous outcomes and keep polling failures fail-closed and retryable.
 - [x] Update OpenAPI and `BUSINESS_MODEL.md` to match the final sequence.
 
-**Completed locally 2026-09-23:** automated tests prove report-generation/storage failure does not call settlement, and an exact settled retry recovers the original report without another facilitator call. The default bounded operation store is process-local; durable shared state and facilitator/on-chain reconciliation remain mandatory before production/mainnet, but testnet proof may proceed with this limitation explicitly recorded.
+**Completed locally through 2026-09-24:** automated tests prove report-generation/storage failure does not call settlement, an exact settled retry recovers the original report without another facilitator call, and a stored pending/timeout transaction can reconcile through `getSettleStatus` without another settlement call. The default bounded operation store is process-local; durable shared state remains mandatory before production/mainnet because state and reconciliation cannot survive restarts or coordinate multiple instances. Testnet proof may proceed with this limitation explicitly recorded.
 
 ## Stage 3 — Configure X Layer testnet payments
 
@@ -68,7 +70,7 @@ Required operator values:
 - [x] Integrate the official pinned `@okxweb3/x402-core@0.1.0` `OKXFacilitatorClient` with synchronous settlement, bounded timeouts, sanitized failures, a read-only `npm run check:x402-support` command, and a cached sanitized `GET /health/payments` fallback for deployments without shell access.
 - [x] Confirm a compatible facilitator supporting x402 v2 `exact` on `eip155:1952`. The authenticated official `https://web3.okx.com/api/v6/pay/x402/supported` route advertised 2 matching kinds among 9 total kinds through the sanitized production probe on 2026-09-24 (request `3e6d2114-e8de-465a-80f9-ebaa454b88f0`). The keyless `https://web3.okx.com/facilitator` path remains invalid.
 - [x] Confirm the official OKX buyer preserves LiquidFlux request binding in `PAYMENT-SIGNATURE` (binding moved into the selected `accepts[].extra` entry; unknown top-level extensions are not echoed).
-- [ ] Fund the buyer test wallet with test USD₮0 if required.
+- [x] Fund the buyer test wallet. An official read-only funding check on 2026-09-24 confirmed 10 USD₮0 against the 0.01 USD₮0 requirement (shortfall 0, sufficient).
 - [x] Configure Render secrets:
   - [x] `X402_PAYTO_ADDRESS` = the verified receiver above
   - [x] `X402_ASSET_ADDRESS`
@@ -79,13 +81,13 @@ Required operator values:
   - [x] `X402_ENABLED=true` only after the sanitized production probe confirmed the intended kind
 - [x] Keep the initial price at `10000` atomic units (0.01 USD₮0) for the proof.
 
-**Completed 2026-09-24:** `/api/v1/research-report` returned a valid live `HTTP 402` challenge with the intended network, token, amount, recipient, timeout, and request binding (request `c964e0b5-ce4b-4bce-b629-1608f4688855`). No payment was authorized or executed.
+**Completed 2026-09-24:** `/api/v1/research-report` returned a valid live `HTTP 402` challenge with the intended network, token, amount, recipient, timeout, and request binding (request `c964e0b5-ce4b-4bce-b629-1608f4688855`). The paid gate is enabled, the supported-kind probe passes, and the buyer now has sufficient test USD₮0. One pre-funding authorization reached an ambiguous settlement response with no transaction hash and will never be retried; no successful payment or report delivery is claimed yet.
 
 ## Stage 4 — Prove the complete paid flow
 
 Use the official OKX buyer/payment flow; do not manually construct signatures.
 
-- [ ] Quote the paid endpoint with a valid research request.
+- [x] Quote compatibility with a valid scalar `symbols=BTC` request is implemented and deployed in v0.8.6; create a completely fresh quote after v0.8.7 is live.
 - [ ] Verify the confirmation card shows the correct network, token, amount, and recipient.
 - [ ] Explicitly confirm the payment.
 - [ ] Complete testnet verification and settlement.
@@ -198,4 +200,4 @@ This stage may run in parallel with Stages 6–8 after payment proof.
 - Native mobile application
 - Decorative dashboard expansion
 
-These features add risk without proving the current product. The next immediate action is **Stage 0: rotate exposed provider credentials**, followed by production verification and payment hardening.
+These features add risk without proving the current product. The immediate launch-path action is to deploy and verify v0.8.7, create a completely fresh BTC quote, show the mandatory payment confirmation card, and proceed only after a new explicit `yes`. Credential rotation in Stage 0 remains an unresolved security requirement.

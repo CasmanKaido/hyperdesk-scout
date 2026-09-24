@@ -108,6 +108,18 @@ After commit `78d2f53` was pushed, Render reported version `0.8.5`. The first de
 
 After the operator configured the public payment values and enabled the gate, the probe returned `payments_enabled: true` (request `919fe357-0876-4f3c-b363-97b79292bc2e`). An unsigned production report request then returned HTTP 402 with a `PAYMENT-REQUIRED` challenge for x402 v2 `exact` on `eip155:1952`, 10,000 atomic units (0.01 USD₮0), asset `0x9e29b3aada05bf2d2c827af80bd28dc0b9b4fb0c`, receiver `0x49d948895262dbaa485dde3d5785d7d3d3165508`, 300-second timeout, and a `research-report:v1` request fingerprint binding. Request ID: `c964e0b5-ce4b-4bce-b629-1608f4688855`. This proves the live challenge contract and intended terms; it does not prove buyer funding, authorization, facilitator verification, settlement, or report delivery.
 
+## Buyer compatibility, funding, and settlement reconciliation — 2026-09-24 (v0.8.6–v0.8.7)
+
+Production v0.8.6 normalized the official buyer CLI's scalar `symbols=BTC` request to the same canonical request and payment fingerprint as `symbols: ["BTC"]`. This removes a quote/replay incompatibility without weakening the one-to-five-symbol validation or exact request binding.
+
+The first authorized live test occurred before the buyer wallet was funded. An initial replay omitted the required `symbols=BTC` parameter and was rejected with HTTP 400. A fresh correctly parameterized request reached settlement but returned HTTP 502 `settlement_outcome_unknown` for request `40110eb7-79fe-4d92-bd5e-1866e89fc025`, with no transaction hash. No transaction was found, and the wallet had zero USD₮0 at the time. That authorization will not be retried or reused. This is evidence of fail-closed behavior, not successful payment or report delivery.
+
+A later read-only official CLI funding check confirmed 10 USD₮0 on X Layer testnet in buyer wallet `0x49d948895262dbaa485dde3d5785d7d3d3165508`, against a 0.01 USD₮0 requirement: shortfall 0 and `sufficient: true`. The configured recipient is the same address, so the forthcoming test can prove authorization, facilitator settlement, receipt, and delivery mechanics but not economically meaningful transfer to an independent merchant.
+
+v0.8.7 adds bounded facilitator settlement reconciliation. Immediate confirmed success still releases the stored artifact. `pending` and `timeout` with a transaction hash persist only sanitized status/hash/network/payer data; timeout is polled through the official SDK's `getSettleStatus`, and exact retries reconcile the stored hash without another settlement call. Confirmed status success releases the original artifact, confirmed failure becomes terminal `settlement_failed`, and polling errors or continued pending return HTTP 202 while withholding the report. Thrown settlement calls and malformed timeout responses without a hash remain ambiguous and fail closed; they are never blindly resubmitted. Raw signatures, nonces, authorization payloads, credentials, and upstream error bodies remain absent from logs.
+
+Focused payment/handler/OpenAPI validation passed 56/56 tests, the full local suite passed 159/159 tests, syntax/JSON checks passed, and project diagnostics were clean. The default operation store remains bounded process-local memory: reconciliation cannot survive a restart and is not safe across multiple instances. A durable shared transactional store remains required before production/mainnet claims.
+
 ## Findings and priorities
 
 ### P0 — Complete and validate the information/strategy split
