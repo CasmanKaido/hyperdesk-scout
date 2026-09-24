@@ -154,6 +154,14 @@ v0.8.10 adds a deterministic normalized allowlist for natural confirmations, act
 
 Focused browser-flow tests passed 7/7, the full suite passed 161/161, recursive JavaScript syntax and JSON checks passed, and diagnostics for the changed frontend/test files were clean. After commit `914450a` was pushed, Render reported v0.8.10. The deployed Chrome smoke used the literal reply “check it”; it executed the pending request, displayed BTC evidence, and then completed strategy review and orchestration. Desktop and emulated 390×844 mobile checks also passed without horizontal overflow or runtime exceptions. The permanent smoke journey now exercises this natural-confirmation path instead of the older “yes” path.
 
+## Paid-service product disclosure — 2026-09-24 (v0.8.11, local)
+
+The public workspace previously exposed only free chat and first-party analysis controls. Its hidden settings row said “No paid services selected · 0 USDT,” which accurately described the current workflow but made the separate paid Hyperliquid Research Report invisible and could imply that every LiquidFlux service was free. `OKX_AI.md` also had a stale top-level “Fee: Free” summary despite documenting the paid report later.
+
+v0.8.11 adds a compact paid-service offer directly below the conversation starters. It names the Hyperliquid Research Report, displays the 0.01 USD₮0 endpoint price and X Layer testnet scope, summarizes the up-to-five-market evidence artifact, identifies OKX.AI publication and buyer-agent authorization, links the paid API contract, and states that no browser wallet connection is required. The manual-controls budget row now says “Current workflow · Free first-party analysis · no paid service selected,” preserving the distinction between free browser workflows and the separate paid endpoint. No fake browser checkout or unsupported marketplace-native delivery claim was added.
+
+Static-asset tests assert the paid label, report name, price, wallet boundary, and free-workflow copy. Local desktop and emulated 390×844 Chrome journeys passed through information evidence and strategy results without runtime errors or horizontal overflow. Screenshot inspection confirmed the paid badge, service name, and price are visible before interaction in both viewports. The OKX.AI integration summary and product status now distinguish the two free services from the paid report and retain the marketplace testnet-asset limitation.
+
 ## Findings and priorities
 
 ### P0 — Complete and validate the information/strategy split

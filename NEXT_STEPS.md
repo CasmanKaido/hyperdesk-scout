@@ -1,11 +1,12 @@
 # LiquidFlux — Ordered Execution Checklist
 
-This is the working order from the current `0.8.10` state. Complete each numbered stage before starting the next unless it is explicitly marked parallel. Do not claim a stage is complete without its listed evidence.
+This is the working order from the current `0.8.11` state. Complete each numbered stage before starting the next unless it is explicitly marked parallel. Do not claim a stage is complete without its listed evidence.
 
 ## Current baseline
 
 - [x] Chat-first workspace
 - [x] Natural pending-information confirmations execute the free fetch without another planner turn
+- [x] Paid Hyperliquid Research Report is visibly distinguished from free browser workflows
 - [x] Live Hyperliquid snapshot data
 - [x] 72-hour funding and visible L2-book research
 - [x] Grounded AI analyst with deterministic numeric findings and fallback
@@ -201,4 +202,4 @@ This stage may run in parallel with Stages 6–8 after payment proof.
 - Native mobile application
 - Decorative dashboard expansion
 
-These features add risk without proving the current product. The submission-day action is to package the proven scope: production v0.8.10 with live natural information-fetch confirmation, public OKX.AI listing/routing, two direct official payment receipts, settlement reconciliation, and explicit marketplace testnet-asset limitation. Mainnet/token alignment and marketplace-native paid delivery are post-submission work. Credential rotation in Stage 0 remains an unresolved security requirement.
+These features add risk without proving the current product. The submission-day action is to package the proven scope: production v0.8.11 with live natural information-fetch confirmation and visible paid-report disclosure, public OKX.AI listing/routing, two direct official payment receipts, settlement reconciliation, and explicit marketplace testnet-asset limitation. Mainnet/token alignment and marketplace-native paid delivery are post-submission work. Credential rotation in Stage 0 remains an unresolved security requirement.

@@ -12,7 +12,13 @@ test("loads the dashboard assets with strict security headers", () => {
 
   assert.equal(dashboard.headers["content-type"], "text/html; charset=utf-8");
   assert.match(dashboard.headers["content-security-policy"], /default-src 'self'/);
-  assert.match(dashboard.body.toString("utf8"), /LiquidFlux/);
+  const html = dashboard.body.toString("utf8");
+  assert.match(html, /LiquidFlux/);
+  assert.match(html, /class="paid-service-badge">Paid agent service<\/span>/);
+  assert.match(html, /Hyperliquid Research Report/);
+  assert.match(html, /0\.01 USD₮0/);
+  assert.match(html, /No browser wallet connection is required/);
+  assert.match(html, /Free first-party analysis · no paid service selected/);
   assert.equal(getStaticAsset(assets, "POST", "/"), null);
   assert.equal(getStaticAsset(assets, "GET", "/missing.css"), null);
 });

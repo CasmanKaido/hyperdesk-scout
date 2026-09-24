@@ -8,9 +8,10 @@
 - **Network:** X Layer
 - **Registered services:** Hyperliquid Funding Specialist, Market-Neutral Orchestrator, and Hyperliquid Research Report
 - **Service type:** A2MCP
-- **Fee:** Free
+- **Fees:** Funding Specialist and Market-Neutral Orchestrator are free; Hyperliquid Research Report is listed at 0.01 USDT per call and challenges for 0.01 USD₮0 on X Layer testnet
 - **Funding endpoint:** https://hyperdesk-scout.onrender.com/api/v1/funding-scan
 - **Orchestrator endpoint:** https://hyperdesk-scout.onrender.com/api/v1/orchestrate
+- **Paid research endpoint:** https://hyperdesk-scout.onrender.com/api/v1/research-report
 
 The service listing passed the local OKX listing validator with no findings before registration.
 
