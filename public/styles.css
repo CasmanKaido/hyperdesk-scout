@@ -2101,3 +2101,43 @@ body {
 .plan-state, .loading-state, .error-state, #overview-state, #result-state { background: #ffffffbd; border-radius: var(--radius-lg); padding-inline: 1.25rem; backdrop-filter: blur(12px); }
 .app-footer { background: transparent; }
 @media print { body { background: white; } }
+
+/* Digital epoch experiment. The existing agent workspace follows the hero. */
+:root { --font-ui: Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
+html, body { background: #f9fafb; }
+body { background-image: none; color: #0a1b33; }
+.epoch-hero { position: relative; display: flex; flex-direction: column; width: min(calc(100% - 48px), 1400px); height: 600px; margin: 24px auto 0; overflow: hidden; isolation: isolate; border: 1px solid #e2e8f080; border-radius: 48px; background: radial-gradient(circle at 70% 60%, #d2e7ea 0%, #f4f8f8 48%, #fff 85%); box-shadow: 0 40px 100px -20px #00000008; }
+.epoch-video-layer { position: absolute; inset: 0; z-index: -1; overflow: hidden; pointer-events: none; user-select: none; }
+.epoch-video-layer video { width: 100%; height: 100%; object-fit: cover; transform: scale(1.05); transition: transform 1s ease; }
+.epoch-copy { position: relative; z-index: 2; display: flex; flex: 1; flex-direction: column; align-items: flex-start; padding: 64px; animation: epoch-enter .75s ease-out both; }
+.epoch-kicker { margin: 0 0 22px; color: #365c71; font-size: 11px; font-weight: 700; letter-spacing: .14em; }
+.epoch-copy h1 { margin: 0; max-width: 13ch; color: #0a1b33; font-family: Outfit, Inter, sans-serif; font-size: 56px; font-weight: 500; line-height: 1.05; letter-spacing: -.045em; text-wrap: balance; }
+.epoch-copy > p:not(.epoch-kicker) { max-width: 48ch; margin: 20px 0 26px; color: #475569; font-size: 15px; line-height: 1.7; }
+.epoch-contact { display: inline-flex; align-items: center; justify-content: center; gap: 14px; min-height: 44px; padding: 0 22px; border-radius: 999px; background: #0a152d; color: #fff; font-size: 14px; font-weight: 600; text-decoration: none; transition: transform .2s ease, background .2s ease; }
+.epoch-contact:hover { background: #1b3657; transform: scale(1.04); }
+.epoch-nav { position: absolute; bottom: 40px; left: 50%; z-index: 3; display: flex; align-items: center; gap: 5px; padding: 6px; border: 1px solid #e2e8f066; border-radius: 999px; background: #ffffffe8; box-shadow: 0 12px 40px #00000014; backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px); transform: translateX(-50%); animation: epoch-nav-enter .7s .25s ease-out both; white-space: nowrap; }
+.epoch-nav > a:not(.epoch-nav-logo):not(.epoch-nav-cta) { padding: 10px 14px; color: #64748b; font-size: 12px; font-weight: 600; text-decoration: none; }
+.epoch-nav > a:hover { color: #0a1b33; }
+.epoch-nav-logo { display: grid; width: 36px; height: 36px; place-items: center; overflow: hidden; border: 1px solid #f1f5f9; border-radius: 50%; background: #fff; box-shadow: 0 1px 3px #0001; }
+.epoch-nav-logo img { width: 36px; height: 36px; object-fit: cover; }
+.epoch-nav-cta { display: inline-flex; align-items: center; gap: 8px; padding: 9px 20px; border: 1px solid #e2e8f099; border-radius: 999px; background: #fff; box-shadow: 0 1px 3px #0001; color: #0a1b33; font-size: 12px; font-weight: 600; text-decoration: none; transition: border-color .2s ease; }
+.epoch-nav-cta:hover { border-color: #cbd5e1; }
+.epoch-nav-cta span { font-size: 20px; line-height: .7; }
+.epoch-marquee { width: min(100%, 1400px); margin: 40px auto 64px; overflow: hidden; -webkit-mask-image: linear-gradient(to right, transparent, #000 8%, #000 92%, transparent); mask-image: linear-gradient(to right, transparent, #000 8%, #000 92%, transparent); }
+.epoch-marquee-track { display: flex; width: max-content; gap: 16px; animation: epoch-scroll 38s linear infinite; }
+.epoch-marquee:hover .epoch-marquee-track { animation-play-state: paused; }
+.epoch-logo-card { position: relative; display: flex; flex: 0 0 160px; width: 160px; height: 96px; align-items: center; justify-content: center; gap: 8px; overflow: hidden; border: 1px solid #e2e8f099; border-radius: 999px; background: #fff; box-shadow: 0 1px 3px #0001; transition: border-color .2s ease; }
+.epoch-logo-card:hover { border-color: #cbd5e1; }
+.epoch-logo-glow { position: absolute; inset: 0; z-index: 0; border-radius: inherit; background: linear-gradient(135deg, var(--glow-a), var(--glow-b)); opacity: 0; transform: scale(1.5); transition: opacity .35s ease, transform .35s ease; }
+.epoch-logo-card:hover .epoch-logo-glow { opacity: 1; transform: scale(1); }
+.epoch-logo-card img { position: relative; z-index: 1; width: 28px; height: 28px; object-fit: contain; transition: filter .2s ease; }
+.epoch-logo-card:hover img { filter: brightness(0) invert(1); }
+.epoch-logo-name { position: relative; z-index: 1; color: #334155; font-size: 12px; font-weight: 600; }
+.epoch-logo-card:hover .epoch-logo-name { color: #0a1b33; }
+@keyframes epoch-scroll { from { transform: translateX(0); } to { transform: translateX(calc(-50% - 8px)); } }
+@keyframes epoch-enter { from { opacity: 0; transform: translateY(18px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes epoch-nav-enter { from { opacity: 0; transform: translate(-50%, 14px); } to { opacity: 1; transform: translate(-50%, 0); } }
+@media (max-width: 720px) { .epoch-hero { width: calc(100% - 24px); height: 600px; margin-top: 12px; border-radius: 28px; } .epoch-copy { padding: 48px 28px 120px; } .epoch-copy h1 { font-size: 42px; } .epoch-copy > p:not(.epoch-kicker) { font-size: 14px; } .epoch-nav { bottom: 28px; } .epoch-marquee { margin-block: 28px 44px; } }
+@media (max-width: 370px) { .epoch-copy { padding-inline: 22px; } .epoch-nav > a:not(.epoch-nav-logo):not(.epoch-nav-cta) { padding-inline: 8px; } .epoch-nav-cta { padding-inline: 12px; } }
+@media (prefers-reduced-motion: reduce) { .epoch-copy, .epoch-nav, .epoch-marquee-track { animation: none; } }
+@media print { .epoch-hero, .epoch-marquee { display: none; } }
