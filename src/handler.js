@@ -43,7 +43,7 @@ export function createRequestHandler({
   analyzeEvidence = null,
   paymentGate = null,
   researchReportPriceAtomic = "10000",
-  publicBaseUrl = "https://hyperdesk-scout.onrender.com",
+  publicBaseUrl = "https://liquidflux.onrender.com",
 } = {}) {
   if (typeof getMarketData !== "function") throw new TypeError("getMarketData is required");
 
@@ -81,7 +81,7 @@ export function createRequestHandler({
           execution_included: false,
         }, id, corsHeaders);
       } else if (method === "GET" && pathname === "/health") {
-        result = json(200, { status: "ok", service: "hyperdesk-scout", version: VERSION }, id, corsHeaders);
+        result = json(200, { status: "ok", service: "liquidflux", version: VERSION }, id, corsHeaders);
       } else if (method === "GET" && pathname === "/health/payments") {
         if (!paymentGate?.supportConfigured || typeof paymentGate.checkSupport !== "function") {
           result = json(503, {

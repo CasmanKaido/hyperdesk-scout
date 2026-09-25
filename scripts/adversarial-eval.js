@@ -2,10 +2,10 @@
 // Each case attacks a specific failure mode. The script independently re-verifies every
 // numeric token in the model-facing output against the response's own evidence ledger,
 // using the same rules as the server gate, and flags prescriptive/predictive wording.
-// Usage: node scripts/adversarial-eval.js [origin]   (default https://hyperdesk-scout.onrender.com)
+// Usage: node scripts/adversarial-eval.js [origin]   (default https://liquidflux.onrender.com)
 import { mkdir, writeFile } from "node:fs/promises";
 
-const ORIGIN = process.argv[2] || "https://hyperdesk-scout.onrender.com";
+const ORIGIN = process.argv[2] || "https://liquidflux.onrender.com";
 const PROHIBITED = /\b(?:traders?|trades?|positions?|best|superior|decisive|recommend(?:ation|ed)?|costs?|supports? (?:a |an )?(?:larger|bigger) order)\b/i;
 
 const CASES = [

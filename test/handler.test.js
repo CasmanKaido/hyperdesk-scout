@@ -40,7 +40,7 @@ test("serves a discoverable index and health without market data", async () => {
 
   const result = await handle({ method: "GET", pathname: "/health" });
   assert.equal(result.status, 200);
-  assert.deepEqual(result.body, { status: "ok", service: "hyperdesk-scout", version: VERSION });
+  assert.deepEqual(result.body, { status: "ok", service: "liquidflux", version: VERSION });
 });
 
 test("serves a sanitized payment support probe while payments remain disabled", async () => {

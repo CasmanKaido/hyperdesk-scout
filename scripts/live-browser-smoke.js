@@ -5,7 +5,7 @@ import { mkdir, mkdtemp, writeFile, rm } from "node:fs/promises";
 import { resolve } from "node:path";
 import assert from "node:assert/strict";
 
-const origin = process.argv[2] || "https://hyperdesk-scout.onrender.com/";
+const origin = process.argv[2] || "https://liquidflux.onrender.com/";
 const chromePath = "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome";
 const debuggingPort = 9226;
 

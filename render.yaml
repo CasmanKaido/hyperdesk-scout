@@ -1,6 +1,6 @@
 services:
   - type: web
-    name: hyperdesk-scout
+    name: liquidflux
     runtime: docker
     plan: free
     repo: https://github.com/CasmanKaido/hyperdesk-scout
@@ -25,7 +25,7 @@ services:
       - key: CORS_ALLOW_ORIGIN
         value: "*"
       - key: PUBLIC_BASE_URL
-        value: https://hyperdesk-scout.onrender.com
+        value: https://liquidflux.onrender.com
       # x402 paid research report (OKX Agent Payments Protocol). Disabled until
       # the secrets below are set in the Render dashboard, never in this file:
       # X402_ENABLED=true, X402_PAYTO_ADDRESS, X402_ASSET_ADDRESS (USD₮0 on the

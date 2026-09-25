@@ -2,11 +2,11 @@
   "openapi": "3.1.0",
   "info": {
     "title": "LiquidFlux API",
-    "version": "0.8.6",
+    "version": "0.8.13",
     "description": "AI-assisted objective planning with approval-gated, deterministic Hyperliquid funding, liquidity, and risk intelligence. AI interprets constraints but does not calculate market evidence, spend funds, or execute trades."
   },
   "servers": [
-    { "url": "https://hyperdesk-scout.onrender.com", "description": "Production" },
+    { "url": "https://liquidflux.onrender.com", "description": "Production" },
     { "url": "http://localhost:3000", "description": "Local development" }
   ],
   "paths": {
@@ -420,7 +420,7 @@
         "required": ["status", "service", "version"],
         "properties": {
           "status": { "const": "ok" },
-          "service": { "const": "hyperdesk-scout" },
+          "service": { "const": "liquidflux" },
           "version": { "type": "string" }
         }
       },

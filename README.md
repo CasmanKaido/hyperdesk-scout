@@ -10,12 +10,12 @@ LiquidFlux is a read-only Hyperliquid information and strategy-analysis service 
 
 **Status (2026-09-22):** `market_information`, `POST /api/v1/market-overview`, and short-reply support are implemented and deployed. All 117 automated tests and syntax/JSON checks pass. Version `0.7.8` is verified live on Render: a detailed evidence question returned a five-sentence grounded answer quoting exact ledger figures (snapshot and 72-hour rates, retrospective APR, visible-level limits) that all passed the number-grounding gate, via Groq. Direct live Hyperliquid BTC funding-history and L2-book calls passed, plus fixture-backed desktop/mobile Chrome journeys. Gemini (`gemini-3.6-flash`) is verified live with a real key; its free-tier quota is small, so Groq fallback remains load-bearing (see Evidence and security limitations). Strategy approval is a browser workflow, not API authorization. No external paid specialist, payment, or trade execution is implemented. See [`AUDIT.md`](AUDIT.md) for code-grounded gaps and validation requirements. The URLs and marketplace records below are historical project references, not freshly verified by this audit.
 
-- **Live dashboard:** https://hyperdesk-scout.onrender.com
-- **Live API origin:** https://hyperdesk-scout.onrender.com
-- **Health:** https://hyperdesk-scout.onrender.com/health
-- **OpenAPI:** https://hyperdesk-scout.onrender.com/openapi.json
-- **Conversational planner:** `POST https://hyperdesk-scout.onrender.com/api/v1/plan` — provider-backed intent/planning endpoint; intent/planning endpoint
-- **Orchestrator:** `POST https://hyperdesk-scout.onrender.com/api/v1/orchestrate`
+- **Live dashboard:** https://liquidflux.onrender.com
+- **Live API origin:** https://liquidflux.onrender.com
+- **Health:** https://liquidflux.onrender.com/health
+- **OpenAPI:** https://liquidflux.onrender.com/openapi.json
+- **Conversational planner:** `POST https://liquidflux.onrender.com/api/v1/plan` — provider-backed intent/planning endpoint
+- **Orchestrator:** `POST https://liquidflux.onrender.com/api/v1/orchestrate`
 - **OKX.AI ASP:** LiquidFlux, Agent ID `13784` — resubmitted with two free A2MCP services; listing review is pending. The paid report remains a separate direct testnet API.
 
 ## Product direction
@@ -183,7 +183,7 @@ Set the following values in the process or deployment environment. `npm start` d
 | `AI_PLANNER_TIMEOUT_MS` | `15000` | Timeout applied separately to each configured AI provider |
 | `GEMINI_MODEL` | `gemini-3.6-flash` | Gemini planner model override |
 | `GROQ_MODEL` | `openai/gpt-oss-20b` | Groq planner model override |
-| `PUBLIC_BASE_URL` | `https://hyperdesk-scout.onrender.com` | Public base URL used in x402 resource descriptors |
+| `PUBLIC_BASE_URL` | `https://liquidflux.onrender.com` | Public base URL used in x402 resource descriptors |
 | `X402_ENABLED` | `false` | Master switch for the paid research report |
 | `X402_PAYTO_ADDRESS` | unset | Receiving address for x402 payments (public, not a secret) |
 | `X402_NETWORK` | `eip155:1952` | CAIP-2 payment network (X Layer testnet) |
@@ -196,7 +196,7 @@ Set the following values in the process or deployment environment. `npm start` d
 
 The initial deployment target is Render's **Free web-service plan**. The repository includes `render.yaml` with `plan: free` and a detailed authorization and verification checklist in [`DEPLOYMENT.md`](DEPLOYMENT.md).
 
-The recorded deployment URL is https://hyperdesk-scout.onrender.com; its current revision and behavior were not checked in this audit. Render Free instances may sleep when idle, so check `/health` before a demo. Health alone does not verify provider, market-data, or marketplace functionality.
+The production deployment URL is https://liquidflux.onrender.com. Render Free instances may sleep when idle, so check `/health` before a demo. Health alone does not verify provider, market-data, or marketplace functionality.
 
 ## Container
 

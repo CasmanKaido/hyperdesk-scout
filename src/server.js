@@ -36,7 +36,7 @@ export function createApp({
   analyzeEvidence = process.env.NODE_ENV === "test" ? null : createAIAnalyst({ logger }),
   paymentGate = process.env.NODE_ENV === "test" ? null : paymentGateFromEnv(process.env, { logger }),
   researchReportPriceAtomic = process.env.X402_PRICE_RESEARCH_REPORT_ATOMIC || "10000",
-  publicBaseUrl = process.env.PUBLIC_BASE_URL || "https://hyperdesk-scout.onrender.com",
+  publicBaseUrl = process.env.PUBLIC_BASE_URL || "https://liquidflux.onrender.com",
 } = {}) {
   const handleRequest = createRequestHandler({
     getMarketData, rateLimiter, logger, openApiSpec, planObjective, enrichMarketEvidence, analyzeEvidence,

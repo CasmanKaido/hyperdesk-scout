@@ -10,9 +10,9 @@
 - **Separate direct service:** Hyperliquid Research Report
 - **Service type:** A2MCP
 - **Fees:** Both marketplace-submitted services are free; the direct Hyperliquid Research Report challenges for 0.01 USD₮0 on X Layer testnet
-- **Funding endpoint:** https://hyperdesk-scout.onrender.com/api/v1/funding-scan
-- **Orchestrator endpoint:** https://hyperdesk-scout.onrender.com/api/v1/orchestrate
-- **Paid research endpoint:** https://hyperdesk-scout.onrender.com/api/v1/research-report
+- **Funding endpoint:** https://liquidflux.onrender.com/api/v1/funding-scan
+- **Orchestrator endpoint:** https://liquidflux.onrender.com/api/v1/orchestrate
+- **Paid research endpoint:** https://liquidflux.onrender.com/api/v1/research-report
 
 The service listing passed the local OKX listing validator with no findings before registration.
 
@@ -22,7 +22,7 @@ The service listing passed the local OKX listing validator with no findings befo
 1. [Service Description] Scan Hyperliquid perpetual markets for funding opportunities and receive decision-ready evidence covering funding APR, spot-perp basis, liquidity, and risk—without executing trades.
 2. [Parameter Spec] symbols(array of strings, optional): 1–50 Hyperliquid market symbols, defaults to BTC, ETH, and SOL; min_funding_apr(number, optional): minimum absolute annualized funding APR, defaults to 0; risk_tolerance(string, optional): risk profile for screening results—conservative, moderate, or aggressive—defaults to moderate.
 3. [Request Method] POST
-4. [Request Example] curl -X POST https://hyperdesk-scout.onrender.com/api/v1/funding-scan -H 'Content-Type: application/json' -d '{"symbols":["BTC","ETH","SOL"],"min_funding_apr":5,"risk_tolerance":"moderate"}'
+4. [Request Example] curl -X POST https://liquidflux.onrender.com/api/v1/funding-scan -H 'Content-Type: application/json' -d '{"symbols":["BTC","ETH","SOL"],"min_funding_apr":5,"risk_tolerance":"moderate"}'
 ```
 
 The polished description passed OKX.AI listing validation with no findings and was published on 2026-09-18. X Layer update transaction: `0x81284f1062a2d4a0e5edfef877ceea2f947b6b18f931c53e9fb82d5c00e84db2`.
@@ -32,7 +32,7 @@ The polished description passed OKX.AI listing validation with no findings and w
 - **Marketplace service ID:** `491c8879-74b2-4804-9017-a34017ec623d`
 - **Service type:** A2MCP
 - **Fee:** Free
-- **Endpoint:** https://hyperdesk-scout.onrender.com/api/v1/orchestrate
+- **Endpoint:** https://liquidflux.onrender.com/api/v1/orchestrate
 - **Published:** 2026-09-18
 - **X Layer update transaction:** `0x50e2b52b3e31b74635c1976a3c09ea81a24d187ba57e6a71d44ddbdb6dd06609`
 
@@ -40,7 +40,7 @@ The polished description passed OKX.AI listing validation with no findings and w
 1. [Service Description] Coordinate LiquidFlux funding, liquidity, risk, and deterministic synthesis stages into a traceable Hyperliquid market-neutral workflow that returns review candidates and rejection evidence without executing trades.
 2. [Parameter Spec] objective(string, optional): supported objective market_neutral_income, defaults to market_neutral_income; symbols(array of strings, optional): 1–20 Hyperliquid market symbols, defaults to BTC, ETH, and SOL; risk_tolerance(string, optional): conservative, moderate, or aggressive, defaults to moderate; max_leverage(number, optional): leverage cap from 1–10, defaults to 2; max_notional_usd(number, optional): proposed notional greater than 0 and no more than 1000000, defaults to 1000; min_funding_apr(number, optional): minimum absolute annualized funding APR from 0–10000, defaults to 5.
 3. [Request Method] POST
-4. [Request Example] curl -X POST https://hyperdesk-scout.onrender.com/api/v1/orchestrate -H 'Content-Type: application/json' -d '{"objective":"market_neutral_income","symbols":["BTC","ETH","SOL"],"risk_tolerance":"moderate","max_leverage":2,"max_notional_usd":1000,"min_funding_apr":5}'
+4. [Request Example] curl -X POST https://liquidflux.onrender.com/api/v1/orchestrate -H 'Content-Type: application/json' -d '{"objective":"market_neutral_income","symbols":["BTC","ETH","SOL"],"risk_tolerance":"moderate","max_leverage":2,"max_notional_usd":1000,"min_funding_apr":5}'
 ```
 
 The orchestrator endpoint returned `HTTP 200` with fresh Hyperliquid evidence before publication, and the OKX.AI listing validator returned no findings. This listing accurately represents first-party specialist coordination; it does not claim external-agent hiring.
@@ -69,9 +69,9 @@ Current marketplace state:
 - **Approval:** Resubmitted; under review
 - **Category:** Finance
 - **Submitted services:** 2
-- **Funding Specialist endpoint:** https://hyperdesk-scout.onrender.com/api/v1/funding-scan
-- **Market-Neutral Orchestrator endpoint:** https://hyperdesk-scout.onrender.com/api/v1/orchestrate
-- **Direct paid endpoint, not in current marketplace submission:** https://hyperdesk-scout.onrender.com/api/v1/research-report
+- **Funding Specialist endpoint:** https://liquidflux.onrender.com/api/v1/funding-scan
+- **Market-Neutral Orchestrator endpoint:** https://liquidflux.onrender.com/api/v1/orchestrate
+- **Direct paid endpoint, not in current marketplace submission:** https://liquidflux.onrender.com/api/v1/research-report
 
 ## Buyer-side test identity
 
